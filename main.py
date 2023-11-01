@@ -11,58 +11,43 @@ from tkinter import *
 from PIL import Image
 Image.CUBIC = Image.BICUBIC
 
-
-# Modulos
-
-# 3#import Adafruit_DHT
-
-# 3#SENSOR_DHT = Adafruit_DHT.DHT11
-
-PIN_DHT = 4
+# Modulo Sensor de temperatura
+#3#import Adafruit_DHT
+#3#SENSOR_DHT = Adafruit_DHT.DHT11
+#3#PIN_DHT = 4
 
 ###########################
 #### Ventana Principal ####
 ###########################
 
 root = ttk.Window(title='RED TEST', themename="cosmo")
-
 root.geometry('800x480')
-
 root.resizable(False, False)
-
 # root.wm_attributes('-fullscreen','True')
 
 
 ##########################################  Fin Seccion Ventana Principal  ################################################################
 
 # Variables globales a eliminar
-
 contadorDump = 0
-
 contadorNetDiscover = 0
-
 uploadBps = 0
 downloadBps = 0
 
-
+#################################################################################################################################
 #################
 #### Estilos ####
 #################
 
-
 style = Style()
-
 style.theme_use("cosmo")
-
 
 def aplicarEstilos():
 
     # Botones Home
 
     style = ttk.Style()
-
-    style.configure('myhome.primary.Outline.TButton', font=(
-        'helvetica', 18), padding=53, width=20, relief=ttk.RAISED, borderwidth=4)
+    style.configure('myhome.primary.Outline.TButton', font=('helvetica', 18), padding=53, width=20, relief=ttk.RAISED, borderwidth=4)
 
     # Botones
 
@@ -70,29 +55,25 @@ def aplicarEstilos():
     style.configure('custom.success.TButton', font=('helvetica', 15))
     style.configure('custom.primary.TButton', font=('helvetica', 15))
     style.configure('custom.danger.TButton', font=('helvetica', 15))
-    style.configure('barraSuperior.primary.TButton',
-                    font=('helvetica', 15), padding=8)
-    style.configure('barraSuperior.danger.TButton',
-                    font=('helvetica', 15), padding=8)
-    style.configure('barraSuperior.success.TButton',
-                    font=('helvetica', 15), padding=8)
+    style.configure('barraSuperior.primary.TButton', font=('helvetica', 15), padding=8)
+    style.configure('barraSuperior.danger.TButton', font=('helvetica', 15), padding=8)
+    style.configure('barraSuperior.success.TButton', font=('helvetica', 15), padding=8)
 
     # Pestañas
     style.configure('my.primary.TNotebook.Label', font=('helvetica', 18))
 
     # Estilos frame destino
-    style.configure('destino.success.TButton', font=(
-        'helvetica', 14), padding=7, width=15)
 
-    style.configure('destino.danger.TButton', font=(
-        'helvetica', 14), padding=7, width=15)
-
+    style.configure('destino.success.TButton', font=('helvetica', 14), padding=7, width=15)
+    style.configure('destino.danger.TButton', font=('helvetica', 14), padding=7, width=15)
     style.configure('destino.TLabel', font=('helvetica', 14), padding=7)
 
-# Inicio los estilos
+# Inicializacion de estilos
 aplicarEstilos()
 
 ##########################################  Fin Seccion Estilos  ################################################################
+
+#################################################################################################################################
 
 ###################
 #### Pantallas ####
@@ -114,7 +95,9 @@ escaneo.grid(row=0, column=0, sticky='nsew', padx=0, pady=10)
 config.grid(row=0, column=0, sticky='nsew', padx=0, pady=10)
 tools.grid(row=0, column=0, sticky='nsew', padx=0, pady=10)
 
-##########################################  Fin Seccion Pantallas  ################################################################
+##########################################  Fin Seccion Pantallas  ##############################################################
+
+#################################################################################################################################
 
 ######################
 #### Ventana Home ####
@@ -143,10 +126,12 @@ ttk.Button(home, text='HERRAMIENTAS', style='myhome.primary.Outline.TButton',
 ##########################################  Fin Seccion Home  ################################################################
 
 # Funcion de share
+
 iconShare = PhotoImage(file='./img/sharethis-32.png')
 def shareResultado():
     print (f'Funcion share')
 
+#################################################################################################################################
 
 ######################
 #### Ventana Dump ####
@@ -197,8 +182,7 @@ interfacesLinux = interface.tomarInterface()
 
 seleccionInterface = StringVar()
 textoLabelFrameInterface = Label(text='Seleccion de interface')
-labelFrameInterface = ttk.Labelframe(
-    frameInterface, text='Seleccion de Interface', padding=5)
+labelFrameInterface = ttk.Labelframe(frameInterface, text='Seleccion de Interface', padding=5)
 
 labelFrameInterface.pack(pady=5, side='left')
 i = 0
@@ -225,57 +209,41 @@ labelFrameDireccion.pack(pady=5, padx=10, side='left')
 j = 0
 
 for direccion in direcciones:
-
     ttk.Radiobutton(labelFrameDireccion, style='my.primary.TRadiobutton', variable=seleccionDireccion,
-
                     text=direccion, value=direccionesLinux[j]).pack(pady=15, padx=8, side='left')
 
     # iterador de lista de interfaces linux
-
     j = j + 1
 
 
 # Frame Archivo
 
-
 frameArchivo = ttk.Frame(dump)
-
 frameArchivo.pack(padx=5, pady=10, fill=BOTH)
 
-
-labelFrameArchivo = ttk.Labelframe(
-
-    frameArchivo, text='Nombre de archivo', padding=5)
-
+labelFrameArchivo = ttk.Labelframe(frameArchivo, text='Nombre de archivo', padding=5)
 labelFrameArchivo.pack(pady=5, side='left')
 
 
 textArchivoDump = ttk.Entry(labelFrameArchivo, width=25, font=('Courier', 13))
-
 textArchivoDump.insert(END, 'prueba')
-
 textArchivoDump.pack()
-
 
 # Frame Control
 
-
 frameControl = ttk.Frame(dump)
-
 frameControl.pack(padx=5, pady=20, fill=BOTH)
 
 
 # Boton de comando
-
 botonDump = ttk.Button(frameControl, text='INICIAR',
                        style='custom.success.TButton', padding=10, width=15, command=interfaceDump)
-
-botonDump.pack(
-
-    padx=20, pady=10, side='right')
+botonDump.pack(padx=20, pady=10, side='right')
 
 
 ##########################################  Fin Seccion Dump  ################################################################
+
+#################################################################################################################################
 
 ########################
 #### Ventana Trazas ####
@@ -397,8 +365,6 @@ frameNoteMtr.add(tabMtr2, text='Ping')
 def refrezcarInterfaces():
     print (f'Funcion Refrezcar')
 
-
-
 # Titulo
 tituloFrameTap = ttk.Frame(tap)
 tituloFrameTap.pack(fill=BOTH)
@@ -485,8 +451,6 @@ for interface2 in interfaces:
 botonTap = ttk.Button(tabTap1, text='INICIAR', style='custom.success.TButton', padding=10, width=15, command=interfaceDump)
 botonTap.pack(padx=20, pady=2)
 
-
-
 # Frame Cuadro destino
 destinoFrameTap = Frame(tabTap2)
 destinoFrameTap.pack(fill=BOTH, pady=2)
@@ -498,8 +462,6 @@ resultadoFrameTap.pack(pady=2, padx=5, fill=BOTH)
 # Cuadro de texto resultado
 resultadoTap = Text(resultadoFrameTap, font=('Courier', 11))
 resultadoTap.pack(fill=BOTH)
-
-
 
 # Creacion de pestañas
 frameNoteTap.add(tabTap1, text='Configuracion')
@@ -530,35 +492,24 @@ def funcionDiscover():
         comandoDiscover = '/sbin/netdiscover -fP'
 
         # p1 = subprocess.Popen(
-
         #    comandoDiscover, stdout=subprocess.PIPE, bufsize=0, universal_newlines=True, shell=True)
 
         p1 = subprocess.Popen(comandoDiscover, stdout=subprocess.PIPE,
                               bufsize=0, universal_newlines=True, shell=True)
 
         while p1.poll() is None:
-
             resultadoDiscover.insert(END, p1.stdout.readline())
-
             resultadoDiscover.update()
 
         p1.stdout.close()
-
         p1.wait()
-
         result = p1.returncode
-
         print(f'resultado{result}')
-
         contadorNetDiscover += 1
 
     else:
-
         subprocess.run('killall netdiscover', shell=True)
-
-        botonDescubrir.configure(
-            text='DESCUBRIMIENTO IP', style='destino.success.TButton')
-
+        botonDescubrir.configure(text='DESCUBRIMIENTO IP', style='destino.success.TButton')
         contadorNetDiscover += 1
 
 
@@ -576,104 +527,72 @@ menuEscaneo.agregarBotonSuperior(tituloFrameEscaneo, shareResultado, 'SHARE', ic
 # Frame de pestañas
 
 frameNoteEscaneo = ttk.Notebook(escaneo, bootstyle='primary')
-
 frameNoteEscaneo.pack(padx=10, pady=2, fill=BOTH)
 
-
 tabEscaneo1 = ttk.Frame(frameNoteEscaneo)
-
 tabEscaneo2 = ttk.Frame(frameNoteEscaneo)
 
 
 # Pestaña Escaneo
 
-
 # Frame Cuadro destino
 
 destinoFrameEscaneo = Frame(tabEscaneo1)
-
 destinoFrameEscaneo.pack(pady=2, fill=BOTH)
 
-
 ttk.Button(destinoFrameEscaneo, text='ESCANEAR', style='destino.success.TButton',
-
            command=funcionNmap).pack(padx=23, pady=10, side='right')
 
 
-textTargetEscaneo = ttk.Entry(
-
-    destinoFrameEscaneo, width=34, font=('Courier', 15))
-
+textTargetEscaneo = ttk.Entry(destinoFrameEscaneo, width=34, font=('Courier', 15))
 textTargetEscaneo.pack(pady=10, side='right')
 
-
-ttk.Label(destinoFrameEscaneo, text='IP DESTINO',
-          style='destino.TLabel').pack(side='right')
+ttk.Label(destinoFrameEscaneo, text='IP DESTINO',style='destino.TLabel').pack(side='right')
 
 
 # Frame de respuesta
-
 resultadoFrameEscaneo = Frame(tabEscaneo1, height=15, width=80)
-
 resultadoFrameEscaneo.pack(pady=2, padx=5)
-
 
 # Cuadro de texto resultado
 
-resultadoEscaneo = Text(resultadoFrameEscaneo, height=15,
-
-                        width=80, font=('Courier', 11))
-
+resultadoEscaneo = Text(resultadoFrameEscaneo, height=15,width=80, font=('Courier', 11))
 resultadoEscaneo.pack(fill=BOTH)
 
-
 # Pestaña Descubrimiento
-
 
 # Frame Cuadro destino
 
 destinoFrameDiscover = Frame(tabEscaneo2, width=80)
-
 destinoFrameDiscover.pack(pady=2, padx=2)
 
-
 botonDescubrir = ttk.Button(destinoFrameDiscover, text='DESCUBRIMIENTO IP', padding=10, style='destino.success.TButton',
-
                             width=20, command=funcionDiscover)
-
 botonDescubrir.pack(padx=20, pady=10, side='right')
-
 
 # Frame de respuesta
 
 resultadoFrameDiscover = Frame(tabEscaneo2, height=15, width=80)
-
 resultadoFrameDiscover.pack(pady=2, padx=5)
 
 
 # Cuadro de texto resultado
 
-resultadoDiscover = Text(resultadoFrameDiscover,
-
-                         height=15, width=80, font=('Courier', 11))
-
+resultadoDiscover = Text(resultadoFrameDiscover, height=15, width=80, font=('Courier', 11))
 resultadoDiscover.pack(fill=BOTH)
 
 
 # Fin Pestañas
 
 frameNoteEscaneo.add(tabEscaneo1, text='Escaneo de puertos')
-
 frameNoteEscaneo.add(tabEscaneo2, text='Descubrimiento IP')
 
 
 ##########################################  Fin Seccion Escaneo  ################################################################
 
-
 ########################
 #### Ventana Config ####
 ########################
-
 
 # Titulo
 tituloFrameConfig = ttk.Frame(config)
@@ -703,9 +622,7 @@ def cambiarEstilo(x):
     aplicarEstilos()
 
 
-seleccionEstilos = ttk.Menubutton(
-    tabConfig1, text='ESTILO', bootstyle='primary')
-
+seleccionEstilos = ttk.Menubutton(tabConfig1, text='ESTILO', bootstyle='primary')
 seleccionEstilos.pack(pady=15)
 
 
@@ -718,18 +635,13 @@ menuEstilos = ttk.Menu(seleccionEstilos, font=('helvetica', 18))
 items = StringVar()
 
 for x in estilos:
-
     menuEstilos.add_radiobutton(
         label=x, variable=items, command=lambda x=x: cambiarEstilo(x))
 
 
 seleccionEstilos['menu'] = menuEstilos
 
-
-generalAplicar = ttk.Button(
-
-    tabConfig1, text='APLICAR', style='destino.success.TButton', command=cambiarEstilo)
-
+generalAplicar = ttk.Button(tabConfig1, text='APLICAR', style='destino.success.TButton', command=cambiarEstilo)
 generalAplicar.pack(pady=20)
 
 
@@ -737,36 +649,24 @@ generalAplicar.pack(pady=20)
 
 wifiAplicar = ttk.Button(tabConfig2, text='APLICAR',
                          style='destino.success.TButton', command=lambda: home.tkraise())
-
 wifiAplicar.pack(pady=20)
 
 
 # Pestaña Ethernet Interna
 
-internalAplicar = ttk.Button(
-
-    tabConfig3, text='APLICAR', style='destino.success.TButton', command=lambda: home.tkraise())
-
+internalAplicar = ttk.Button(tabConfig3, text='APLICAR', style='destino.success.TButton', command=lambda: home.tkraise())
 internalAplicar.pack(pady=20)
 
 
 # Pestaña Ethernet Externa
 
-enternalAplicar = ttk.Button(
-
-    tabConfig4, text='APLICAR', style='destino.success.TButton', command=lambda: home.tkraise())
-
+enternalAplicar = ttk.Button(tabConfig4, text='APLICAR', style='destino.success.TButton', command=lambda: home.tkraise())
 enternalAplicar.pack(pady=20)
 
 
 # Pestaña Mantenimiento
-
-mantenimeintoSalir = ttk.Button(
-
-    tabConfig5, text='Cerrar APP', style='destino.danger.TButton', command=lambda: root.destroy())
-
+mantenimeintoSalir = ttk.Button(tabConfig5, text='Cerrar APP', style='destino.danger.TButton', command=lambda: root.destroy())
 mantenimeintoSalir.pack(pady=20)
-
 
 frameNoteConfig.add(tabConfig1, text='General')
 frameNoteConfig.add(tabConfig2, text='Wifi')
@@ -814,24 +714,17 @@ def funcionSpeedTest():
     print(f'{resultado}')
 
     resultadoJson = json.loads(resultado)
-
     downloadBps = resultadoJson["download"]
-
     uploadBps = resultadoJson["upload"]
-
     print(f'Upload: {uploadBps:.2f} Mbps')
-
     print(f'Download: {downloadBps:.2f} Mbps')
 
 
 # Titulo
 tituloFrameTools = ttk.Frame(tools)
-
 tituloFrameTools.pack(fill=BOTH)
 
-
 # Objeto menuSuperior
-
 menuTools = MenuSuperior(tituloFrameTools, 'HERRAMIENTAS', home)
 
 # Agregar boton Compartir
@@ -840,57 +733,38 @@ menuTools.agregarBotonSuperior(tituloFrameTools, shareResultado, 'SHARE', iconSh
 # Frame de pestañas
 
 frameNoteTools = ttk.Notebook(tools, bootstyle='primary')
-
 frameNoteTools.pack(padx=10, pady=2, fill=BOTH)
 
-
 tabTools1 = ttk.Frame(frameNoteTools)
-
 tabTools2 = ttk.Frame(frameNoteTools)
-
 tabTools3 = ttk.Frame(frameNoteTools)
-
 tabTools4 = ttk.Frame(frameNoteTools)
 
-
 # Pestaña Seedtest
-
 
 # Frame Cuadro destino
 
 destinoFrameSpeedTest = Frame(tabTools3, width=80)
-
 destinoFrameSpeedTest.pack(pady=2, padx=2)
 
-
 ttk.Button(destinoFrameSpeedTest, text='TEST DE VELOCIDAD', style='custom.success.TButton',
-
            command=funcionSpeedTest).pack(padx=20, pady=10, side='right')
-
 
 # Frame de respuesta
 
 resultadoFrameSpeedTest = Frame(tabTools3, height=15, width=80)
-
 resultadoFrameSpeedTest.pack(pady=2, padx=5)
 
-
 uploadMeter = ttk.Meter(resultadoFrameSpeedTest, metersize=150, amountused=25,
-
                         bootstyle='success', subtext="Upload", interactive=True,
-
                         textright="Mbps", stripethickness=1)
-
 uploadMeter.pack(side='left')
 
 downloadMeter = ttk.Meter(resultadoFrameSpeedTest, bootstyle='success',
-
                           subtext="Download", interactive=True, textright="Mbps",
-
                           metersize=500, stripethickness=1)
 
 downloadMeter.pack(side='left')
-
 
 # Pestaña Wake on lan
 
@@ -898,101 +772,72 @@ downloadMeter.pack(side='left')
 # Frame Cuadro destino
 
 destinoFrameWol = Frame(tabTools1, width=80)
-
 destinoFrameWol.pack(pady=2, padx=2)
 
 
 ttk.Button(destinoFrameWol, text='DESPERTAR', style='destino.success.TButton',
-
            command=funcionWol).pack(padx=20, pady=10, side='right')
 
 
 textTargetWol = ttk.Entry(destinoFrameWol, width=30, font=("Courier", 15))
-
-
 textTargetWol.pack(pady=10, side='right')
 
 
 ttk.Label(destinoFrameWol, text='MAC DESTINO', style='destino.TLabel'
-
           ).pack(side='right')
 
 
 # Frame de respuesta
 
 resultadoFrameWol = Frame(tabTools1, height=15, width=80)
-
 resultadoFrameWol.pack(pady=2, padx=5)
 
 
 # Cuadro de texto resultado
 
 resultadoWol = Text(resultadoFrameWol, height=15,
-
                     width=80, font=('Courier', 11))
-
 resultadoWol.pack()
 
 
 # Pestaña Temperatura
 
 tempLabel = ttk.Label(tabTools2, text=' ', padding=10, font=('Helvetica', 18))
-
 tempLabel.pack(pady=30)
 
 humLabel = ttk.Label(tabTools2, text=' ', padding=10, font=('Helvetica', 18))
-
 humLabel.pack(pady=10)
 
 tomarTemperatura()
 
-tempActualizar = ttk.Button(
-
-    tabTools2, text='ACTUALIZAR', padding=4, style='destino.success.TButton', command=tomarTemperatura)
-
+tempActualizar = ttk.Button(tabTools2, text='ACTUALIZAR', padding=4, 
+                            style='destino.success.TButton', command=tomarTemperatura)
 tempActualizar.pack(padx=10, pady=10)
 
-
 # Pestaña IP publica
-
 
 def tomarIpPublica():
 
     comandoIpPublica = '/bin/curl ifconfig.me'
-
-    p4 = subprocess.Popen(
-
-        comandoIpPublica, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
+    p4 = subprocess.Popen(comandoIpPublica, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
 
     ipResultado = f'La ip publica es {p4.stdout.readline()}'
-
     p4.terminate()
-
     ipPublica.config(text=ipResultado)
 
-
 ipPublica = ttk.Label(tabTools4, text=' ', padding=10, font=('Helvetica', 18))
-
 ipPublica.pack(pady=40)
 
 
-ipActualizar = ttk.Button(
-
-    tabTools4, text='ACTUALIZAR', padding=4, style='destino.success.TButton', command=tomarIpPublica)
-
+ipActualizar = ttk.Button(tabTools4, text='ACTUALIZAR', padding=4, style='destino.success.TButton', command=tomarIpPublica)
 ipActualizar.pack(padx=10, pady=10)
-
 
 # Fin Pestañas
 
 frameNoteTools.add(tabTools1, text='Wake on Lan')
-
 frameNoteTools.add(tabTools2, text='Temperatura ambiente')
-
 frameNoteTools.add(tabTools3, text='Test de velocidad')
-
 frameNoteTools.add(tabTools4, text='Ip Publica')
-
 
 ##########################################  Fin Seccion Dump  ################################################################
 
@@ -1000,5 +845,4 @@ frameNoteTools.add(tabTools4, text='Ip Publica')
 # Pagina principal
 
 home.tkraise()
-
 root.mainloop()
