@@ -167,7 +167,7 @@ tituloFrameDump.pack(fill=BOTH)
 menuDump = MenuSuperior(tituloFrameDump, 'CAPTURA DE PAQUETES', home)
 
 # Agregar boton Compartir
-menuDump.agregarBotonSuperior(tituloFrameDump, shareResultado, 'SHARE', iconShare)
+menuDump.agregarBotonSuperior(tituloFrameDump, shareResultado, 'SHARE')#, iconShare)
 
 # Frame Seleccion de interface
 frameInterface = ttk.Frame(dump)
@@ -272,7 +272,7 @@ tituloFrameMtr.pack(fill=BOTH)
 menuMtr = MenuSuperior(tituloFrameMtr, 'TRAZAS', home)
 
 # Agregar boton Compartir
-menuMtr.agregarBotonSuperior(tituloFrameMtr, shareResultado, 'SHARE', iconShare)
+menuMtr.agregarBotonSuperior(tituloFrameMtr, shareResultado, 'SHARE')#, iconShare)
 
 # Frame de pestañas
 
@@ -374,10 +374,10 @@ menuTap = MenuSuperior(tituloFrameTap, 'TAP', home)
 
 # Agregar boton Refresh
 iconSincroEth = PhotoImage(file='./img/refresh-32.png')
-menuTap.agregarBotonSuperior(tituloFrameTap, refrezcarInterfaces, 'Refresh', iconSincroEth)
+menuTap.agregarBotonSuperior(tituloFrameTap, refrezcarInterfaces, 'Refresh')#, iconSincroEth)
 
 # Agregar boton Compartir
-menuTap.agregarBotonSuperior(tituloFrameTap, shareResultado, 'SHARE', iconShare)
+menuTap.agregarBotonSuperior(tituloFrameTap, shareResultado, 'SHARE')#, iconShare)
 
 # Frame de pestañas
 frameNoteTap = ttk.Notebook(tap, style='primary')
@@ -522,7 +522,7 @@ tituloFrameEscaneo.pack(fill=BOTH)
 menuEscaneo = MenuSuperior(tituloFrameEscaneo, 'ESCANEO', home)
 
 # Agregar boton Compartir
-menuEscaneo.agregarBotonSuperior(tituloFrameEscaneo, shareResultado, 'SHARE', iconShare)
+menuEscaneo.agregarBotonSuperior(tituloFrameEscaneo, shareResultado, 'SHARE')#, iconShare)
 
 # Frame de pestañas
 
@@ -602,7 +602,7 @@ tituloFrameConfig.pack(fill=BOTH)
 menuConfig = MenuSuperior(tituloFrameConfig, 'CONFIGURACIÓN', home)
 
 # Agregar boton Compartir
-menuConfig.agregarBotonSuperior(tituloFrameConfig, shareResultado, 'SHARE', iconShare)
+menuConfig.agregarBotonSuperior(tituloFrameConfig, shareResultado, 'SHARE')#, iconShare)
 
 # Pestañas
 frameNoteConfig = ttk.Notebook(config, bootstyle='primary')
@@ -728,7 +728,7 @@ tituloFrameTools.pack(fill=BOTH)
 menuTools = MenuSuperior(tituloFrameTools, 'HERRAMIENTAS', home)
 
 # Agregar boton Compartir
-menuTools.agregarBotonSuperior(tituloFrameTools, shareResultado, 'SHARE', iconShare)
+menuTools.agregarBotonSuperior(tituloFrameTools, shareResultado, 'SHARE')#, iconShare)
 
 # Frame de pestañas
 
@@ -755,16 +755,16 @@ ttk.Button(destinoFrameSpeedTest, text='TEST DE VELOCIDAD', style='custom.succes
 resultadoFrameSpeedTest = Frame(tabTools3, height=15, width=80)
 resultadoFrameSpeedTest.pack(pady=2, padx=5)
 
-uploadMeter = ttk.Meter(resultadoFrameSpeedTest, metersize=150, amountused=25,
-                        bootstyle='success', subtext="Upload", interactive=True,
-                        textright="Mbps", stripethickness=1)
-uploadMeter.pack(side='left')
+#uploadMeter = ttk.Meter(resultadoFrameSpeedTest, metersize=150, amountused=25,
+#                        bootstyle='success', subtext="Upload", interactive=True,
+#                        textright="Mbps", stripethickness=1)
+#uploadMeter.pack(side='left')
 
-downloadMeter = ttk.Meter(resultadoFrameSpeedTest, bootstyle='success',
-                          subtext="Download", interactive=True, textright="Mbps",
-                          metersize=500, stripethickness=1)
+#downloadMeter = ttk.Meter(resultadoFrameSpeedTest, bootstyle='success',
+#                          subtext="Download", interactive=True, textright="Mbps",
+#                          metersize=500, stripethickness=1)
 
-downloadMeter.pack(side='left')
+#downloadMeter.pack(side='left')
 
 # Pestaña Wake on lan
 
@@ -840,7 +840,6 @@ frameNoteTools.add(tabTools3, text='Test de velocidad')
 frameNoteTools.add(tabTools4, text='Ip Publica')
 
 ##########################################  Fin Seccion Dump  ################################################################
-
 
 # Pagina principal
 
