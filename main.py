@@ -6,6 +6,7 @@ from ttkbootstrap import Style
 from ttkbootstrap.scrolled import ScrolledText
 from ttkbootstrap.scrolled import ScrolledFrame
 from ttkbootstrap.constants import *
+from ttkbootstrap.toast import ToastNotification
 import ttkbootstrap as ttk
 from tkinter import *
 from PIL import Image
@@ -411,7 +412,7 @@ def pingScaler(e):
 destinoFramePing = Frame(tabMtr2, width=80)
 destinoFramePing.pack(fill=BOTH, pady=2)
 
-botonIniciarPing = ttk.Button(destinoFramePing, width=13, text='PING1', style='destino.success.TButton',
+botonIniciarPing = ttk.Button(destinoFramePing, width=13, text='PING', style='destino.success.TButton',
            command=lambda:funcionPing(countScale.get(),velocidadScale.get(),bytesScale.get()))
 botonIniciarPing.pack(padx=23, pady=10, side='right')
 
@@ -942,6 +943,9 @@ def updateSistema():
 
     comandoUpdate = 'cd /root/repositorio/MulitaNetworkTool && /usr/bin/git pull'
     subprocess.run([comandoUpdate], shell=True)
+
+    avisoToasted = ToastNotification(title='Update', message='Actualizacion realizada. reinicie para aplicar', duration=2000, alert=True)
+    avisoToasted.show_toast()
 
 # Titulo
 tituloFrameConfig = ttk.Frame(config)
