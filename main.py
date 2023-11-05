@@ -358,15 +358,15 @@ resultadoMtr.pack(fill=BOTH)
 def funcionPing():
 
     resultadoPing.delete(1.0, END)
-    comandoPing = f'/bin/ping {textTargetPing.get()} -n -c 8'
+    comandoPing = f'/bin/ping {textTargetPing.get()} -n -c 12 -i .2'
     p2 = subprocess.Popen(comandoPing, stdout=subprocess.PIPE,
-                          universal_newlines=True, shell=True)
+                          universal_newlines=True, shell=True, bufsize=0)
     while p2.poll() is None:
         resultadoPing.update()
         resultadoPing.insert(END, p2.stdout.readline())
     p2.terminate()
 
-    for i in range(3):
+    for i in range(4):
         resultadoPing.insert(END, p2.stdout.readline())
         resultadoPing.update()
 
@@ -385,6 +385,12 @@ textTargetPing.pack(pady=10, side='right')
 
 ttk.Label(destinoFramePing, text='IP DESTINO',
           style='destino.TLabel').pack(side='right')
+
+
+# Frame de configuracion
+
+frameConfig = Frame(tabMtr2)
+frameConfig.pack(pady=2, padx=5)
 
 # Frame de respuesta
 
@@ -535,7 +541,7 @@ frameNoteTap.add(tabTap2, text='Pantalla')
 #########################
 #### Ventana Escaneo ####
 #########################
-
+j9re = 0
 
 def funcionNmap():
 
@@ -548,7 +554,7 @@ def funcionNmap():
 
 
 def funcionDiscover():
-
+    global j9re
     global contadorNetDiscover
     if contadorNetDiscover % 2 == 0:
         botonDescubrir.configure(
@@ -564,17 +570,21 @@ def funcionDiscover():
                               bufsize=0, universal_newlines=True, shell=True)
 
         while p1.poll() is None:
+
             resultadoDiscover.insert(END, p1.stdout.readline())
             resultadoDiscover.update()
+            j9re +=1
+            print (j9re)
+
 
         p1.stdout.close()
-        p1.wait()
-        result = p1.returncode
-        print(f'resultado{result}')
+        #p1.wait()
+
         contadorNetDiscover += 1
 
     else:
         subprocess.run('killall netdiscover', shell=True)
+        p1.kill()
         botonDescubrir.configure(
             text='DESCUBRIMIENTO IP',
             style='destino.success.TButton')
