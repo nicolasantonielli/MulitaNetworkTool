@@ -24,7 +24,7 @@ Image.CUBIC = Image.BICUBIC
 root = ttk.Window(title='RED TEST', themename="cosmo")
 root.geometry('800x480')
 root.resizable(False, False)
-root.wm_attributes('-fullscreen','True')
+# root.wm_attributes('-fullscreen','True')
 
 
 ###########  Fin Seccion Ventana Principal  #####################
@@ -751,109 +751,6 @@ frameNoteEscaneo.add(tabEscaneo2, text='Descubrimiento IP')
 
 ##########################################  Fin Seccion Escaneo  #########
 
-########################
-#### Ventana Config ####
-########################
-
-# Titulo
-tituloFrameConfig = ttk.Frame(config)
-tituloFrameConfig.pack(fill=BOTH)
-
-# Objeto menuSuperior
-menuConfig = MenuSuperior(tituloFrameConfig, 'CONFIGURACIÓN', home)
-
-# Pestañas
-frameNoteConfig = ttk.Notebook(config, bootstyle='primary')
-frameNoteConfig.pack(padx=10, pady=2, fill=BOTH)
-
-tabConfig1 = ttk.Frame(frameNoteConfig)
-tabConfig2 = ttk.Frame(frameNoteConfig)
-tabConfig3 = ttk.Frame(frameNoteConfig)
-tabConfig4 = ttk.Frame(frameNoteConfig)
-tabConfig5 = ttk.Frame(frameNoteConfig)
-
-# Pestaña General
-
-
-def cambiarEstilo(x):
-    estilo = x
-    style.theme_use(estilo)
-    aplicarEstilos()
-
-
-seleccionEstilos = ttk.Menubutton(
-    tabConfig1,
-    text='ESTILO',
-    bootstyle='primary')
-seleccionEstilos.pack(pady=15)
-
-
-estilos = ['cosmo', 'darkly', 'pulse', 'lumen', 'litera',
-           'journal', 'solar', 'superhero', 'vapor', 'cyborg']
-
-
-menuEstilos = ttk.Menu(seleccionEstilos, font=('helvetica', 18))
-
-items = StringVar()
-
-for x in estilos:
-    menuEstilos.add_radiobutton(
-        label=x, variable=items, command=lambda x=x: cambiarEstilo(x))
-
-
-seleccionEstilos['menu'] = menuEstilos
-
-generalAplicar = ttk.Button(
-    tabConfig1,
-    text='APLICAR',
-    style='destino.success.TButton',
-    command=cambiarEstilo)
-generalAplicar.pack(pady=20)
-
-
-# Pestaña Wifi
-
-wifiAplicar = ttk.Button(tabConfig2, text='APLICAR',
-                         style='destino.success.TButton', command=lambda: home.tkraise())
-wifiAplicar.pack(pady=20)
-
-
-# Pestaña Ethernet Interna
-
-internalAplicar = ttk.Button(
-    tabConfig3,
-    text='APLICAR',
-    style='destino.success.TButton',
-    command=lambda: home.tkraise())
-internalAplicar.pack(pady=20)
-
-
-# Pestaña Ethernet Externa
-
-enternalAplicar = ttk.Button(
-    tabConfig4,
-    text='APLICAR',
-    style='destino.success.TButton',
-    command=lambda: home.tkraise())
-enternalAplicar.pack(pady=20)
-
-
-# Pestaña Mantenimiento
-mantenimeintoSalir = ttk.Button(
-    tabConfig5,
-    text='Cerrar APP',
-    style='destino.danger.TButton',
-    command=lambda: root.destroy())
-mantenimeintoSalir.pack(pady=20)
-
-frameNoteConfig.add(tabConfig1, text='General')
-frameNoteConfig.add(tabConfig2, text='Wifi')
-frameNoteConfig.add(tabConfig3, text='Ethernet Interna')
-frameNoteConfig.add(tabConfig4, text='Ethernet Externa')
-frameNoteConfig.add(tabConfig5, text='Mantenimiento')
-
-##########################################  Fin Seccion Escaneo  #########
-
 ##############################
 #### Ventana Herramientas ####
 ##############################
@@ -1034,7 +931,124 @@ frameNoteTools.add(tabTools2, text='Temperatura ambiente')
 frameNoteTools.add(tabTools3, text='Test de velocidad')
 frameNoteTools.add(tabTools4, text='Ip Publica')
 
-##########################################  Fin Seccion Dump  ############
+##########################################  Fin Seccion Herramientas  ############
+
+########################
+#### Ventana Config ####
+########################
+
+
+def updateSistema():
+
+    comandoUpdate = 'git pull'
+    subprocess.run([comandoUpdate], shell=True)
+
+# Titulo
+tituloFrameConfig = ttk.Frame(config)
+tituloFrameConfig.pack(fill=BOTH)
+
+# Objeto menuSuperior
+menuConfig = MenuSuperior(tituloFrameConfig, 'CONFIGURACIÓN', home)
+
+# Pestañas
+frameNoteConfig = ttk.Notebook(config, bootstyle='primary')
+frameNoteConfig.pack(padx=10, pady=2, fill=BOTH)
+
+tabConfig1 = ttk.Frame(frameNoteConfig)
+tabConfig2 = ttk.Frame(frameNoteConfig)
+tabConfig3 = ttk.Frame(frameNoteConfig)
+tabConfig4 = ttk.Frame(frameNoteConfig)
+tabConfig5 = ttk.Frame(frameNoteConfig)
+
+# Pestaña General
+
+
+def cambiarEstilo(x):
+    estilo = x
+    style.theme_use(estilo)
+    aplicarEstilos()
+
+
+seleccionEstilos = ttk.Menubutton(
+    tabConfig1,
+    text='ESTILO',
+    bootstyle='primary')
+seleccionEstilos.pack(pady=15)
+
+
+estilos = ['cosmo', 'darkly', 'pulse', 'lumen', 'litera',
+           'journal', 'solar', 'superhero', 'vapor', 'cyborg']
+
+
+menuEstilos = ttk.Menu(seleccionEstilos, font=('helvetica', 18))
+
+items = StringVar()
+
+for x in estilos:
+    menuEstilos.add_radiobutton(
+        label=x, variable=items, command=lambda x=x: cambiarEstilo(x))
+
+
+seleccionEstilos['menu'] = menuEstilos
+
+generalAplicar = ttk.Button(
+    tabConfig1,
+    text='APLICAR',
+    style='destino.success.TButton',
+    command=cambiarEstilo)
+generalAplicar.pack(pady=20)
+
+
+# Pestaña Wifi
+
+wifiAplicar = ttk.Button(tabConfig2, text='APLICAR',
+                         style='destino.success.TButton', command=lambda: home.tkraise())
+wifiAplicar.pack(pady=20)
+
+
+# Pestaña Ethernet Interna
+
+internalAplicar = ttk.Button(
+    tabConfig3,
+    text='APLICAR',
+    style='destino.success.TButton',
+    command=lambda: home.tkraise())
+internalAplicar.pack(pady=20)
+
+
+# Pestaña Ethernet Externa
+
+enternalAplicar = ttk.Button(
+    tabConfig4,
+    text='APLICAR',
+    style='destino.success.TButton',
+    command=lambda: home.tkraise())
+enternalAplicar.pack(pady=20)
+
+
+# Pestaña Mantenimiento
+mantenimeintoSalir = ttk.Button(
+    tabConfig5,
+    text='Cerrar APP',
+    style='destino.danger.TButton',
+    command=lambda: root.destroy())
+mantenimeintoSalir.pack(pady=20)
+
+mantenimeintoUpdate = ttk.Button(
+    tabConfig5,
+    text='UPDATE',
+    style='destino.success.TButton',
+    command=updateSistema)
+mantenimeintoUpdate.pack(pady=10)
+
+
+frameNoteConfig.add(tabConfig1, text='General')
+frameNoteConfig.add(tabConfig2, text='Wifi')
+frameNoteConfig.add(tabConfig3, text='Ethernet Interna')
+frameNoteConfig.add(tabConfig4, text='Ethernet Externa')
+frameNoteConfig.add(tabConfig5, text='Mantenimiento')
+
+##########################################  Fin Seccion Config  #########
 
 # Pagina principal
 
