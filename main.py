@@ -366,7 +366,7 @@ def funcionPing(count, velo, bytes):
         ejecutandoPing = TRUE
 
         botonIniciarPing['text'] = 'DETENER'
-        botonIniciarPing.configure(style='custom.danger.TButton')
+        botonIniciarPing.configure(style='destino.danger.TButton')
         resultadoPing.delete(1.0, END)
         if int(count) != 0:
             comandoPing = f'/bin/ping {textTargetPing.get()} -n -c {int(count)} -i {velo:.2f} -s {int(bytes)-8}'
@@ -386,14 +386,14 @@ def funcionPing(count, velo, bytes):
             resultadoPing.update()
 
             
-        botonIniciarPing['text'] = 'INICIAR'
-        botonIniciarPing.configure(style='custom.success.TButton')
+        botonIniciarPing['text'] = 'PING'
+        botonIniciarPing.configure(style='destino.success.TButton')
 
         ejecutandoPing = FALSE
     
     elif ejecutandoPing == TRUE:
-        botonIniciarPing['text'] = 'INICIAR'
-        botonIniciarPing.configure(style='custom.success.TButton')
+        botonIniciarPing['text'] = 'PING'
+        botonIniciarPing.configure(style='destino.success.TButton')
   
         comandoPing = 'pkill -2 ping'
         subprocess.Popen(comandoPing, stdout=subprocess.PIPE, shell=True)
@@ -411,7 +411,7 @@ def pingScaler(e):
 destinoFramePing = Frame(tabMtr2, width=80)
 destinoFramePing.pack(fill=BOTH, pady=2)
 
-botonIniciarPing = ttk.Button(destinoFramePing, text='PING', style='destino.success.TButton',
+botonIniciarPing = ttk.Button(destinoFramePing, width=13, text='PING', style='destino.success.TButton',
            command=lambda:funcionPing(countScale.get(),velocidadScale.get(),bytesScale.get()))
 botonIniciarPing.pack(padx=23, pady=10, side='right')
 
@@ -940,7 +940,7 @@ frameNoteTools.add(tabTools4, text='Ip Publica')
 
 def updateSistema():
 
-    comandoUpdate = 'git pull'
+    comandoUpdate = 'cd /root/repositorio/MulitaNetworkTool && /usr/bin/git pull'
     subprocess.run([comandoUpdate], shell=True)
 
 # Titulo
