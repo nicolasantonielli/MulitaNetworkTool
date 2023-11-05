@@ -369,9 +369,9 @@ def funcionPing(count, velo, bytes):
         botonIniciarPing.configure(style='custom.danger.TButton')
         resultadoPing.delete(1.0, END)
         if int(count) != 0:
-            comandoPing = f'/bin/ping {textTargetPing.get()} -n -c {int(count)} -i {velo:.2f} -s {int(bytes)}'
+            comandoPing = f'/bin/ping {textTargetPing.get()} -n -c {int(count)} -i {velo:.2f} -s {int(bytes)-8}'
         elif int(count) == 0:
-            comandoPing = f'/bin/ping {textTargetPing.get()} -n -i {velo:.2f} -s {int(bytes)}'
+            comandoPing = f'/bin/ping {textTargetPing.get()} -n -i {velo:.2f} -s {int(bytes)-8}'
         
 
         procesoPing = subprocess.Popen(comandoPing, stdout=subprocess.PIPE,
@@ -440,7 +440,7 @@ countLabel.pack()
 
 frameVelocidadScale = Frame(frameConfig)
 frameVelocidadScale.pack(side='left', padx=10)
-velocidadScale = ttk.Scale(frameVelocidadScale, length=200, orient='horizontal',from_=0.1, to=1, state='enable', command=pingScaler)
+velocidadScale = ttk.Scale(frameVelocidadScale, length=250, orient='horizontal',from_=0.1, to=2, state='enable', command=pingScaler)
 velocidadScale.set(1)
 velocidadScale.pack()
 velocidadLabel = ttk.Label(frameVelocidadScale,text=f'{velocidadScale.get():.1f} segundos')
@@ -448,7 +448,7 @@ velocidadLabel.pack()
 
 frameBytesScale = Frame(frameConfig)
 frameBytesScale.pack(side='left', padx=10)
-bytesScale = ttk.Scale(frameBytesScale, length=200, orient='horizontal',from_=0, to=1024, state='enable', command=pingScaler)
+bytesScale = ttk.Scale(frameBytesScale, length=200, orient='horizontal',from_=64, to=2048, state='enable', command=pingScaler)
 bytesScale.set(64)
 bytesScale.pack()
 bytesLabel = ttk.Label(frameBytesScale,text=f'{int(bytesScale.get())} bytes')
