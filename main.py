@@ -944,7 +944,7 @@ def updateSistema():
     comandoUpdate = 'cd /root/repositorio/MulitaNetworkTool && /usr/bin/git pull'
     subprocess.run([comandoUpdate], shell=True)
 
-    avisoToasted = ToastNotification(title='Update', message='Actualizacion realizada. reinicie para aplicar', duration=2000, alert=True)
+    avisoToasted = ToastNotification(title='Update', message='Actualizacion realizada. reinicie para aplicar', duration=6000, alert=True)
     avisoToasted.show_toast()
 
 # Titulo
