@@ -396,11 +396,7 @@ def funcionPing(count, velo, bytes):
         botonIniciarPing.configure(style='custom.success.TButton')
 
         subprocess.Popen.kill(procesoPing)
-
-        #for i in range(4):
-        #    resultadoPing.insert(END, procesoPing.stdout.readline())
-        #    resultadoPing.update()
-        
+    
         comandoPing = 'pkill -2 ping'
         subprocess.Popen(comandoPing, stdout=subprocess.PIPE, shell=True)
         ejecutandoPing = FALSE
