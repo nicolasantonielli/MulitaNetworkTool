@@ -34,6 +34,7 @@ contadorDump = 0
 contadorNetDiscover = 0
 uploadBps = 0
 downloadBps = 0
+ejecutandoPing = FALSE
 
 
 #################
@@ -354,21 +355,60 @@ resultadoMtr = Text(resultadoFrameMtr, height=15,
                     width=80, font=('Courier', 11))
 resultadoMtr.pack(fill=BOTH)
 
+procesoPing = None
 
-def funcionPing():
+def funcionPing(count, velo, bytes):
+    global ejecutandoPing
+    global procesoPing
 
-    resultadoPing.delete(1.0, END)
-    comandoPing = f'/bin/ping {textTargetPing.get()} -n -c 12 -i .2'
-    p2 = subprocess.Popen(comandoPing, stdout=subprocess.PIPE,
-                          universal_newlines=True, shell=True, bufsize=0)
-    while p2.poll() is None:
-        resultadoPing.update()
-        resultadoPing.insert(END, p2.stdout.readline())
-    p2.terminate()
+    if ejecutandoPing == FALSE:
 
-    for i in range(4):
-        resultadoPing.insert(END, p2.stdout.readline())
-        resultadoPing.update()
+        ejecutandoPing = TRUE
+
+        botonIniciarPing['text'] = 'DETENER'
+        botonIniciarPing.configure(style='custom.danger.TButton')
+        resultadoPing.delete(1.0, END)
+        if int(count) != 0:
+            comandoPing = f'/bin/ping {textTargetPing.get()} -n -c {int(count)} -i {velo:.2f} -s {int(bytes)}'
+        elif int(count) == 0:
+            comandoPing = f'/bin/ping {textTargetPing.get()} -n -i {velo:.2f} -s {int(bytes)}'
+        
+
+        procesoPing = subprocess.Popen(comandoPing, stdout=subprocess.PIPE,
+                                universal_newlines=True, shell=True, bufsize=0)
+        while procesoPing.poll() is None:
+            resultadoPing.update()
+            resultadoPing.insert(END, procesoPing.stdout.readline())
+        procesoPing.terminate()
+
+        for i in range(4):
+            resultadoPing.insert(END, procesoPing.stdout.readline())
+            resultadoPing.update()
+
+            
+        botonIniciarPing['text'] = 'INICIAR'
+        botonIniciarPing.configure(style='custom.success.TButton')
+
+        ejecutandoPing = FALSE
+    
+    elif ejecutandoPing == TRUE:
+        botonIniciarPing['text'] = 'INICIAR'
+        botonIniciarPing.configure(style='custom.success.TButton')
+
+        subprocess.Popen.kill(procesoPing)
+
+        #for i in range(4):
+        #    resultadoPing.insert(END, procesoPing.stdout.readline())
+        #    resultadoPing.update()
+        
+        comandoPing = 'pkill -2 ping'
+        subprocess.Popen(comandoPing, stdout=subprocess.PIPE, shell=True)
+        ejecutandoPing = FALSE
+        
+def pingScaler(e):
+    countLabel.config(text=f'{int(countScale.get())} envios') 
+    velocidadLabel.config(text=f'{velocidadScale.get():.1f} segundos') 
+    bytesLabel.config(text=f'{int(bytesScale.get())} bytes')
 
 # Pestaña Ping
 
@@ -377,8 +417,9 @@ def funcionPing():
 destinoFramePing = Frame(tabMtr2, width=80)
 destinoFramePing.pack(fill=BOTH, pady=2)
 
-ttk.Button(destinoFramePing, text='PING', style='destino.success.TButton',
-           command=funcionPing).pack(padx=23, pady=10, side='right')
+botonIniciarPing = ttk.Button(destinoFramePing, text='PING', style='destino.success.TButton',
+           command=lambda:funcionPing(countScale.get(),velocidadScale.get(),bytesScale.get()))
+botonIniciarPing.pack(padx=23, pady=10, side='right')
 
 textTargetPing = ttk.Entry(destinoFramePing, width=34, font=('Courier', 15))
 textTargetPing.pack(pady=10, side='right')
@@ -387,10 +428,37 @@ ttk.Label(destinoFramePing, text='IP DESTINO',
           style='destino.TLabel').pack(side='right')
 
 
+
+
 # Frame de configuracion
 
 frameConfig = Frame(tabMtr2)
 frameConfig.pack(pady=2, padx=5)
+
+
+frameCountScale = Frame(frameConfig)
+frameCountScale.pack(side='left', padx=10)
+countScale = ttk.Scale(frameCountScale, length=200, orient='horizontal',from_=0, to=20, state='enable', command=pingScaler)
+countScale.set(4)
+countScale.pack()
+countLabel = ttk.Label(frameCountScale,text=f'{int(countScale.get())} envios')
+countLabel.pack()
+
+frameVelocidadScale = Frame(frameConfig)
+frameVelocidadScale.pack(side='left', padx=10)
+velocidadScale = ttk.Scale(frameVelocidadScale, length=200, orient='horizontal',from_=0, to=1, state='enable', command=pingScaler)
+velocidadScale.set(1)
+velocidadScale.pack()
+velocidadLabel = ttk.Label(frameVelocidadScale,text=f'{velocidadScale.get():.1f} segundos')
+velocidadLabel.pack()
+
+frameBytesScale = Frame(frameConfig)
+frameBytesScale.pack(side='left', padx=10)
+bytesScale = ttk.Scale(frameBytesScale, length=200, orient='horizontal',from_=0, to=1024, state='enable', command=pingScaler)
+bytesScale.set(64)
+bytesScale.pack()
+bytesLabel = ttk.Label(frameBytesScale,text=f'{int(bytesScale.get())} bytes')
+bytesLabel.pack()
 
 # Frame de respuesta
 
