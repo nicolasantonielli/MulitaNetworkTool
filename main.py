@@ -1039,21 +1039,21 @@ enternalAplicar.pack(pady=20)
 # Pestaña Mantenimiento
 mantenimeintoSalir = ttk.Button(
     tabConfig5,
-    text='CERRAR SISTEMA',
+    text='CERRAR SISTEMA', width=20,
     style='destino.danger.TButton',
     command=lambda: root.destroy())
-mantenimeintoSalir.pack(pady=20)
+mantenimeintoSalir.pack(pady=10)
 
 mantenimeintoResetApp = ttk.Button(
     tabConfig5,
-    text='REINCIAR SISTEMA',
+    text='REINCIAR SISTEMA', width=20,
     style='destino.danger.TButton',
     command=resetSistema)
 mantenimeintoResetApp.pack(pady=10)
 
 mantenimeintoUpdate = ttk.Button(
     tabConfig5,
-    text='ACTUALIZAR SISTEMA',
+    text='ACTUALIZAR SISTEMA', width=20,
     style='destino.success.TButton',
     command=updateSistema)
 mantenimeintoUpdate.pack(pady=10)
