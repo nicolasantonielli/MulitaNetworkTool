@@ -43,6 +43,7 @@ downloadBps = 0
 style = Style()
 style.theme_use("cosmo")
 
+
 def aplicarEstilos():
 
     # Botones Home
@@ -152,12 +153,12 @@ ttk.Button(home, text='CONFIG', style='myhome.primary.Outline.TButton',
            command=lambda: config.tkraise()).grid(row=3, column=1, pady=10)
 
 
-
 ##########################################  Fin Seccion Home  ############
 
 # Funcion de share
 
 iconShare = PhotoImage(file='./img/sharethis-32.png')
+
 
 def shareResultado():
     print(f'Funcion share')

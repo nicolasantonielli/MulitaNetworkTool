@@ -1,6 +1,7 @@
 import subprocess
 import json
 
+
 class PlacaRed:
 
     interfacesEth = []
@@ -33,7 +34,7 @@ class PlacaRed:
             self.interfacesIP.append(resultadoJson[i]['addr_info'][0]['local'])
 
         return self.interfacesIP
-    
+
     def tomarMac(self):
         self.interfacesMac.clear()
 
@@ -46,6 +47,4 @@ class PlacaRed:
         for i in range(len(resultadoJson)):
             self.interfacesMac.append(resultadoJson[i]['address'])
         print(self.interfacesMac)
-        return self.interfacesMac    
-    
-
+        return self.interfacesMac
