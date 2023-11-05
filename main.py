@@ -440,7 +440,7 @@ countLabel.pack()
 
 frameVelocidadScale = Frame(frameConfig)
 frameVelocidadScale.pack(side='left', padx=10)
-velocidadScale = ttk.Scale(frameVelocidadScale, length=200, orient='horizontal',from_=0, to=1, state='enable', command=pingScaler)
+velocidadScale = ttk.Scale(frameVelocidadScale, length=200, orient='horizontal',from_=0.1, to=1, state='enable', command=pingScaler)
 velocidadScale.set(1)
 velocidadScale.pack()
 velocidadLabel = ttk.Label(frameVelocidadScale,text=f'{velocidadScale.get():.1f} segundos')
