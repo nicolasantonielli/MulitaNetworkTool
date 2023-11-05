@@ -946,6 +946,12 @@ def updateSistema():
 
     avisoToasted = ToastNotification(title='Update', message='Actualizacion realizada. reinicie para aplicar', duration=6000, alert=True)
     avisoToasted.show_toast()
+    
+def resetSistema():
+
+    comandoReset = '/bin/bash /root/reset.sh'
+    subprocess.run([comandoReset], shell=True)
+
 
 # Titulo
 tituloFrameConfig = ttk.Frame(config)
@@ -1033,14 +1039,21 @@ enternalAplicar.pack(pady=20)
 # Pestaña Mantenimiento
 mantenimeintoSalir = ttk.Button(
     tabConfig5,
-    text='Cerrar APP',
+    text='CERRAR APP',
     style='destino.danger.TButton',
     command=lambda: root.destroy())
 mantenimeintoSalir.pack(pady=20)
 
+mantenimeintoResetApp = ttk.Button(
+    tabConfig5,
+    text='RESET APP',
+    style='destino.danger.TButton',
+    command=resetSistema)
+mantenimeintoResetApp.pack(pady=10)
+
 mantenimeintoUpdate = ttk.Button(
     tabConfig5,
-    text='UPDATE',
+    text='UPDATE APP',
     style='destino.success.TButton',
     command=updateSistema)
 mantenimeintoUpdate.pack(pady=10)
