@@ -411,7 +411,7 @@ def pingScaler(e):
 destinoFramePing = Frame(tabMtr2, width=80)
 destinoFramePing.pack(fill=BOTH, pady=2)
 
-botonIniciarPing = ttk.Button(destinoFramePing, width=13, text='PING', style='destino.success.TButton',
+botonIniciarPing = ttk.Button(destinoFramePing, width=13, text='PING1', style='destino.success.TButton',
            command=lambda:funcionPing(countScale.get(),velocidadScale.get(),bytesScale.get()))
 botonIniciarPing.pack(padx=23, pady=10, side='right')
 
