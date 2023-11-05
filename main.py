@@ -394,9 +394,7 @@ def funcionPing(count, velo, bytes):
     elif ejecutandoPing == TRUE:
         botonIniciarPing['text'] = 'INICIAR'
         botonIniciarPing.configure(style='custom.success.TButton')
-
-        subprocess.Popen.kill(procesoPing)
-    
+  
         comandoPing = 'pkill -2 ping'
         subprocess.Popen(comandoPing, stdout=subprocess.PIPE, shell=True)
         ejecutandoPing = FALSE
