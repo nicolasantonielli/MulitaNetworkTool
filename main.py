@@ -952,6 +952,10 @@ def resetSistema():
     comandoReset = '/bin/bash /root/reset.sh'
     subprocess.run([comandoReset], shell=True)
 
+def apagarDevice():
+
+    comandoApagar = 'poweroff'
+    subprocess.run([comandoApagar], shell=True)
 
 # Titulo
 tituloFrameConfig = ttk.Frame(config)
@@ -1057,6 +1061,13 @@ mantenimeintoUpdate = ttk.Button(
     style='destino.success.TButton',
     command=updateSistema)
 mantenimeintoUpdate.pack(pady=10)
+
+mantenimeintoApagarDevice = ttk.Button(
+    tabConfig5,
+    text='REINCIAR SISTEMA', width=20,
+    style='destino.danger.TButton',
+    command=apagarDevice)
+mantenimeintoApagarDevice.pack(pady=10)
 
 
 frameNoteConfig.add(tabConfig1, text='General')
