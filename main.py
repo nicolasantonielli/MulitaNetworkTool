@@ -26,7 +26,7 @@ Image.CUBIC = Image.BICUBIC
 root = ttk.Window(title='RED TEST', themename="cosmo")
 root.geometry('800x480')
 root.resizable(False, False)
-# root.wm_attributes('-fullscreen','True')
+root.wm_attributes('-fullscreen','True')
 
 ###########  Fin Seccion Ventana Principal  #####################
 
