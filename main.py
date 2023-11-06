@@ -9,6 +9,7 @@ from ttkbootstrap.constants import *
 from ttkbootstrap.toast import ToastNotification
 import ttkbootstrap as ttk
 from tkinter import *
+from tkinter import font
 from PIL import Image
 
 Image.CUBIC = Image.BICUBIC
@@ -25,8 +26,7 @@ Image.CUBIC = Image.BICUBIC
 root = ttk.Window(title='RED TEST', themename="cosmo")
 root.geometry('800x480')
 root.resizable(False, False)
-root.wm_attributes('-fullscreen','True')
-
+# root.wm_attributes('-fullscreen','True')
 
 ###########  Fin Seccion Ventana Principal  #####################
 
@@ -79,7 +79,7 @@ def aplicarEstilos():
 
     # Pestañas
     style.configure('my.primary.TNotebook.Label', font=('helvetica', 18))
-
+    #style.configure('TNotebook.Label', font=('helvetica', 18))
     # Estilos frame destino
 
     style.configure(
@@ -96,6 +96,7 @@ def aplicarEstilos():
             14),
         padding=7,
         width=15)
+    #style.configure('TScrolledText.Text', font=('Courier', 15))
     style.configure('destino.TLabel', font=('helvetica', 14), padding=7)
 
 
@@ -462,8 +463,11 @@ resultadoFramePing.pack(pady=2, padx=5)
 
 # Cuadro de texto resultado
 
-resultadoPing = Text(resultadoFramePing, height=15,
-                     width=80, font=('Courier', 11))
+#resultadoPing = ttk.Text(resultadoFramePing, height=15,
+#                     width=80, font=('Courier', 11))
+resultadoPing = ScrolledText(resultadoFramePing, height=13 , width=73, hbar=True)
+#resultadoPing = ScrolledText(resultadoFramePing, height=13 , width=73, font=('courier',13))
+
 resultadoPing.pack(fill=BOTH)
 
 
@@ -965,7 +969,7 @@ tituloFrameConfig.pack(fill=BOTH)
 menuConfig = MenuSuperior(tituloFrameConfig, 'CONFIGURACIÓN', home)
 
 # Pestañas
-frameNoteConfig = ttk.Notebook(config, bootstyle='primary')
+frameNoteConfig = ttk.Notebook(config, bootstyle='primary', height=365)
 frameNoteConfig.pack(padx=10, pady=2, fill=BOTH)
 
 tabConfig1 = ttk.Frame(frameNoteConfig)
@@ -1043,28 +1047,28 @@ enternalAplicar.pack(pady=20)
 # Pestaña Mantenimiento
 mantenimeintoSalir = ttk.Button(
     tabConfig5,
-    text='CERRAR SISTEMA', width=20,
+    text='CERRAR', width=12,
     style='destino.danger.TButton',
     command=lambda: root.destroy())
 mantenimeintoSalir.pack(pady=10)
 
 mantenimeintoResetApp = ttk.Button(
     tabConfig5,
-    text='REINCIAR SISTEMA', width=20,
+    text='REINCIAR', width=12,
     style='destino.danger.TButton',
     command=resetSistema)
 mantenimeintoResetApp.pack(pady=10)
 
 mantenimeintoUpdate = ttk.Button(
     tabConfig5,
-    text='ACTUALIZAR SISTEMA', width=20,
+    text='ACTUALIZAR', width=12,
     style='destino.success.TButton',
     command=updateSistema)
 mantenimeintoUpdate.pack(pady=10)
 
 mantenimeintoApagarDevice = ttk.Button(
     tabConfig5,
-    text='REINCIAR SISTEMA', width=20,
+    text='APAGAR', width=12,
     style='destino.danger.TButton',
     command=apagarDevice)
 mantenimeintoApagarDevice.pack(pady=10)
