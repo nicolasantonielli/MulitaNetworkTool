@@ -26,7 +26,7 @@ Image.CUBIC = Image.BICUBIC
 root = ttk.Window(title='RED TEST', themename="cosmo")
 root.geometry('800x480')
 root.resizable(False, False)
-root.wm_attributes('-fullscreen','True')
+#root.wm_attributes('-fullscreen','True')
 
 ###########  Fin Seccion Ventana Principal  #####################
 
@@ -785,7 +785,6 @@ def funcionWol():
 
 def funcionSpeedTest():
 
-    print('entre en la funcion\n')
     global downloadBps
     global uploadBps
     comandoSpeedTest = '/bin/speedtest --json'
@@ -793,8 +792,6 @@ def funcionSpeedTest():
     p = subprocess.Popen(
         comandoSpeedTest, stdout=subprocess.PIPE, shell=True)
     resultado = p.stdout.read()
-
-    print(f'{resultado}')
 
     resultadoJson = json.loads(resultado)
     downloadBps = resultadoJson["download"]
