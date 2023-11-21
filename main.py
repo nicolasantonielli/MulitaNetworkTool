@@ -788,7 +788,9 @@ def funcionSpeedTest():
     global downloadBps
     global uploadBps
     comandoSpeedTest = '/bin/speedtest --json'
-
+    labelMidiendo.config(text='Realizando medicion... Aguarde')
+    labelMidiendo.update()
+    
     p = subprocess.Popen(
         comandoSpeedTest, stdout=subprocess.PIPE, shell=True)
     resultado = p.stdout.read()
@@ -796,9 +798,16 @@ def funcionSpeedTest():
     resultadoJson = json.loads(resultado)
     downloadBps = resultadoJson["download"]
     uploadBps = resultadoJson["upload"]
-    print(f'Upload: {uploadBps:.2f} Mbps')
-    print(f'Download: {downloadBps:.2f} Mbps')
 
+
+    labelDownload.config(text=f'Download: {(downloadBps/1000000):.2f} Mbps')
+    labelDownload.update()
+
+    labelUpload.config(text=f'Upload: {(uploadBps/1000000):.2f} Mbps')
+    labelUpload.update()
+
+    labelMidiendo.config(text='')
+    labelMidiendo.update()
 
 # Titulo
 tituloFrameTools = ttk.Frame(tools)
@@ -828,26 +837,42 @@ tabTools4 = ttk.Frame(frameNoteTools)
 # Frame Cuadro destino
 
 destinoFrameSpeedTest = Frame(tabTools3, width=80)
-destinoFrameSpeedTest.pack(pady=2, padx=2)
+destinoFrameSpeedTest.pack(pady=20, padx=2)
 
 ttk.Button(destinoFrameSpeedTest, text='TEST DE VELOCIDAD', style='custom.success.TButton',
-           command=funcionSpeedTest).pack(padx=20, pady=10, side='right')
+           command=funcionSpeedTest).pack(padx=15, pady=10, side='right')
+
+
 
 # Frame de respuesta
 
 resultadoFrameSpeedTest = Frame(tabTools3, height=15, width=80)
-resultadoFrameSpeedTest.pack(pady=2, padx=5)
+resultadoFrameSpeedTest.pack(pady=15, padx=5)
 
-# uploadMeter = ttk.Meter(resultadoFrameSpeedTest, metersize=150, amountused=25,
-#                        bootstyle='success', subtext="Upload", interactive=True,
-#                        textright="Mbps", stripethickness=1)
-# uploadMeter.pack(side='left')
+labelMidiendo = ttk.Label(resultadoFrameSpeedTest,text='', font=('helvetica',15), style='primary.Tlabel')
+labelMidiendo.pack(pady=5)
 
-# downloadMeter = ttk.Meter(resultadoFrameSpeedTest, bootstyle='success',
-#                          subtext="Download", interactive=True, textright="Mbps",
-#                          metersize=500, stripethickness=1)
+labelUpload = ttk.Label(resultadoFrameSpeedTest,text='', font=('helvetica',25), style='success.Tlabel')
+labelUpload.pack(pady=10)
+labelDownload = ttk.Label(resultadoFrameSpeedTest,text='', font=('helvetica',25), style='success.Tlabel')
+labelDownload.pack()
 
-# downloadMeter.pack(side='left')
+
+
+
+"""
+uploadMeter = ttk.Meter(resultadoFrameSpeedTest, metersize=150, amountused=25,
+                        bootstyle='success', subtext="Upload", interactive=True,
+                        textright="Mbps", stripethickness=1)
+uploadMeter.pack(side='left')
+
+downloadMeter = ttk.Meter(resultadoFrameSpeedTest, bootstyle='success',
+                          subtext="Download", interactive=True, textright="Mbps",
+                          metersize=500, stripethickness=1)
+
+downloadMeter.pack(side='left')
+
+"""
 
 # Pestaña Wake on lan
 
