@@ -15,9 +15,9 @@ from PIL import Image
 Image.CUBIC = Image.BICUBIC
 
 # Modulo Sensor de temperatura
-# 3#import Adafruit_DHT
-# 3#SENSOR_DHT = Adafruit_DHT.DHT11
-# 3#PIN_DHT = 4
+import Adafruit_DHT
+SENSOR_DHT = Adafruit_DHT.DHT11
+PIN_DHT = 4
 
 ###########################
 #### Ventana Principal ####
@@ -26,7 +26,7 @@ Image.CUBIC = Image.BICUBIC
 root = ttk.Window(title='RED TEST', themename="cosmo")
 root.geometry('800x480')
 root.resizable(False, False)
-#root.wm_attributes('-fullscreen','True')
+root.wm_attributes('-fullscreen','True')
 
 ###########  Fin Seccion Ventana Principal  #####################
 
@@ -762,7 +762,7 @@ frameNoteEscaneo.add(tabEscaneo2, text='Descubrimiento IP')
 
 
 def tomarTemperatura():
-    humedad, temperatura = 50, 26  # 3#Adafruit_DHT.read(SENSOR_DHT, PIN_DHT)
+    humedad, temperatura = Adafruit_DHT.read(SENSOR_DHT, PIN_DHT)
     humedad = humedad + 15
     temperatura = temperatura - 6
 
