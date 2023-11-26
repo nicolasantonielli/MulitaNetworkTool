@@ -14,10 +14,18 @@ from PIL import Image
 
 Image.CUBIC = Image.BICUBIC
 
+# Modo test en aplicacion
+# Desactiva Sensor de temperatura
+# Desactiva Fullscreen
+TEST = True
+
+
 # Modulo Sensor de temperatura
-import Adafruit_DHT
-SENSOR_DHT = Adafruit_DHT.DHT11
-PIN_DHT = 4
+if TEST == False:
+
+    import Adafruit_DHT
+    SENSOR_DHT = Adafruit_DHT.DHT11
+    PIN_DHT = 4
 
 ###########################
 #### Ventana Principal ####
@@ -26,7 +34,9 @@ PIN_DHT = 4
 root = ttk.Window(title='RED TEST', themename="cosmo")
 root.geometry('800x480')
 root.resizable(False, False)
-root.wm_attributes('-fullscreen','True')
+
+if TEST == False:
+    root.wm_attributes('-fullscreen','True')
 
 ###########  Fin Seccion Ventana Principal  #####################
 
@@ -762,15 +772,21 @@ frameNoteEscaneo.add(tabEscaneo2, text='Descubrimiento IP')
 
 
 def tomarTemperatura():
-    humedad, temperatura = Adafruit_DHT.read(SENSOR_DHT, PIN_DHT)
-    humedad = humedad + 15
-    temperatura = temperatura - 6
+    if TEST == False:
+        humedad, temperatura = Adafruit_DHT.read(SENSOR_DHT, PIN_DHT)
+        humedad = humedad + 15
+        temperatura = temperatura - 6
 
-    if humedad is not None and temperatura is not None:
-        temp = 'Temperatura: ' + str(temperatura) + '°c'
-        hum = 'Humedad: ' + str(humedad) + '%'
-        tempLabel.config(text=temp)
-        humLabel.config(text=hum)
+        if humedad is not None and temperatura is not None:
+            temp = 'Temperatura: ' + str(temperatura) + '°c'
+            hum = 'Humedad: ' + str(humedad) + '%'
+    else:     
+        temp = 'Temperatura: 29°c'
+        hum = 'Humedad: 78%'
+
+
+    tempLabel.config(text=temp)
+    humLabel.config(text=hum)
 
 
 def funcionWol():
