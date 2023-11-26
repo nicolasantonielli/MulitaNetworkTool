@@ -42,6 +42,7 @@ if TEST == False:
 
 # Variables globales a eliminar
 contadorDump = 0
+contadorTap = 0
 contadorNetDiscover = 0
 uploadBps = 0
 downloadBps = 0
@@ -498,6 +499,23 @@ frameNoteMtr.add(tabMtr2, text='Ping')
 def refrezcarInterfaces():
     print(f'Funcion Refrezcar')
 
+def interfaceTap():
+
+    global contadorTap
+    if contadorTap % 2 == 0:
+
+        botonTap['text'] = 'DETENER'
+        botonTap.configure(style='custom.danger.TButton')
+
+        contadorTap += 1
+
+    else:
+        botonTap['text'] = 'INICIAR'
+        botonTap.configure(style='custom.success.TButton')
+       
+        contadorTap += 1
+
+
 
 # Titulo
 tituloFrameTap = ttk.Frame(tap)
@@ -594,7 +612,7 @@ botonTap = ttk.Button(
     style='custom.success.TButton',
     padding=10,
     width=15,
-    command=interfaceDump)
+    command=interfaceTap)
 botonTap.pack(padx=20, pady=2)
 
 # Frame Cuadro destino
