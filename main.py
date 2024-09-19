@@ -17,7 +17,7 @@ Image.CUBIC = Image.BICUBIC
 # Modo test en aplicacion
 # Desactiva Sensor de temperatura
 # Desactiva Fullscreen
-TEST = True
+TEST = False
 
 
 # Modulo Sensor de temperatura
