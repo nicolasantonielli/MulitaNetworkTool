@@ -1,0 +1,5 @@
+# ttkbootstrap 2.x movio los modulos toast y scrolled
+ttkbootstrap>=1.10,<2
+Pillow
+# Sensor DHT11, solo en la Raspberry Pi
+Adafruit_DHT; platform_machine == "armv7l" or platform_machine == "aarch64"

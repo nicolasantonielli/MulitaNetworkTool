@@ -1,0 +1,66 @@
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass, field
+from pathlib import Path, PurePosixPath
+from typing import Sequence
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Modo test en aplicacion
+# Desactiva Sensor de temperatura
+# Desactiva Fullscreen
+TEST = False
+
+
+@dataclass(frozen=True)
+class Binaries:
+    tcpdump: str = '/bin/tcpdump'
+    mtr: str = '/bin/mtr'
+    ping: str = '/bin/ping'
+    nmap: str = '/bin/nmap'
+    netdiscover: str = '/sbin/netdiscover'
+    wakeonlan: str = '/bin/wakeonlan'
+    speedtest: str = '/bin/speedtest'
+    curl: str = '/bin/curl'
+    ip: str = '/usr/bin/ip'
+    git: str = '/usr/bin/git'
+    bash: str = '/bin/bash'
+    onboard: str = 'onboard'
+    killall: str = 'killall'
+    poweroff: str = 'poweroff'
+
+
+@dataclass(frozen=True)
+class SensorSettings:
+    pin: int = 4
+    humidity_offset: float = 15
+    temperature_offset: float = -6
+
+
+@dataclass(frozen=True)
+class AppConfig:
+    test_mode: bool = TEST
+    window_title: str = 'RED TEST'
+    window_width: int = 800
+    window_height: int = 480
+    default_theme: str = 'cosmo'
+    themes: tuple[str, ...] = (
+        'cosmo', 'darkly', 'pulse', 'lumen', 'litera',
+        'journal', 'solar', 'superhero', 'vapor', 'cyborg')
+    capture_dir: PurePosixPath = PurePosixPath('/root/Desktop')
+    default_capture_name: str = 'prueba'
+    trace_cycles: int = 6
+    public_ip_url: str = 'ifconfig.me'
+    public_ip_timeout: int = 10
+    repository_dir: str = '/root/repositorio/MulitaNetworkTool'
+    reset_script: str = '/root/reset.sh'
+    assets_dir: Path = PROJECT_ROOT / 'img'
+    binaries: Binaries = field(default_factory=Binaries)
+    sensor: SensorSettings = field(default_factory=SensorSettings)
+
+
+def load_config(argv: Sequence[str] = ()) -> AppConfig:
+    """`--test` o la variable MULITA_TEST=1 activan el modo test sin editar el codigo."""
+    test_mode = TEST or '--test' in argv or os.environ.get('MULITA_TEST') == '1'
+    return AppConfig(test_mode=test_mode)
