@@ -33,12 +33,14 @@ La forma recomendada es usar el `.bat`:
 run_windows_test.bat
 ```
 
-Este comando:
+Este comando (sin opciones) inicia la UI final en Qt Quick:
 
 1. Crea (si no existe) el entorno virtual `.venv-win`.
 2. Instala dependencias de `requirements.txt`.
 3. Ejecuta tests del proyecto.
-4. Inicia la aplicacion en modo simulacion (`MULITA_TEST=1`) usando `--tk --no-keyboard`.
+4. Inicia la aplicacion en modo simulacion (`MULITA_TEST=1`) con Qt Quick y `--no-keyboard`.
+
+El modo por defecto en Windows ya usa Qt Quick, instala `PyQt5` en `.venv-win` y arranca sin `--tk`.
 
 ### Comandos frecuentes en Windows
 
@@ -58,6 +60,18 @@ run_windows_test.bat -RecreateVenv
 
 ```bat
 run_windows_test.bat -SkipTests
+```
+
+- Ejecutar UI Qt Quick sin tests:
+
+```bat
+run_windows_test.bat -SkipTests
+```
+
+- Forzar interfaz Tk legada (solo para fallback):
+
+```bat
+run_windows_test.bat -TkLegacy
 ```
 
 Si tu politica de PowerShell bloquea scripts:

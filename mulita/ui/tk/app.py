@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+
 import ttkbootstrap as ttk
 from PIL import Image
 
@@ -23,8 +25,12 @@ class TkApplication:
     def __init__(self, config: AppConfig, services: Services):
         self._services = services
         self.root = ttk.Window(title=config.window_title, themename=config.default_theme)
+        # En Windows con DPI alto, Tk puede inflar fuentes/controles y recortar la UI
+        # al forzar 800x480. En modo test fijamos escala base para simular mejor la Pi.
+        if config.test_mode and sys.platform == 'win32':
+            self.root.tk.call('tk', 'scaling', 1.0)
         self.root.geometry(f'{config.window_width}x{config.window_height}')
-        self.root.resizable(False, False)
+        self.root.resizable(config.test_mode, config.test_mode)
         if not config.test_mode:
             self.root.wm_attributes('-fullscreen', True)
 

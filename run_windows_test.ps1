@@ -2,6 +2,7 @@ Param(
     [string]$VenvDirName = ".venv-win",
     [switch]$RecreateVenv,
     [switch]$SkipTests,
+    [switch]$TkLegacy,
     [switch]$NoUi,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$AppArgs
@@ -64,6 +65,11 @@ Invoke-Checked -Exe $venvPy -Args @("-m", "ensurepip", "--upgrade") -Step "boots
 Write-Host "Instalando dependencias del proyecto..."
 Invoke-Checked -Exe $venvPy -Args @("-m", "pip", "install", "-r", "requirements.txt") -Step "instalacion de dependencias"
 
+if (-not $TkLegacy) {
+    Write-Host "Instalando dependencias para UI Qt Quick en Windows..."
+    Invoke-Checked -Exe $venvPy -Args @("-m", "pip", "install", "PyQt5") -Step "instalacion de PyQt5"
+}
+
 if (-not $SkipTests) {
     Write-Host "Ejecutando tests..."
     Invoke-Checked -Exe $venvPy -Args @("-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py") -Step "ejecucion de tests"
@@ -74,9 +80,16 @@ if ($NoUi) {
     exit 0
 }
 
-# En Windows evitamos la UI Qt de Raspberry y usamos la interfaz TK.
 $env:MULITA_TEST = "1"
-$launchArgs = @("main.py", "--tk", "--no-keyboard") + $AppArgs
+if ($TkLegacy) {
+    # Fallback util para pruebas rapidas sin dependencias Qt.
+    $launchArgs = @("main.py", "--tk", "--no-keyboard") + $AppArgs
+}
+else {
+    # Modo por defecto: UI final en Qt Quick.
+    # En escritorio Windows no suele haber teclado virtual Qt configurado.
+    $launchArgs = @("main.py", "--no-keyboard") + $AppArgs
+}
 
 Write-Host "Iniciando app en modo test (simulacion)..."
 Invoke-Checked -Exe $venvPy -Args $launchArgs -Step "arranque de la app"

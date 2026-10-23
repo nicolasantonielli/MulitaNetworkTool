@@ -20,7 +20,7 @@ class StyleManager:
 
         # Botones Home
         style.configure('myhome.primary.Outline.TButton', font=('helvetica', 18),
-                        padding=53, width=20, relief=ttk.RAISED, borderwidth=4)
+                        padding=53, width=20, relief='raised', borderwidth=4)
 
         # Botones
         for color in ('success', 'primary', 'danger'):
