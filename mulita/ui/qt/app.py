@@ -1,0 +1,102 @@
+from __future__ import annotations
+
+import logging
+import os
+import signal
+import sys
+from pathlib import Path
+
+from mulita.config import AppConfig
+from mulita.services import Services
+
+log = logging.getLogger(__name__)
+
+QML_DIR = Path(__file__).resolve().parent / 'qml'
+
+
+class QtApplication:
+
+    def __init__(self, config: AppConfig, services: Services):
+        if config.virtual_keyboard:
+            os.environ.setdefault('QT_IM_MODULE', 'qtvirtualkeyboard')
+        os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Material'
+
+        from PyQt5.QtCore import QTimer, QUrl
+        from PyQt5.QtGui import QGuiApplication
+        from PyQt5.QtQml import QQmlApplicationEngine
+
+        from mulita.ui.qt.bridge.base import BridgeContext, Notifier
+        from mulita.ui.qt.bridge.diagnostics import (DiscoveryController,
+                                                     PingController,
+                                                     PortScanController,
+                                                     TraceController)
+        from mulita.ui.qt.bridge.network import (CaptureController,
+                                                 NetworkController,
+                                                 TapController)
+        from mulita.ui.qt.bridge.system import (Appearance, SettingsController,
+                                                SystemController)
+        from mulita.ui.qt.bridge.tools import (ClimateController,
+                                               PublicIpController,
+                                               SpeedTestController,
+                                               WakeOnLanController)
+        from mulita.ui.qt.dispatcher import QtDispatcher
+        from mulita.ui.qt.icons import IconProvider
+
+        self._services = services
+        self.app = QGuiApplication(sys.argv)
+        self.app.setApplicationName('Mulita')
+
+        notifier = Notifier()
+        ctx = BridgeContext(config=config, services=services, dispatcher=QtDispatcher(), notifier=notifier)
+        self._controllers = {
+            'ui': Appearance(ctx),
+            'notifier': notifier,
+            'settings': SettingsController(ctx),
+            'system': SystemController(ctx),
+            'network': NetworkController(ctx),
+            'capture': CaptureController(ctx),
+            'tap': TapController(ctx),
+            'trace': TraceController(ctx),
+            'ping': PingController(ctx),
+            'portScan': PortScanController(ctx),
+            'discovery': DiscoveryController(ctx),
+            'wakeOnLan': WakeOnLanController(ctx),
+            'climate': ClimateController(ctx),
+            'speedTest': SpeedTestController(ctx),
+            'publicIp': PublicIpController(ctx),
+        }
+
+        self.engine = QQmlApplicationEngine()
+        self.engine.warnings.connect(lambda warnings: [log.warning(w.toString()) for w in warnings])
+        self.engine.addImageProvider('icon', IconProvider())
+        context = self.engine.rootContext()
+        for name, controller in self._controllers.items():
+            context.setContextProperty(name, controller)
+
+        self.app.aboutToQuit.connect(services.shutdown)
+        self.engine.load(QUrl.fromLocalFile(str(QML_DIR / 'Main.qml')))
+        if not self.engine.rootObjects():
+            raise RuntimeError('No se pudo cargar la interfaz QML')
+
+        # Python solo atiende Ctrl+C cuando recupera el control del bucle de Qt
+        signal.signal(signal.SIGINT, lambda *_: self.app.quit())
+        self._signal_pump = QTimer()
+        self._signal_pump.start(300)
+        self._signal_pump.timeout.connect(lambda: None)
+
+    @property
+    def root(self):
+        return self.engine.rootObjects()[0]
+
+    def run(self) -> int:
+        try:
+            return self.app.exec_()
+        finally:
+            self.dispose()
+
+    def dispose(self) -> None:
+        """El motor QML se destruye antes que los controladores que sus vinculaciones leen."""
+        from PyQt5 import sip
+        if self.engine is not None and not sip.isdeleted(self.engine):
+            sip.delete(self.engine)
+        self.engine = None

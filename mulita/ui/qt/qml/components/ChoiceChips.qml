@@ -1,0 +1,52 @@
+import QtQuick 2.15
+import QtQuick.Layouts 1.15
+
+// Seleccion unica tactil. El modelo acepta textos o objetos {label, value}.
+// No guarda la seleccion: emite `activated` y quien lo usa actualiza `value`.
+Flow {
+    id: root
+
+    property var model: []
+    property string value: ""
+    signal activated(string value)
+
+    spacing: Math.round(ui.gap * 0.6)
+    opacity: enabled ? 1 : 0.5
+
+    Repeater {
+        model: root.model
+
+        delegate: Rectangle {
+            id: chip
+
+            readonly property string chipValue: typeof modelData === "string" ? modelData : modelData.value
+            readonly property string chipLabel: typeof modelData === "string" ? modelData : modelData.label
+            readonly property bool selected: root.value === chipValue
+
+            height: ui.touch
+            width: Math.max(ui.touch * 1.5, label.implicitWidth + ui.padding * 2)
+            radius: height / 2
+            color: selected ? ui.primary : (area.pressed ? ui.surfaceHigh : ui.surfaceAlt)
+            border.width: 1
+            border.color: selected ? ui.primary : ui.border
+
+            Behavior on color { ColorAnimation { duration: 120 } }
+
+            Text {
+                id: label
+                anchors.centerIn: parent
+                text: chip.chipLabel
+                color: chip.selected ? ui.onAccent : ui.text
+                font.pixelSize: ui.fontBody
+                font.weight: chip.selected ? Font.DemiBold : Font.Normal
+            }
+
+            MouseArea {
+                id: area
+                anchors.fill: parent
+                enabled: root.enabled
+                onClicked: root.activated(chip.chipValue)
+            }
+        }
+    }
+}

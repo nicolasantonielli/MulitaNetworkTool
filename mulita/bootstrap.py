@@ -6,12 +6,14 @@ import sys
 from typing import Sequence
 
 from mulita.adapters.sensors import Dht11Sensor, FixedClimateSensor
+from mulita.adapters.settings_store import JsonSettingsStore
 from mulita.adapters.subprocess_runner import SubprocessCommandRunner
-from mulita.config import AppConfig, load_config
+from mulita.config import AppConfig, Toolkit, load_config
 from mulita.core.commands import CommandFactory
 from mulita.core.models import Calibration
-from mulita.core.ports import ClimateSensor, CommandRunner
+from mulita.core.ports import ClimateSensor, CommandRunner, SettingsStore
 from mulita.services import Services
+from mulita.services.settings import SettingsService
 from mulita.services.diagnostics import (DiscoveryService, PingService,
                                          PortScanService, TraceService)
 from mulita.services.network import (CaptureService, InterfaceService,
@@ -33,7 +35,8 @@ def _climate(config: AppConfig) -> ClimateService:
 
 
 def build_services(config: AppConfig, runner: CommandRunner | None = None,
-                   climate: ClimateService | None = None) -> Services:
+                   climate: ClimateService | None = None,
+                   settings_store: SettingsStore | None = None) -> Services:
     runner = runner or SubprocessCommandRunner()
     commands = CommandFactory(config.binaries)
     return Services(
@@ -51,6 +54,7 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
         maintenance=MaintenanceService(runner, commands, config.repository_dir, config.reset_script),
         keyboard=KeyboardService(runner, commands),
         share=ShareService(),
+        settings=SettingsService(settings_store or JsonSettingsStore(config.settings_path)),
     )
 
 
@@ -60,5 +64,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     logging.getLogger(__name__).info('Mulita %s', __version__)
     services = build_services(config)
 
-    from mulita.ui.tk.app import TkApplication
-    TkApplication(config, services).run()
+    if config.toolkit == Toolkit.TK:
+        from mulita.ui.tk.app import TkApplication
+        TkApplication(config, services).run()
+    else:
+        from mulita.ui.qt.app import QtApplication
+        sys.exit(QtApplication(config, services).run())

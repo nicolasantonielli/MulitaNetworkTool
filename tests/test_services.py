@@ -2,6 +2,7 @@ import sys
 import threading
 import unittest
 
+from mulita.adapters.settings_store import MemorySettingsStore
 from mulita.adapters.subprocess_runner import SubprocessCommandRunner
 from mulita.bootstrap import build_services
 from mulita.config import AppConfig
@@ -16,7 +17,8 @@ from tests.test_core import IP_JSON
 
 
 def services_with(runner: FakeRunner, test_mode: bool = True):
-    return build_services(AppConfig(test_mode=test_mode), runner=runner)
+    return build_services(AppConfig(test_mode=test_mode), runner=runner,
+                          settings_store=MemorySettingsStore())
 
 
 class SessionServicesTest(unittest.TestCase):

@@ -13,6 +13,21 @@ def version(number: str) -> str:
     return f'Versión {number}'
 
 
+NO_VALUE = '—'
+
+
+def temperature_value(reading: ClimateReading | None) -> str:
+    return NO_VALUE if reading is None else f'{reading.temperature:g} °C'
+
+
+def humidity_value(reading: ClimateReading | None) -> str:
+    return NO_VALUE if reading is None else f'{reading.humidity:g} %'
+
+
+def mbps(bits_per_second: float) -> str:
+    return f'{bits_per_second / 1_000_000:.2f}'
+
+
 def temperature(reading: ClimateReading | None) -> str:
     if reading is None:
         return 'Temperatura: sin lectura'

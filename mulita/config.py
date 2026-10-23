@@ -38,9 +38,17 @@ class SensorSettings:
     temperature_offset: float = -6
 
 
+class Toolkit:
+    QT = 'qt'
+    TK = 'tk'
+
+
 @dataclass(frozen=True)
 class AppConfig:
     test_mode: bool = TEST
+    toolkit: str = Toolkit.QT
+    settings_path: Path = Path.home() / '.config' / 'mulita' / 'settings.json'
+    virtual_keyboard: bool = True
     window_title: str = 'RED TEST'
     window_width: int = 800
     window_height: int = 480
@@ -61,6 +69,9 @@ class AppConfig:
 
 
 def load_config(argv: Sequence[str] = ()) -> AppConfig:
-    """`--test` o la variable MULITA_TEST=1 activan el modo test sin editar el codigo."""
+    """`--test` o MULITA_TEST=1 activan el modo test; `--tk` vuelve a la interfaz anterior;
+    `--no-keyboard` desactiva el teclado virtual integrado."""
     test_mode = TEST or '--test' in argv or os.environ.get('MULITA_TEST') == '1'
-    return AppConfig(test_mode=test_mode)
+    toolkit = Toolkit.TK if '--tk' in argv else Toolkit.QT
+    return AppConfig(test_mode=test_mode, toolkit=toolkit,
+                     virtual_keyboard='--no-keyboard' not in argv)

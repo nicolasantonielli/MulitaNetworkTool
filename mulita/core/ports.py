@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Callable, Optional, Sequence
 
 from mulita.core.models import ClimateReading, CommandResult
+from mulita.core.settings import Settings
 
 OutputListener = Callable[[str], None]
 ExitListener = Callable[[int], None]
@@ -35,6 +36,15 @@ class CommandRunner(ABC):
               on_output: Optional[OutputListener] = None,
               on_exit: Optional[ExitListener] = None) -> RunningCommand:
         """Lanza sin esperar. Los callbacks llegan desde otro hilo."""
+
+
+class SettingsStore(ABC):
+
+    @abstractmethod
+    def load(self) -> Settings: ...
+
+    @abstractmethod
+    def save(self, settings: Settings) -> None: ...
 
 
 class ClimateSensor(ABC):

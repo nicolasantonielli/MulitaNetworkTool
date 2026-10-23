@@ -6,6 +6,7 @@ from mulita.services.diagnostics import (DiscoveryService, PingService,
                                          PortScanService, TraceService)
 from mulita.services.network import (CaptureService, InterfaceService,
                                      TapService)
+from mulita.services.settings import SettingsService
 from mulita.services.system import (KeyboardService, MaintenanceService,
                                     ShareService)
 from mulita.services.tools import (ClimateService, PublicIpService,
@@ -28,6 +29,7 @@ class Services:
     maintenance: MaintenanceService
     keyboard: KeyboardService
     share: ShareService
+    settings: SettingsService
 
     def shutdown(self) -> None:
         """Al cerrar la aplicacion no quedan capturas ni pings huerfanos."""
