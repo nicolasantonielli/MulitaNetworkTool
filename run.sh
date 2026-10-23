@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Arranca Mulita en un entorno virtual.
 #
 # PyQt5 no tiene paquetes pip para la Raspberry Pi. Se instala por apt y el
@@ -8,6 +8,11 @@
 # Uso, en el equipo:
 #   bash run.sh
 #   bash run.sh --tk
+
+# sh en Debian es dash y rechaza "pipefail". El resto del script es bash.
+if [ -z "${BASH_VERSION-}" ]; then
+  exec bash "$0" "$@"
+fi
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
