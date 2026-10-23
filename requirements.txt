@@ -1,10 +1,7 @@
-# Interfaz principal (Qt Quick). En la Raspberry Pi conviene instalarla por apt:
-#   sudo apt install python3-pyqt5 python3-pyqt5.qtquick python3-pyqt5.qtsvg \
-#     qml-module-qtquick2 qml-module-qtquick-controls2 qml-module-qtquick-layouts \
-#     qml-module-qtquick-window2 qml-module-qtquick-virtualkeyboard \
-#     qtvirtualkeyboard-plugin libqt5svg5
-PyQt5>=5.15,<6
-# Interfaz anterior (python main.py --tk). ttkbootstrap 2.x movio los modulos toast y scrolled
+# PyQt5 y los modulos QML no se instalan con pip en la Raspberry Pi.
+# Los instala run.sh por apt y el entorno virtual los ve con --system-site-packages.
+#
+# Interfaz anterior (bash run.sh --tk). ttkbootstrap 2.x movio los modulos toast y scrolled
 ttkbootstrap>=1.10,<2
 Pillow
 # Sensor DHT11, solo en la Raspberry Pi
