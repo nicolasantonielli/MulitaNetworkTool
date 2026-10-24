@@ -21,9 +21,11 @@ class QtApplication:
         # aborta: "OpenGL windows cannot be mixed with others".
         os.environ.pop('QT_IM_MODULE', None)
         os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Material'
+        # EGLFS dibuja una flecha de mouse. En el equipo el dedo es el puntero.
+        os.environ['QT_QPA_EGLFS_HIDECURSOR'] = '1'
 
-        from PyQt5.QtCore import QTimer, QUrl
-        from PyQt5.QtGui import QGuiApplication
+        from PyQt5.QtCore import Qt, QTimer, QUrl
+        from PyQt5.QtGui import QCursor, QGuiApplication
         from PyQt5.QtQml import QQmlApplicationEngine
 
         from mulita.ui.qt.bridge.base import BridgeContext, Notifier
@@ -42,10 +44,15 @@ class QtApplication:
                                                WakeOnLanController)
         from mulita.ui.qt.dispatcher import QtDispatcher
         from mulita.ui.qt.icons import IconProvider
+        from mulita.ui.qt.touch_debug import TouchDebug, log_input_devices
 
         self._services = services
         self.app = QGuiApplication(sys.argv)
         self.app.setApplicationName('Mulita')
+        self.app.setOverrideCursor(QCursor(Qt.BlankCursor))
+        log_input_devices()
+        self._touch_debug = TouchDebug()
+        self.app.installEventFilter(self._touch_debug)
 
         notifier = Notifier()
         ctx = BridgeContext(config=config, services=services, dispatcher=QtDispatcher(), notifier=notifier)

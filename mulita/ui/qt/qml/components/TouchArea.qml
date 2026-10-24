@@ -17,11 +17,15 @@ MouseArea {
     onPressed: {
         originX = mouse.x
         originY = mouse.y
+        console.log("tactil press", mouse.x.toFixed(0), mouse.y.toFixed(0), parent.objectName)
     }
     onReleased: {
         var dx = mouse.x - originX
         var dy = mouse.y - originY
-        if (dx * dx + dy * dy <= slop * slop)
+        var accepted = dx * dx + dy * dy <= slop * slop
+        console.log("tactil release", accepted ? "aceptado" : "descartado",
+                    "dx", dx.toFixed(0), "dy", dy.toFixed(0), parent.objectName)
+        if (accepted)
             area.tapped()
     }
 }
