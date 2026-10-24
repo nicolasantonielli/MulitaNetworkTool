@@ -48,6 +48,7 @@ APT_PACKAGES=(
   libgbm1
   libdrm2
   fonts-dejavu-core
+  libinput10
   iproute2
   tcpdump
   mtr-tiny
@@ -153,6 +154,17 @@ if ! install_dht; then
 fi
 if [[ -r /proc/device-tree/model ]] && tr -d '\0' < /proc/device-tree/model | grep -q "Pi 5"; then
   echo "Aviso: esta libreria no lee el GPIO de la Raspberry Pi 5."
+fi
+
+# El ft5x06 se anuncia como mouse. Qt entonces lee mal el arrastre y el dedo salta.
+touch_rule="/etc/udev/rules.d/99-mulita-touch.rules"
+if [[ ! -f "$touch_rule" ]] || ! grep -q ft5x06 "$touch_rule"; then
+  echo "Marcando el panel ft5x06 como pantalla tactil..."
+  as_root tee "$touch_rule" >/dev/null <<'EOF'
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="*ft5x06*", ENV{ID_INPUT}="1", ENV{ID_INPUT_TOUCHSCREEN}="1", ENV{ID_INPUT_MOUSE}="0"
+EOF
+  as_root udevadm control --reload-rules || true
+  as_root udevadm trigger --subsystem-match=input || true
 fi
 
 echo "Activando el arranque al boot..."

@@ -23,6 +23,11 @@ class QtApplication:
         os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Material'
         # EGLFS dibuja una flecha de mouse. En el equipo el dedo es el puntero.
         os.environ['QT_QPA_EGLFS_HIDECURSOR'] = '1'
+        runtime = os.environ.get('XDG_RUNTIME_DIR')
+        if not runtime:
+            runtime = f'/tmp/runtime-{os.getuid()}'
+            os.makedirs(runtime, mode=0o700, exist_ok=True)
+            os.environ['XDG_RUNTIME_DIR'] = runtime
 
         from PyQt5.QtCore import Qt, QTimer, QUrl
         from PyQt5.QtGui import QCursor, QGuiApplication

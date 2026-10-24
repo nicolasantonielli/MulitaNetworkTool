@@ -1,13 +1,22 @@
-"""Registro de lo que Qt recibe del tactil. Sirve para ver por que un toque cae mal."""
+"""Registro del tactil y correccion de saltos del ft5x06.
+
+El controlador a veces manda un solo movimiento a coordenadas imposibles
+(por ejemplo de 664,222 a -1220,88). Qt suelta el dedo ahi y el toque se pierde.
+Ese salto se reemplaza por la ultima posicion valida.
+"""
 from __future__ import annotations
 
 import logging
 import time
 from pathlib import Path
 
-from PyQt5.QtCore import QEvent, QObject, Qt
+from PyQt5.QtCore import QCoreApplication, QEvent, QObject, QPointF, Qt
+from PyQt5.QtGui import QMouseEvent
 
 log = logging.getLogger('mulita.touch')
+
+# Un dedo no cruza media pantalla en un solo reporte. Mas que esto es un salto del driver.
+_JUMP = 280
 
 _MOUSE = {
     QEvent.MouseButtonPress: 'press',
@@ -54,39 +63,76 @@ class TouchDebug(QObject):
     def __init__(self):
         super().__init__()
         self._last_move = 0.0
+        self._anchor: tuple[float, float] | None = None
+        self._rewriting = False
+        self._seen: tuple | None = None
 
     def eventFilter(self, watched, event):
+        if self._rewriting:
+            return False
         kind = _MOUSE.get(event.type())
         if kind is not None:
-            self._mouse(watched, event, kind)
-        else:
-            touch = _TOUCH.get(event.type())
-            if touch is not None:
-                self._touch(watched, event, touch)
+            return self._mouse(watched, event, kind)
+        touch = _TOUCH.get(event.type())
+        if touch is not None:
+            return self._touch(watched, event, touch)
         return False
 
-    def _mouse(self, watched, event, kind: str) -> None:
-        if kind == 'move' and not self._due():
-            return
+    def _mouse(self, watched, event, kind: str) -> bool:
         position = event.globalPos()
-        source = _SOURCE.get(int(event.source()), str(int(event.source())))
-        log.info(
-            'mouse %s %s %d,%d boton=%s objetivo=%s',
-            kind, source, position.x(), position.y(),
-            int(event.button()), _target(watched))
+        x, y = position.x(), position.y()
+        if kind != 'press' and self._anchor is not None and _far(self._anchor, x, y):
+            fixed_x, fixed_y = self._anchor
+            self._log(kind, x, y, _target(watched), note=f'corregido {fixed_x:.0f},{fixed_y:.0f}')
+            self._send_mouse(watched, event, fixed_x, fixed_y)
+            return True
+        self._anchor = (x, y)
+        if kind != 'move' or self._due():
+            source = _SOURCE.get(int(event.source()), str(int(event.source())))
+            self._log(f'mouse {kind} {source}', x, y, _target(watched), button=int(event.button()))
+        return False
 
-    def _touch(self, watched, event, kind: str) -> None:
-        points = event.touchPoints()
-        moving = points and all(int(point.state()) == int(Qt.TouchPointMoved) for point in points)
-        if moving and not self._due():
-            return
+    def _touch(self, watched, event, kind: str) -> bool:
+        eaten = False
         target = _target(watched)
-        for point in points:
+        for point in event.touchPoints():
             position = point.screenPos()
+            x, y = position.x(), position.y()
             state = _POINT.get(int(point.state()), str(int(point.state())))
-            log.info(
-                'touch %s id=%s %s %d,%d objetivo=%s',
-                kind, point.id(), state, position.x(), position.y(), target)
+            if state == 'down' or self._anchor is None:
+                self._anchor = (x, y)
+            elif _far(self._anchor, x, y):
+                self._log(f'touch {kind} id={point.id()} {state}', x, y, target, note='salto ignorado')
+                eaten = True
+                continue
+            else:
+                self._anchor = (x, y)
+            if state == 'move' and not self._due():
+                continue
+            self._log(f'touch {kind} id={point.id()} {state}', x, y, target)
+        return eaten
+
+    def _send_mouse(self, watched, event, x: float, y: float) -> None:
+        delta = QPointF(x - event.globalPos().x(), y - event.globalPos().y())
+        fixed = QMouseEvent(
+            event.type(), event.localPos() + delta, QPointF(x, y),
+            event.button(), event.buttons(), event.modifiers())
+        self._rewriting = True
+        try:
+            QCoreApplication.sendEvent(watched, fixed)
+        finally:
+            self._rewriting = False
+
+    def _log(self, kind: str, x: float, y: float, target: str,
+             button: int | None = None, note: str = '') -> None:
+        key = (kind, round(x), round(y), note)
+        now = time.monotonic()
+        if self._seen is not None and self._seen[0] == key and now - self._seen[1] < 0.03:
+            return
+        self._seen = (key, now)
+        extra = f' boton={button}' if button is not None else ''
+        suffix = f' {note}' if note else ''
+        log.info('%s %d,%d objetivo=%s%s%s', kind, x, y, target, extra, suffix)
 
     def _due(self) -> bool:
         now = time.monotonic()
@@ -96,11 +142,13 @@ class TouchDebug(QObject):
         return True
 
 
+def _far(anchor: tuple[float, float], x: float, y: float) -> bool:
+    return abs(x - anchor[0]) > _JUMP or abs(y - anchor[1]) > _JUMP
+
+
 def _target(watched) -> str:
-    name = ''
     object_name = getattr(watched, 'objectName', lambda: '')()
     if object_name:
-        name = object_name
+        return object_name
     meta = getattr(watched, 'metaObject', None)
-    class_name = meta().className() if meta else type(watched).__name__
-    return name or class_name
+    return meta().className() if meta else type(watched).__name__
