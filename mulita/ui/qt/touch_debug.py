@@ -1,11 +1,12 @@
 """Registro del tactil y correccion del ft5x06.
 
 Con el dedo quieto el panel manda un toque completo cada ~25 ms, siempre en
-el mismo pixel, y a veces sigue despues de soltar. Eso se junta en un solo
-apoyo: el boton queda presionado y se suelta una vez, donde empezo.
+el mismo pixel, y a veces sigue muchos segundos despues de soltar. El primer
+par es el toque. Lo que sigue en ese punto se ignora hasta que el panel se
+calla. Un salto a coordenadas imposibles no se entrega.
 
-Un salto a coordenadas imposibles no se entrega. Tragar el evento tactil
-crudo deja el dedo apretado para Qt, asi que esos solo se registran.
+Tragar el evento tactil crudo deja el dedo apretado para Qt, asi que esos
+solo se registran.
 """
 from __future__ import annotations
 
@@ -13,17 +14,18 @@ import logging
 import time
 from pathlib import Path
 
-from PyQt5.QtCore import QCoreApplication, QEvent, QObject, QPointF, Qt, QTimer
+from PyQt5.QtCore import QCoreApplication, QEvent, QObject, QPointF, Qt
 from PyQt5.QtGui import QMouseEvent
 
 log = logging.getLogger('mulita.touch')
 
 # Un dedo no cruza media pantalla en un solo reporte. Mas que esto es un salto del driver.
 _JUMP = 280
-# El ft5x06, con el dedo quieto, manda un toque nuevo cada ~25 ms. Si el
-# siguiente empieza cerca y antes de este plazo, es el mismo apoyo.
-_BURST_MS = 90
+# Dos toques a esta distancia son el mismo apoyo del ft5x06.
 _BURST_PX = 45
+# Despues de soltar, el panel puede seguir hablando. Recien un silencio de
+# este largo habilita otro toque en el mismo punto.
+_QUIET_S = 0.25
 
 _MOUSE = {
     QEvent.MouseButtonPress: 'press',
@@ -75,13 +77,11 @@ class TouchDebug(QObject):
         self._seen: tuple | None = None
         self._down: tuple[float, float] | None = None
         self._press = None
-        self._pending = None
+        self._closed = False
+        self._ignore_until = 0.0
+        self._noted = False
         self._touch_pos: tuple[float, float] | None = None
         self._touch_at = 0.0
-        self._burst = QTimer(self)
-        self._burst.setSingleShot(True)
-        self._burst.setInterval(_BURST_MS)
-        self._burst.timeout.connect(self._flush)
 
     def eventFilter(self, watched, event):
         if self._rewriting:
@@ -98,24 +98,30 @@ class TouchDebug(QObject):
         position = event.globalPos()
         x, y = position.x(), position.y()
         if kind == 'press':
-            if self._press is not None and self._down is not None and _near(self._down, x, y):
-                self._pending = self._press
-                self._burst.start()
+            if self._ghost(x, y):
                 return True
-            self._flush()
+            if self._press is not None:
+                self._send_release(self._press)
             self._down = (x, y)
             self._anchor = (x, y)
+            self._closed = False
             self._press = (
                 watched, QPointF(event.localPos()), QPointF(x, y),
                 event.button(), event.modifiers())
             self._log('mouse press', x, y, _target(watched), button=int(event.button()))
             return False
         if kind == 'release':
+            if self._ghost(x, y):
+                return True
             # Se suelta donde apoyo. El reporte de soltar a veces cae en otro lado.
-            self._pending = self._press or (
+            pending = self._press or (
                 watched, QPointF(event.localPos()), QPointF(x, y),
                 event.button(), event.modifiers())
-            self._burst.start()
+            self._press = None
+            self._closed = True
+            self._ignore_until = time.monotonic() + _QUIET_S
+            self._noted = False
+            self._send_release(pending)
             return True
         if self._anchor is not None and _far(self._anchor, x, y):
             return True
@@ -125,15 +131,29 @@ class TouchDebug(QObject):
             self._log(f'mouse {kind} {source}', x, y, _target(watched))
         return False
 
-    def _flush(self) -> None:
-        if self._pending is None:
-            self._pending = self._press
-        pending = self._pending
-        self._pending = None
-        self._press = None
-        self._down = None
-        if pending is None:
-            return
+    def _ghost(self, x: float, y: float) -> bool:
+        """True si este reporte es la repeticion del toque que ya se solto."""
+        if not self._closed or self._down is None:
+            return False
+        now = time.monotonic()
+        if now > self._ignore_until:
+            self._closed = False
+            self._noted = False
+            return False
+        # Un salto afuera de la pantalla no abre otro toque.
+        if x < 0 or y < 0:
+            return True
+        if not _near(self._down, x, y):
+            self._closed = False
+            self._noted = False
+            return False
+        self._ignore_until = now + _QUIET_S
+        if not self._noted:
+            self._noted = True
+            log.info('el panel repite %d,%d; se ignora', self._down[0], self._down[1])
+        return True
+
+    def _send_release(self, pending) -> None:
         watched, local, screen, button, modifiers = pending
         try:
             from PyQt5 import sip
@@ -159,12 +179,14 @@ class TouchDebug(QObject):
             position = point.screenPos()
             x, y = position.x(), position.y()
             state = _POINT.get(int(point.state()), str(int(point.state())))
+            if self._ghost(x, y) or (state == 'move' and not self._due()):
+                continue
             repeated = (
                 self._touch_pos is not None
                 and _near(self._touch_pos, x, y)
                 and now - self._touch_at < 0.5
             )
-            if repeated or (state == 'move' and not self._due()):
+            if repeated:
                 continue
             self._touch_pos = (x, y)
             self._touch_at = now
