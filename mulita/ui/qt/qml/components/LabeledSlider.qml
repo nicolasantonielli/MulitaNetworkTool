@@ -61,7 +61,7 @@ ColumnLayout {
         handle: Rectangle {
             x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
             y: slider.topPadding + slider.availableHeight / 2 - height / 2
-            width: Math.round(ui.touch * 0.55)
+            width: Math.round(ui.touch * 0.9)
             height: width
             radius: width / 2
             color: slider.pressed ? Qt.lighter(ui.primary, 1.2) : ui.primary

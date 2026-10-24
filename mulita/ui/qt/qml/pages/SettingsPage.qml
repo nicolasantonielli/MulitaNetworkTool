@@ -180,6 +180,8 @@ Item {
                             font.pixelSize: ui.fontBody
                         }
                         Switch {
+                            implicitHeight: ui.touch
+                            implicitWidth: Math.round(ui.touch * 1.7)
                             checked: root.draftFullscreen
                             onToggled: root.draftFullscreen = checked
                         }

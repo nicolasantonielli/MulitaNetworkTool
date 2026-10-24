@@ -55,10 +55,9 @@ ColumnLayout {
                 }
             }
 
-            MouseArea {
+            TouchArea {
                 id: area
-                anchors.fill: parent
-                onClicked: root.currentIndex = index
+                onTapped: root.currentIndex = index
             }
         }
     }

@@ -113,11 +113,79 @@ if [[ ! -x .venv/bin/python ]]; then
   python3 -m venv --system-site-packages .venv
 fi
 
+install_dht() {
+  # Pi OS de 64 bits no trae "Hardware : BCM..." en /proc/cpuinfo.
+  # Adafruit_DHT 1.4.0 aborta la compilacion. Se fuerza el driver de Pi 2/3/4.
+  local src py status
+  py="$ROOT/.venv/bin/python"
+  src="$(mktemp -d)"
+  status=0
+  "$py" -m pip install setuptools wheel || status=1
+  if [[ "$status" -eq 0 ]]; then
+    "$py" -m pip download 'Adafruit_DHT==1.4.0' --no-binary :all: -d "$src" || status=1
+  fi
+  if [[ "$status" -eq 0 ]]; then
+    tar -xzf "$src"/Adafruit_DHT-1.4.0.tar.gz -C "$src" || status=1
+  fi
+  if [[ "$status" -eq 0 ]]; then
+    "$py" - "$src/Adafruit_DHT-1.4.0/Adafruit_DHT/platform_detect.py" <<'PY' || status=1
+import pathlib, sys
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+needle = "def pi_version():"
+if needle not in text:
+    raise SystemExit("platform_detect.py no tiene pi_version")
+path.write_text(text.replace(needle, "def pi_version():\n    return 3\n", 1))
+PY
+  fi
+  if [[ "$status" -eq 0 ]]; then
+    "$py" -m pip install --no-build-isolation "$src/Adafruit_DHT-1.4.0" || status=1
+  fi
+  rm -rf "$src"
+  return "$status"
+}
+
 echo "Instalando dependencias Python..."
 .venv/bin/python -m pip install --upgrade pip
 grep -v '^Adafruit_DHT' requirements.txt | .venv/bin/python -m pip install -r /dev/stdin
-if ! .venv/bin/python -m pip install 'Adafruit_DHT'; then
+if ! install_dht; then
   echo "Aviso: no se instalo Adafruit_DHT. La app arranca igual; el DHT11 no va a leer."
 fi
+if [[ -r /proc/device-tree/model ]] && tr -d '\0' < /proc/device-tree/model | grep -q "Pi 5"; then
+  echo "Aviso: esta libreria no lee el GPIO de la Raspberry Pi 5."
+fi
 
-echo "Listo. Arranque con: bash run.sh"
+echo "Activando el arranque al boot..."
+unit="$(mktemp)"
+cat > "$unit" <<EOF
+[Unit]
+Description=Mulita Network Tool
+After=multi-user.target
+Conflicts=getty@tty1.service
+
+[Service]
+Type=simple
+WorkingDirectory=$ROOT
+Environment=QT_QPA_PLATFORM=eglfs
+Environment=QT_QPA_EGLFS_INTEGRATION=eglfs_kms
+ExecStart=$ROOT/.venv/bin/python main.py
+Restart=on-failure
+RestartSec=3
+StandardInput=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target
+EOF
+as_root cp "$unit" /etc/systemd/system/mulita.service
+rm -f "$unit"
+as_root systemctl daemon-reload
+as_root systemctl enable mulita.service
+
+echo "Listo. Al reiniciar, Mulita se abre sola en la pantalla."
+echo "Probar ahora: sudo systemctl start mulita"
+echo "Ver el registro: journalctl -u mulita -f"

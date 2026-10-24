@@ -17,8 +17,9 @@ QML_DIR = Path(__file__).resolve().parent / 'qml'
 class QtApplication:
 
     def __init__(self, config: AppConfig, services: Services):
-        if config.virtual_keyboard:
-            os.environ.setdefault('QT_IM_MODULE', 'qtvirtualkeyboard')
+        # El plugin qtvirtualkeyboard abre una ventana propia. En EGLFS Qt
+        # aborta: "OpenGL windows cannot be mixed with others".
+        os.environ.pop('QT_IM_MODULE', None)
         os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Material'
 
         from PyQt5.QtCore import QTimer, QUrl

@@ -60,9 +60,8 @@ Rectangle {
         }
     }
 
-    MouseArea {
-        anchors.fill: parent
-        onClicked: root.shown = false
+    TouchArea {
+        onTapped: root.shown = false
     }
 
     Timer {

@@ -59,12 +59,11 @@ Rectangle {
         }
     }
 
-    MouseArea {
+    TouchArea {
         id: area
-        anchors.fill: parent
         enabled: root.enabled
         onPressed: root._repeated = false
-        onClicked: if (!root._repeated) root.clicked()
+        onTapped: if (!root._repeated) root.clicked()
     }
 
     Timer {

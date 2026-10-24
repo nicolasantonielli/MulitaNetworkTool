@@ -68,9 +68,8 @@ Rectangle {
         }
     }
 
-    MouseArea {
+    TouchArea {
         id: area
-        anchors.fill: parent
-        onClicked: root.clicked()
+        onTapped: root.clicked()
     }
 }

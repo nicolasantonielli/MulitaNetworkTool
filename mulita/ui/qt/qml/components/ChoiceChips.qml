@@ -41,11 +41,10 @@ Flow {
                 font.weight: chip.selected ? Font.DemiBold : Font.Normal
             }
 
-            MouseArea {
+            TouchArea {
                 id: area
-                anchors.fill: parent
                 enabled: root.enabled
-                onClicked: root.activated(chip.chipValue)
+                onTapped: root.activated(chip.chipValue)
             }
         }
     }

@@ -11,12 +11,20 @@ log = logging.getLogger(__name__)
 class Dht11Sensor(ClimateSensor):
 
     def __init__(self, pin: int):
-        import Adafruit_DHT
+        self._pin = pin
+        self._driver = None
+        self._sensor = None
+        try:
+            import Adafruit_DHT
+        except ImportError:
+            log.warning('Adafruit_DHT no esta instalado; el DHT11 no va a leer')
+            return
         self._driver = Adafruit_DHT
         self._sensor = Adafruit_DHT.DHT11
-        self._pin = pin
 
     def read(self) -> ClimateReading | None:
+        if self._driver is None:
+            return None
         humidity, temperature = self._driver.read(self._sensor, self._pin)
         if humidity is None or temperature is None:
             log.warning('El DHT11 no respondio')
