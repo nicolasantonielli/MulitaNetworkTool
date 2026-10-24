@@ -1,5 +1,5 @@
-# PyQt5 y los modulos QML no se instalan con pip en la Raspberry Pi.
-# Los instala run.sh por apt y el entorno virtual los ve con --system-site-packages.
+# PyQt5, los modulos QML y las herramientas de red los instala install-lite.sh
+# por apt. El entorno virtual los ve con --system-site-packages.
 #
 # Interfaz anterior (bash run.sh --tk). ttkbootstrap 2.x movio los modulos toast y scrolled
 ttkbootstrap>=1.10,<2

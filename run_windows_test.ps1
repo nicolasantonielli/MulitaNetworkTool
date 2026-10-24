@@ -1,5 +1,8 @@
 Param(
-    [string]$VenvDirName = ".venv-win",
+    # Vacio: el entorno queda en %LOCALAPPDATA%\Mulita\venv-win.
+    # No puede vivir en la carpeta de Dropbox: guarda la ruta absoluta de Python
+    # de la PC donde se creo y falla en la otra.
+    [string]$VenvDirName = "",
     [switch]$RecreateVenv,
     [switch]$SkipTests,
     [switch]$TkLegacy,
@@ -36,27 +39,68 @@ function Invoke-Checked {
     }
 }
 
+function Test-VenvUsable {
+    param(
+        [Parameter(Mandatory = $true)][string]$Dir,
+        [Parameter(Mandatory = $true)][string]$PythonExe
+    )
+    if (-not (Test-Path -LiteralPath $PythonExe)) {
+        return $false
+    }
+    $cfgPath = Join-Path $Dir "pyvenv.cfg"
+    if (-not (Test-Path -LiteralPath $cfgPath)) {
+        return $false
+    }
+    foreach ($line in Get-Content -LiteralPath $cfgPath) {
+        if ($line -match '^(home|executable)\s*=\s*(.+)$') {
+            $candidate = $Matches[2].Trim()
+            if ($Matches[1] -eq "home") {
+                $candidate = Join-Path $candidate "python.exe"
+            }
+            if (-not (Test-Path -LiteralPath $candidate)) {
+                Write-Host "Python base del entorno no existe en esta PC: $candidate"
+                return $false
+            }
+        }
+    }
+    & $PythonExe -c "import sys" | Out-Null
+    return $LASTEXITCODE -eq 0
+}
+
 $pythonCmd = Get-PythonCommand
 $pythonExe = $pythonCmd[0]
 $pythonArgs = @()
 if ($pythonCmd.Count -gt 1) {
     $pythonArgs = $pythonCmd[1..($pythonCmd.Count - 1)]
 }
-$venvDir = Join-Path $Root $VenvDirName
+if ([string]::IsNullOrWhiteSpace($VenvDirName)) {
+    $venvDir = Join-Path $env:LOCALAPPDATA "Mulita\venv-win"
+} elseif ([System.IO.Path]::IsPathRooted($VenvDirName)) {
+    $venvDir = $VenvDirName
+} else {
+    $venvDir = Join-Path $Root $VenvDirName
+}
 $venvPy = Join-Path $venvDir "Scripts\python.exe"
 
-if ($RecreateVenv -and (Test-Path $venvDir)) {
+$recreate = [bool]$RecreateVenv
+if (-not $recreate -and (Test-Path -LiteralPath $venvDir) -and -not (Test-VenvUsable -Dir $venvDir -PythonExe $venvPy)) {
+    Write-Host "El entorno virtual no sirve en esta PC. Se recrea."
+    $recreate = $true
+}
+
+if ($recreate -and (Test-Path -LiteralPath $venvDir)) {
     Write-Host "Eliminando entorno virtual existente..."
-    Remove-Item -Recurse -Force $venvDir
+    Remove-Item -LiteralPath $venvDir -Recurse -Force
+}
+
+if (-not (Test-Path -LiteralPath $venvPy)) {
+    Write-Host "Creando entorno virtual en $venvDir ..."
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $venvDir) | Out-Null
+    Invoke-Checked -Exe $pythonExe -Args (@($pythonArgs) + @("-m", "venv", $venvDir)) -Step "creacion del entorno virtual"
 }
 
 if (-not (Test-Path $venvPy)) {
-    Write-Host "Creando entorno virtual..."
-    Invoke-Checked -Exe $pythonExe -Args (@($pythonArgs) + @("-m", "venv", $VenvDirName)) -Step "creacion del entorno virtual"
-}
-
-if (-not (Test-Path $venvPy)) {
-    throw "No se pudo crear el entorno virtual en $VenvDirName"
+    throw "No se pudo crear el entorno virtual en $venvDir"
 }
 
 Write-Host "Verificando pip en el entorno virtual..."
