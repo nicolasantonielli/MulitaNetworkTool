@@ -93,24 +93,16 @@ class TouchDebug(QObject):
         return False
 
     def _touch(self, watched, event, kind: str) -> bool:
-        eaten = False
+        """Solo registra. Tragar un evento tactil deja el dedo "apretado" para Qt
+        y el toque siguiente no llega."""
         target = _target(watched)
         for point in event.touchPoints():
             position = point.screenPos()
-            x, y = position.x(), position.y()
             state = _POINT.get(int(point.state()), str(int(point.state())))
-            if state == 'down' or self._anchor is None:
-                self._anchor = (x, y)
-            elif _far(self._anchor, x, y):
-                self._log(f'touch {kind} id={point.id()} {state}', x, y, target, note='salto ignorado')
-                eaten = True
-                continue
-            else:
-                self._anchor = (x, y)
             if state == 'move' and not self._due():
                 continue
-            self._log(f'touch {kind} id={point.id()} {state}', x, y, target)
-        return eaten
+            self._log(f'touch {kind} id={point.id()} {state}', position.x(), position.y(), target)
+        return False
 
     def _send_mouse(self, watched, event, x: float, y: float) -> None:
         delta = QPointF(x - event.globalPos().x(), y - event.globalPos().y())

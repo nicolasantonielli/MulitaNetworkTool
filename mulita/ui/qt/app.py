@@ -24,7 +24,7 @@ class QtApplication:
         # EGLFS dibuja una flecha de mouse. En el equipo el dedo es el puntero.
         os.environ['QT_QPA_EGLFS_HIDECURSOR'] = '1'
         runtime = os.environ.get('XDG_RUNTIME_DIR')
-        if not runtime:
+        if not runtime and hasattr(os, 'getuid'):
             runtime = f'/tmp/runtime-{os.getuid()}'
             os.makedirs(runtime, mode=0o700, exist_ok=True)
             os.environ['XDG_RUNTIME_DIR'] = runtime
