@@ -168,6 +168,7 @@ Type=simple
 WorkingDirectory=$ROOT
 Environment=QT_QPA_PLATFORM=eglfs
 Environment=QT_QPA_EGLFS_INTEGRATION=eglfs_kms
+Environment=QT_QPA_EGLFS_HIDECURSOR=1
 ExecStart=$ROOT/.venv/bin/python main.py
 Restart=on-failure
 RestartSec=3

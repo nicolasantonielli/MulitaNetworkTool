@@ -26,6 +26,7 @@ if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
     export DISPLAY=:0
   else
     export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-eglfs}"
+    export QT_QPA_EGLFS_HIDECURSOR=1
   fi
 fi
 
