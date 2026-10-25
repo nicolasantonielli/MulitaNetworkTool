@@ -67,26 +67,35 @@ class WifiServiceTest(unittest.TestCase):
         script = Script([CommandResult(0, 'eth0:ethernet\n')])
         self.assertEqual(service(script).scan(), (None, ()))
 
-    def test_connect_sends_the_password_only_when_the_network_is_secure(self):
-        script = Script([CommandResult(0, DEVICES), CommandResult(10, '', 'unknown'), CommandResult(0)])
-        self.assertEqual(service(script).connect('Oficina', 'secreto', True), 'Oficina')
-        self.assertEqual(script.runs[1][:4], [NM, 'connection', 'delete', 'id'])
-        self.assertEqual(script.runs[2],
-                         [NM, 'device', 'wifi', 'connect', 'Oficina', 'password', 'secreto', 'ifname', 'wlan0'])
-
-    def test_missing_psk_is_repaired_on_the_saved_connection(self):
+    def test_connect_saves_key_management_and_password(self):
         script = Script([
             CommandResult(0, DEVICES),
-            CommandResult(0),
-            CommandResult(4, '', '802-11-wireless-security.psk: property is missing'),
+            CommandResult(10, '', 'unknown'),
             CommandResult(0),
             CommandResult(0),
         ])
         self.assertEqual(service(script).connect('Oficina', 'secreto', True), 'Oficina')
-        self.assertEqual(script.runs[3],
-                         [NM, 'connection', 'modify', 'Oficina',
-                          'wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', 'secreto'])
-        self.assertEqual(script.runs[4], [NM, 'connection', 'up', 'Oficina', 'ifname', 'wlan0'])
+        self.assertEqual(script.runs[1][:4], [NM, 'connection', 'delete', 'id'])
+        self.assertEqual(script.runs[2], [
+            NM, 'connection', 'add', 'type', 'wifi', 'ifname', 'wlan0',
+            'con-name', 'Oficina', 'ssid', 'Oficina',
+            '802-11-wireless-security.key-mgmt', 'wpa-psk',
+            '802-11-wireless-security.psk', 'secreto'])
+        self.assertEqual(script.runs[3], [NM, 'connection', 'up', 'Oficina', 'ifname', 'wlan0'])
+
+    def test_existing_profile_gets_key_management_before_activation(self):
+        script = Script([
+            CommandResult(0, DEVICES),
+            CommandResult(0),
+            CommandResult(4, '', 'already exists'),
+            CommandResult(0),
+            CommandResult(0),
+        ])
+        self.assertEqual(service(script).connect('Oficina', 'secreto', True), 'Oficina')
+        self.assertEqual(script.runs[3], [
+            NM, 'connection', 'modify', 'Oficina',
+            '802-11-wireless-security.key-mgmt', 'wpa-psk',
+            '802-11-wireless-security.psk', 'secreto'])
 
     def test_open_network_does_not_send_a_password(self):
         script = Script([CommandResult(0, DEVICES), CommandResult(0)])

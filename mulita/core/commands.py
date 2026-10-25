@@ -65,17 +65,24 @@ class CommandFactory:
         return [self._bin.nmcli, 'connection', 'delete', 'id', name]
 
     def wifi_connect(self, interface: str, ssid: str, password: str) -> Argv:
-        # La clave va antes de ifname. Si queda despues, algunas versiones no la guardan
-        # y NetworkManager responde que falta 802-11-wireless-security.psk.
         argv = [self._bin.nmcli, 'device', 'wifi', 'connect', ssid]
         if password:
             argv += ['password', password]
         argv += ['ifname', interface]
         return argv
 
+    def wifi_add_secured(self, interface: str, ssid: str, password: str) -> Argv:
+        # key-mgmt y psk juntos. Si falta key-mgmt, NetworkManager dice
+        # "security key management property is missing".
+        return [self._bin.nmcli, 'connection', 'add', 'type', 'wifi',
+                'ifname', interface, 'con-name', ssid, 'ssid', ssid,
+                '802-11-wireless-security.key-mgmt', 'wpa-psk',
+                '802-11-wireless-security.psk', password]
+
     def wifi_set_psk(self, name: str, password: str) -> Argv:
         return [self._bin.nmcli, 'connection', 'modify', name,
-                'wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', password]
+                '802-11-wireless-security.key-mgmt', 'wpa-psk',
+                '802-11-wireless-security.psk', password]
 
     def wifi_up(self, name: str, interface: str) -> Argv:
         return [self._bin.nmcli, 'connection', 'up', name, 'ifname', interface]

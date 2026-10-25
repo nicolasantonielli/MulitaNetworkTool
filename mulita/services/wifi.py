@@ -33,17 +33,17 @@ class WifiService:
         device = self.interface()
         if not device:
             raise CommandFailedError('No hay una interfaz Wi-Fi')
-        if secret:
-            self._runner.run(self._commands.wifi_delete(name))
-        failed = self._runner.run(self._commands.wifi_connect(device, name, secret))
-        if failed.ok:
+        if not secret:
+            self._checked(self._commands.wifi_connect(device, name, ''),
+                          f'No se pudo conectar a {name}')
             return name
-        if secret:
-            repaired = self._runner.run(self._commands.wifi_set_psk(name, secret))
-            if repaired.ok:
-                self._checked(self._commands.wifi_up(name, device), f'No se pudo conectar a {name}')
-                return name
-        raise CommandFailedError(f'No se pudo conectar a {name}: {failed.text}', failed)
+        self._runner.run(self._commands.wifi_delete(name))
+        added = self._runner.run(self._commands.wifi_add_secured(device, name, secret))
+        if not added.ok:
+            self._checked(self._commands.wifi_set_psk(name, secret),
+                          f'No se pudo guardar la clave de {name}')
+        self._checked(self._commands.wifi_up(name, device), f'No se pudo conectar a {name}')
+        return name
 
     def _checked(self, argv: list[str], message: str):
         result = self._runner.run(argv)
