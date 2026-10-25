@@ -1,25 +1,75 @@
 import QtQuick 2.15
-import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
-// Contenido que puede no entrar en pantallas chicas: se desplaza con el dedo.
-Flickable {
+// El alto lo fija quien contiene la pagina. El contenido, si no entra, se mueve
+// tocando la barra: el panel no entrega un arrastre continuo, solo toques.
+Item {
     id: root
 
     default property alias content: column.data
     property alias spacing: column.spacing
 
+    Layout.fillWidth: true
+    Layout.fillHeight: true
     clip: true
-    contentWidth: width
-    contentHeight: column.height
-    boundsBehavior: Flickable.StopAtBounds
 
-    ColumnLayout {
-        id: column
-        // StackLayout deja en ancho 0 las secciones que nunca se mostraron.
-        width: Math.max(root.width, ui.touch * 6)
-        spacing: ui.gap
+    readonly property bool overflowing: flick.contentHeight > flick.height + 1
+
+    Flickable {
+        id: flick
+
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.right: bar.left
+        clip: true
+        flickableDirection: Flickable.VerticalFlick
+        boundsBehavior: Flickable.StopAtBounds
+        contentWidth: width
+        contentHeight: column.implicitHeight
+
+        ColumnLayout {
+            id: column
+            width: flick.width
+            height: implicitHeight
+            spacing: ui.gap
+        }
     }
 
-    ScrollBar.vertical: ScrollBar { }
+    Rectangle {
+        id: bar
+
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
+        width: root.overflowing ? ui.touch : 0
+        visible: width > 0
+        radius: ui.radius
+        color: ui.surfaceHigh
+        border.width: 1
+        border.color: ui.border
+
+        readonly property real maxY: Math.max(0, flick.contentHeight - flick.height)
+        readonly property real handleHeight: Math.max(ui.touch, height * flick.height / Math.max(flick.contentHeight, 1))
+        readonly property real handleY: maxY <= 0 ? 0
+                : (height - handleHeight) * (flick.contentY / maxY)
+
+        Rectangle {
+            x: 3
+            y: bar.handleY
+            width: Math.max(0, bar.width - 6)
+            height: bar.handleHeight
+            radius: width / 2
+            color: ui.primary
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            enabled: root.overflowing
+            onPressed: {
+                var fraction = Math.max(0, Math.min(1, mouse.y / Math.max(1, height)))
+                flick.contentY = fraction * bar.maxY
+            }
+        }
+    }
 }

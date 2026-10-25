@@ -1,10 +1,13 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
 
 TextField {
     id: root
 
     implicitHeight: ui.touch
+    Layout.preferredHeight: ui.touch
+    Layout.minimumHeight: ui.touch
     font.pixelSize: ui.fontBody
     color: ui.text
     placeholderTextColor: ui.textMuted
@@ -19,6 +22,8 @@ TextField {
     inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
 
     background: Rectangle {
+        implicitWidth: 120
+        implicitHeight: ui.touch
         radius: ui.radius
         color: ui.surfaceAlt
         border.width: root.activeFocus ? 2 : 1

@@ -21,7 +21,6 @@ Rectangle {
         x: root.margin
         y: root.margin
         width: Math.max(0, root.width - root.margin * 2)
-        height: Math.max(0, root.height - root.margin * 2)
         spacing: Math.round(ui.gap * 0.7)
 
         RowLayout {
@@ -46,7 +45,6 @@ Rectangle {
         ColumnLayout {
             id: body
             Layout.fillWidth: true
-            Layout.fillHeight: true
             spacing: Math.round(ui.gap * 0.7)
         }
     }
