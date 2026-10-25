@@ -122,6 +122,7 @@ Item {
 
                 function afterConfirm(ssid, secure) {
                     wifiKeyField.text = ""
+                    wifiKeyField.revealed = false
                     wifiKey.ssid = ssid
                     wifiKey.secure = secure
                     wifiKey.open()
@@ -165,9 +166,21 @@ Item {
                         }
                         Field {
                             id: wifiKeyField
+
+                            property bool revealed: false
+
                             Layout.fillWidth: true
-                            echoMode: TextInput.Password
+                            echoMode: revealed ? TextInput.Normal : TextInput.Password
                             placeholderText: "Clave"
+                            rightPadding: ui.touch
+
+                            IconButton {
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                icon: wifiKeyField.revealed ? "eye-off" : "eye"
+                                iconColor: ui.textMuted
+                                onClicked: wifiKeyField.revealed = !wifiKeyField.revealed
+                            }
                         }
                         RowLayout {
                             Layout.topMargin: ui.gap
