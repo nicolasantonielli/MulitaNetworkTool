@@ -56,22 +56,23 @@ class WifiRulesTest(unittest.TestCase):
 class WifiServiceTest(unittest.TestCase):
 
     def test_scan_lists_networks_on_wlan0(self):
-        script = Script([
-            CommandResult(0, DEVICES), CommandResult(0), CommandResult(0, LIST),
-            *([CommandResult(0, '')] * 8),
-        ])
-        device, networks, link = service(script).scan()
+        script = Script([CommandResult(0, DEVICES), CommandResult(0), CommandResult(0, LIST)])
+        device, networks = service(script).scan()
         self.assertEqual(device, 'wlan0')
         self.assertEqual(networks[0].ssid, 'Oficina')
-        self.assertEqual(link.interface, 'wlan0')
         self.assertEqual(script.runs[1][1:4], ['device', 'wifi', 'rescan'])
         self.assertEqual(script.runs[2][4:7], ['device', 'wifi', 'list'])
-        self.assertEqual(script.runs[7][1:], ['dev', 'wlan0', 'link'])
-        self.assertEqual(script.runs[9][1:], ['dev', 'wlan0', 'station', 'dump'])
+
+    def test_status_reads_the_link_without_rescanning(self):
+        script = Script([CommandResult(0, DEVICES), *([CommandResult(0, '')] * 8)])
+        link = service(script).status()
+        self.assertEqual(link.interface, 'wlan0')
+        self.assertFalse(any('rescan' in run for run in script.runs))
+        self.assertEqual(script.runs[5][1:], ['dev', 'wlan0', 'link'])
 
     def test_scan_without_wifi_is_empty(self):
         script = Script([CommandResult(0, 'eth0:ethernet\n')])
-        self.assertEqual(service(script).scan(), (None, (), WifiLink()))
+        self.assertEqual(service(script).scan(), (None, ()))
 
     def test_connect_saves_key_management_and_password(self):
         script = Script([

@@ -17,11 +17,13 @@ Item {
             id: nav
             Layout.preferredWidth: Math.round(root.width * 0.27)
             Layout.fillHeight: true
+            onCurrentIndexChanged: if (currentIndex === 4 && !wifi.busy) wifi.loadLink()
             items: [
                 { label: "Wake on LAN", icon: "wake" },
                 { label: "Temperatura", icon: "thermometer" },
                 { label: "Velocidad", icon: "gauge" },
-                { label: "IP pública", icon: "globe" }
+                { label: "IP pública", icon: "globe" },
+                { label: "Info Wi-Fi", icon: "wifi" }
             ]
         }
 
@@ -185,6 +187,80 @@ Item {
                         kind: "neutral"
                         enabled: !publicIp.busy
                         onClicked: publicIp.lookup()
+                    }
+                }
+            }
+
+            // Info Wi-Fi
+            ColumnLayout {
+                id: wifiInfo
+                spacing: ui.gap
+
+                readonly property var linkFacts: {
+                    try { return JSON.parse(wifi.linkJson) }
+                    catch (e) { return [] }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
+                        Layout.fillWidth: true
+                        text: wifi.busy ? "Leyendo el enlace…"
+                              : (wifi.deviceName === "" ? "No hay Wi-Fi" : wifi.deviceName)
+                        color: ui.text
+                        font.pixelSize: ui.fontBody
+                        elide: Text.ElideRight
+                    }
+                    TouchButton {
+                        text: wifi.busy ? "Leyendo…" : "Actualizar"
+                        icon: "refresh"
+                        kind: "neutral"
+                        enabled: !wifi.busy
+                        onClicked: wifi.loadLink()
+                    }
+                }
+
+                ScrollPage {
+                    Card {
+                        Layout.fillWidth: true
+                        title: "Info Wi-Fi"
+                        titleIcon: "wifi"
+
+                        Text {
+                            visible: wifiInfo.linkFacts.length === 0
+                            text: wifi.deviceName === "" ? "No hay interfaz Wi-Fi." : "Sin enlace."
+                            color: ui.textMuted
+                            font.pixelSize: ui.fontBody
+                            wrapMode: Text.Wrap
+                        }
+                        GridLayout {
+                            Layout.fillWidth: true
+                            columns: 2
+                            columnSpacing: ui.gap
+                            rowSpacing: Math.round(ui.gap * 0.45)
+
+                            Repeater {
+                                model: wifiInfo.linkFacts
+
+                                delegate: ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 0
+
+                                    Text {
+                                        text: modelData.label
+                                        color: ui.textMuted
+                                        font.pixelSize: ui.fontSmall
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: modelData.value
+                                        color: ui.text
+                                        font.pixelSize: ui.fontBody
+                                        wrapMode: Text.Wrap
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

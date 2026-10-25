@@ -110,10 +110,6 @@ Item {
                     try { return JSON.parse(wifi.networksJson) }
                     catch (e) { return [] }
                 }
-                readonly property var linkFacts: {
-                    try { return JSON.parse(wifi.linkJson) }
-                    catch (e) { return [] }
-                }
 
                 function pick(ssid, secure) {
                     chosen = ssid
@@ -248,50 +244,19 @@ Item {
                         }
                     }
 
-                    ScrollPage {
-                        Card {
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        spacing: Math.round(ui.gap * 0.5)
+
+                        ListView {
+                            id: wifiList
                             Layout.fillWidth: true
-                            title: "Conexión"
-                            titleIcon: "wifi"
-
-                            Text {
-                                visible: wifiPage.linkFacts.length === 0
-                                text: wifi.deviceName === "" ? "No hay interfaz Wi-Fi." : "Sin enlace."
-                                color: ui.textMuted
-                                font.pixelSize: ui.fontBody
-                                wrapMode: Text.Wrap
-                            }
-                            GridLayout {
-                                Layout.fillWidth: true
-                                columns: 2
-                                columnSpacing: ui.gap
-                                rowSpacing: Math.round(ui.gap * 0.45)
-
-                                Repeater {
-                                    model: wifiPage.linkFacts
-
-                                    delegate: ColumnLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 0
-
-                                        Text {
-                                            text: modelData.label
-                                            color: ui.textMuted
-                                            font.pixelSize: ui.fontSmall
-                                        }
-                                        Text {
-                                            Layout.fillWidth: true
-                                            text: modelData.value
-                                            color: ui.text
-                                            font.pixelSize: ui.fontBody
-                                            wrapMode: Text.Wrap
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Repeater {
+                            Layout.fillHeight: true
+                            clip: true
+                            interactive: false
+                            spacing: Math.round(ui.gap * 0.4)
+                            boundsBehavior: Flickable.StopAtBounds
                             model: wifiPage.networks
 
                             delegate: Rectangle {
@@ -300,8 +265,8 @@ Item {
                                 readonly property bool activeNet: modelData.active === true
                                 readonly property bool selected: wifiPage.chosen === ssid
 
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: ui.touch
+                                width: wifiList.width
+                                height: ui.touch
                                 radius: ui.radius
                                 color: activeNet ? ui.primary
                                        : (selected || area.pressed ? ui.surfaceHigh : ui.surfaceAlt)
@@ -322,6 +287,36 @@ Item {
                                 TouchArea {
                                     id: area
                                     onTapped: wifiPage.pick(ssid, secure)
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillHeight: true
+                            Layout.preferredWidth: wifiList.contentHeight > wifiList.height + 1 ? Math.round(ui.mm * 4) : 0
+                            visible: Layout.preferredWidth > 0
+                            radius: ui.radius
+                            color: ui.surfaceHigh
+                            border.width: 1
+                            border.color: ui.border
+
+                            Rectangle {
+                                readonly property real maxY: Math.max(0, wifiList.contentHeight - wifiList.height)
+                                readonly property real handleHeight: Math.max(ui.touch * 0.6,
+                                        parent.height * wifiList.height / Math.max(wifiList.contentHeight, 1))
+                                x: 2
+                                width: Math.max(0, parent.width - 4)
+                                height: handleHeight
+                                y: maxY <= 0 ? 0 : (parent.height - height) * (wifiList.contentY / maxY)
+                                radius: width / 2
+                                color: ui.primary
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                onPressed: {
+                                    var maxY = Math.max(0, wifiList.contentHeight - wifiList.height)
+                                    var fraction = Math.max(0, Math.min(1, mouse.y / Math.max(1, height)))
+                                    wifiList.contentY = fraction * maxY
                                 }
                             }
                         }

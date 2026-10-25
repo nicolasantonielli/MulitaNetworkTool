@@ -19,14 +19,20 @@ class WifiService:
         result = self._checked(self._commands.wifi_devices(), 'No se pudo leer el Wi-Fi')
         return parse_wifi_device(result.stdout)
 
-    def scan(self) -> tuple[str | None, tuple[WifiNetwork, ...], WifiLink]:
+    def scan(self) -> tuple[str | None, tuple[WifiNetwork, ...]]:
         device = self.interface()
         if not device:
-            return None, (), WifiLink()
+            return None, ()
         self._runner.run(self._commands.wifi_rescan(device))
         listed = self._checked(self._commands.wifi_list(device), 'No se pudieron buscar redes')
-        networks = tuple(parse_wifi_list(listed.stdout))
-        return device, networks, self._link(device, networks)
+        return device, tuple(parse_wifi_list(listed.stdout))
+
+    def status(self) -> WifiLink:
+        """Dirección y radio del enlace, sin disparar un escaneo de redes."""
+        device = self.interface()
+        if not device:
+            return WifiLink()
+        return self._link(device, ())
 
     def _link(self, device: str, networks: tuple[WifiNetwork, ...]) -> WifiLink:
         commands = self._commands

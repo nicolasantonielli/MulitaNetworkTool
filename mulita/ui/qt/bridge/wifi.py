@@ -52,6 +52,10 @@ class WifiController(TaskController):
     def refresh(self) -> None:
         self._task(self._services.wifi.scan, self._show)
 
+    @pyqtSlot()
+    def loadLink(self) -> None:
+        self._task(self._services.wifi.status, self._show_link)
+
     @pyqtSlot(str, str, bool)
     def connectTo(self, ssid: str, password: str, secure: bool) -> None:
         def connected(name: str) -> None:
@@ -60,9 +64,13 @@ class WifiController(TaskController):
 
         self._task(lambda: self._services.wifi.connect(ssid, password, secure), connected)
 
-    def _show(self, found: tuple[str | None, tuple[WifiNetwork, ...], WifiLink]) -> None:
-        device, networks, link = found
+    def _show(self, found: tuple[str | None, tuple[WifiNetwork, ...]]) -> None:
+        device, networks = found
         self._device = device or ''
         self._networks = networks
+        self.networksChanged.emit()
+
+    def _show_link(self, link: WifiLink) -> None:
         self._link = link
+        self._device = link.interface
         self.networksChanged.emit()

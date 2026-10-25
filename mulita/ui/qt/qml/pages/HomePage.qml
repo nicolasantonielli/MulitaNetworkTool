@@ -12,7 +12,7 @@ Item {
         { page: 2, icon: "trace", title: "Trazas", subtitle: "Ruta, latencia y ping" },
         { page: 3, icon: "tap", title: "TAP", subtitle: "Puente y espejo de puertos" },
         { page: 4, icon: "scan", title: "Escaneo", subtitle: "Puertos y hosts de la red" },
-        { page: 5, icon: "tools", title: "Herramientas", subtitle: "WoL, clima, velocidad, IP" },
+        { page: 5, icon: "tools", title: "Herramientas", subtitle: "WoL, clima, velocidad, Wi-Fi" },
         { page: 6, icon: "settings", title: "Configuración", subtitle: "Pantalla, tema y sistema" }
     ]
 
