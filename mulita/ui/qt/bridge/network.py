@@ -110,10 +110,10 @@ class CaptureController(SessionController):
 
     def _finished(self, code: int) -> None:
         if code != 0 and not self._stopping:
-        detail = ''.join(self._last_output).strip() or f'tcpdump termino con codigo {code}'
-        folder = str(self._ctx.config.capture_dir)
-        detail = detail.replace(folder + '/', '').replace(folder, 'la carpeta de capturas')
-        self._ctx.notifier.error(detail, title='Captura')
+            detail = ''.join(self._last_output).strip() or f'tcpdump termino con codigo {code}'
+            folder = str(self._ctx.config.capture_dir)
+            detail = detail.replace(folder + '/', '').replace(folder, 'la carpeta de capturas')
+            self._ctx.notifier.error(detail, title='Captura')
 
 
 class TapController(Controller):
