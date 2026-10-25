@@ -110,15 +110,89 @@ Item {
                 function pick(ssid, secure) {
                     chosen = ssid
                     chosenSecure = secure
-                    wifiPassword.text = ""
-                    if (!secure)
-                        dialog.ask({
-                            title: "Conectar a " + ssid,
-                            kind: "success",
-                            message: "La red no pide clave.",
-                            confirmText: "Conectar",
-                            confirmAction: function() { wifi.connectTo(ssid, "", false) }
-                        })
+                    dialog.ask({
+                        title: ssid,
+                        kind: "success",
+                        message: "Conectar a esta red.",
+                        confirmText: "Conectar",
+                        cancelText: "Cancelar",
+                        confirmAction: function() { wifiPage.afterConfirm(ssid, secure) }
+                    })
+                }
+
+                function afterConfirm(ssid, secure) {
+                    wifiKeyField.text = ""
+                    wifiKey.ssid = ssid
+                    wifiKey.secure = secure
+                    wifiKey.open()
+                }
+
+                Popup {
+                    id: wifiKey
+
+                    property string ssid: ""
+                    property bool secure: true
+
+                    parent: Overlay.overlay
+                    modal: true
+                    focus: true
+                    closePolicy: Popup.CloseOnEscape
+                    padding: Math.round(ui.padding * 1.3)
+                    width: Math.min(parent.width - ui.padding * 4, ui.mm * 110)
+                    x: Math.max(0, (parent.width - width) / 2)
+                    y: ui.padding
+                    onOpened: Qt.callLater(function() { wifiKeyField.forceActiveFocus() })
+                    onClosed: wifiKeyField.focus = false
+
+                    background: Rectangle {
+                        color: ui.surface
+                        radius: ui.radius * 1.6
+                        border.width: 1
+                        border.color: ui.border
+                    }
+                    Overlay.modal: Rectangle { color: "#A0000000" }
+
+                    contentItem: ColumnLayout {
+                        spacing: ui.gap
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: "Clave de " + wifiKey.ssid
+                            color: ui.text
+                            font.pixelSize: ui.fontTitle
+                            font.weight: Font.Bold
+                            wrapMode: Text.Wrap
+                        }
+                        Field {
+                            id: wifiKeyField
+                            Layout.fillWidth: true
+                            echoMode: TextInput.Password
+                            placeholderText: "Clave"
+                        }
+                        RowLayout {
+                            Layout.topMargin: ui.gap
+                            spacing: ui.gap
+
+                            TouchButton {
+                                Layout.fillWidth: true
+                                text: "Cancelar"
+                                kind: "neutral"
+                                onClicked: wifiKey.close()
+                            }
+                            TouchButton {
+                                Layout.fillWidth: true
+                                text: "Aceptar"
+                                kind: "success"
+                                enabled: !wifi.busy
+                                onClicked: {
+                                    var secret = wifiKeyField.text
+                                    var name = wifiKey.ssid
+                                    wifiKey.close()
+                                    wifi.connectTo(name, secret, wifiKey.secure)
+                                }
+                            }
+                        }
+                    }
                 }
 
                 ColumnLayout {
@@ -225,33 +299,6 @@ Item {
                         }
                     }
 
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        visible: wifiPage.chosen !== "" && wifiPage.chosenSecure
-                        spacing: Math.round(ui.gap * 0.4)
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: "Clave de " + wifiPage.chosen
-                            color: ui.text
-                            font.pixelSize: ui.fontBody
-                            font.weight: Font.DemiBold
-                            elide: Text.ElideRight
-                        }
-                        Field {
-                            id: wifiPassword
-                            Layout.fillWidth: true
-                            echoMode: TextInput.Password
-                            placeholderText: "Clave"
-                        }
-                        TouchButton {
-                            Layout.fillWidth: true
-                            text: "Conectar"
-                            icon: "wifi"
-                            enabled: !wifi.busy
-                            onClicked: wifi.connectTo(wifiPage.chosen, wifiPassword.text, true)
-                        }
-                    }
                 }
             }
 

@@ -103,7 +103,9 @@ ApplicationWindow {
 
     Loader {
         id: keyboard
-        z: 100
+        // Encima del aviso modal, para poder escribir la clave del Wi-Fi.
+        parent: Overlay.overlay
+        z: 1000
         width: parent.width
         anchors.bottom: parent.bottom
         source: ui.virtualKeyboard ? "components/KeyboardPanel.qml" : ""
