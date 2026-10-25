@@ -1,0 +1,14 @@
+---
+description: Al cambiar la versión, hacer commit y push sin esperar otro pedido
+alwaysApply: true
+---
+
+# Versión y push
+
+Al terminar un cambio que modifica `mulita/version.py`, el trabajo no queda listo hasta subirlo.
+
+- Hacé commit de ese cambio y `git push` a la rama actual (`v3` → `origin/v3`) en el mismo cierre.
+- No esperes un pedido aparte de commit o push.
+- No subas si el usuario pidió explícitamente no hacerlo.
+- El mensaje sigue el estilo del repo: `3.0.X: por qué`.
+- En PowerShell, el mensaje va en un archivo y se confirma con `git commit -F`. No uses heredoc.
