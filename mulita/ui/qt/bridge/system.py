@@ -43,7 +43,7 @@ class SystemController(TaskController):
 
 
 class SettingsController(Controller):
-    """Edicion de preferencias. Los cambios se guardan y se aplican en vivo."""
+    """Tema. La pantalla esta fija en el codigo."""
     changed = pyqtSignal()
 
     def __init__(self, ctx: BridgeContext):
@@ -54,26 +54,6 @@ class SettingsController(Controller):
     def _current(self) -> Settings:
         return self._services.settings.current
 
-    @pyqtProperty(int, notify=changed)
-    def width(self) -> int:
-        return self._current.display.width
-
-    @pyqtProperty(int, notify=changed)
-    def height(self) -> int:
-        return self._current.display.height
-
-    @pyqtProperty(float, notify=changed)
-    def diagonal(self) -> float:
-        return self._current.display.diagonal_inches
-
-    @pyqtProperty(bool, notify=changed)
-    def fullscreen(self) -> bool:
-        return self._current.display.fullscreen
-
-    @pyqtProperty(float, notify=changed)
-    def uiScale(self) -> float:
-        return self._current.display.ui_scale
-
     @pyqtProperty(str, notify=changed)
     def theme(self) -> str:
         return self._current.theme.value
@@ -81,20 +61,6 @@ class SettingsController(Controller):
     @pyqtProperty('QVariantList', constant=True)
     def themes(self) -> list[dict]:
         return [{'label': theme.label, 'value': theme.value} for theme in Theme]
-
-    @pyqtProperty('QVariantList', constant=True)
-    def presets(self) -> list[dict]:
-        return [{'label': preset.name, 'width': preset.width, 'height': preset.height,
-                 'diagonal': preset.diagonal_inches} for preset in self._services.settings.presets]
-
-    @pyqtSlot(int, int, float, bool, float, result=bool)
-    def applyDisplay(self, width: int, height: int, diagonal: float, fullscreen: bool, scale: float) -> bool:
-        try:
-            self._services.settings.update_display(width, height, diagonal, fullscreen, scale)
-        except MulitaError as exc:
-            self._fail(exc)
-            return False
-        return True
 
     @pyqtSlot(str)
     def setTheme(self, value: str) -> None:

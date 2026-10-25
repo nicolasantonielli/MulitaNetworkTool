@@ -13,7 +13,7 @@ Item {
         { page: 3, icon: "tap", title: "TAP", subtitle: "Puente y espejo de puertos" },
         { page: 4, icon: "scan", title: "Escaneo", subtitle: "Puertos y hosts de la red" },
         { page: 5, icon: "tools", title: "Herramientas", subtitle: "WoL, clima, velocidad, IP" },
-        { page: 6, icon: "settings", title: "Configuración", subtitle: "Pantalla, tema y sistema" }
+        { page: 6, icon: "settings", title: "Configuración", subtitle: "Tema y sistema" }
     ]
 
     function isActive(page) {
