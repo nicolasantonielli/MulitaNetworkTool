@@ -21,7 +21,7 @@ Item {
             Layout.fillHeight: true
             onCurrentIndexChanged: if (currentIndex === 3 && !interna.busy) interna.refresh()
             items: [
-                { label: "General", icon: "theme" },
+                { label: "General", icon: "info" },
                 { label: "Pantalla", icon: "display" },
                 { label: "Wi-Fi", icon: "wifi" },
                 { label: "Ethernet interna", icon: "ethernet" },
@@ -37,18 +37,6 @@ Item {
 
             // General
             ScrollPage {
-                Card {
-                    Layout.fillWidth: true
-                    title: "Tema"
-                    titleIcon: "theme"
-
-                    ChoiceChips {
-                        Layout.fillWidth: true
-                        model: settings.themes
-                        value: settings.theme
-                        onActivated: settings.setTheme(value)
-                    }
-                }
                 Card {
                     Layout.fillWidth: true
                     title: "Acerca de"
@@ -91,6 +79,18 @@ Item {
                         initial: settings.uiScale
                         valueText: Math.round(value * 100) + " %"
                         onValueChanged: settings.setScale(value)
+                    }
+                }
+                Card {
+                    Layout.fillWidth: true
+                    title: "Tema"
+                    titleIcon: "theme"
+
+                    ChoiceChips {
+                        Layout.fillWidth: true
+                        model: settings.themes
+                        value: settings.theme
+                        onActivated: settings.setTheme(value)
                     }
                 }
             }
