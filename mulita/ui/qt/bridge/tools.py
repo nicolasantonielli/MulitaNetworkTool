@@ -109,3 +109,32 @@ class PublicIpController(TaskController):
     def _failed(self, error: Exception) -> None:
         self._status = str(error)
         self.addressChanged.emit()
+
+
+class MacVendorController(TaskController):
+    vendorChanged = pyqtSignal()
+
+    def __init__(self, ctx: BridgeContext):
+        super().__init__(ctx)
+        self._vendor = ''
+        self._status = ''
+
+    @pyqtProperty(str, notify=vendorChanged)
+    def vendor(self) -> str:
+        return self._vendor or texts.NO_VALUE
+
+    @pyqtProperty(str, notify=vendorChanged)
+    def status(self) -> str:
+        return self._status
+
+    @pyqtSlot(str)
+    def lookup(self, mac: str) -> None:
+        self._task(lambda: self._services.mac_vendor.lookup(mac), self._show, self._failed)
+
+    def _show(self, name: str) -> None:
+        self._vendor, self._status = name, ''
+        self.vendorChanged.emit()
+
+    def _failed(self, error: Exception) -> None:
+        self._vendor, self._status = '', str(error)
+        self.vendorChanged.emit()

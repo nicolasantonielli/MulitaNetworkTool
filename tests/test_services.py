@@ -107,6 +107,28 @@ class BlockingServicesTest(unittest.TestCase):
         with self.assertRaises(CommandFailedError):
             services_with(runner).public_ip.lookup()
 
+    def test_mac_vendor_reads_the_name(self):
+        runner = FakeRunner({'/bin/curl': CommandResult(0, 'Apple, Inc.\n200')})
+        services = services_with(runner)
+        self.assertEqual(services.mac_vendor.lookup('fc-a1-3e-2a-1c-33'), 'Apple, Inc.')
+        self.assertEqual(runner.runs[-1][-1], 'https://api.macvendors.com/FC:A1:3E:2A:1C:33')
+
+    def test_mac_vendor_reports_unknown_and_the_rate_limit(self):
+        missing = FakeRunner({'/bin/curl': CommandResult(0, 'Not Found\n404')})
+        with self.assertRaises(CommandFailedError) as unknown:
+            services_with(missing).mac_vendor.lookup('aa:bb:cc:dd:ee:ff')
+        self.assertIn('fabricante', str(unknown.exception).lower())
+        limited = FakeRunner({'/bin/curl': CommandResult(0, '\n429')})
+        with self.assertRaises(CommandFailedError) as capped:
+            services_with(limited).mac_vendor.lookup('aa:bb:cc:dd:ee:ff')
+        self.assertIn('consultas', str(capped.exception).lower())
+
+    def test_mac_vendor_rejects_a_bad_address_before_calling_out(self):
+        runner = FakeRunner()
+        with self.assertRaises(ValidationError):
+            services_with(runner).mac_vendor.lookup('no-mac')
+        self.assertEqual(runner.runs, [])
+
     def test_update_pulls_remote_branch(self):
         runner = FakeRunner()
         services_with(runner).maintenance.update()

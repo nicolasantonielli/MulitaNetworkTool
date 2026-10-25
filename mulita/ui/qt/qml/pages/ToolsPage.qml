@@ -23,7 +23,8 @@ Item {
                 { label: "Temperatura", icon: "thermometer" },
                 { label: "Velocidad", icon: "gauge" },
                 { label: "IP pública", icon: "globe" },
-                { label: "Info Wi-Fi", icon: "wifi" }
+                { label: "Info Wi-Fi", icon: "wifi" },
+                { label: "MAC vendors", icon: "info" }
             ]
         }
 
@@ -261,6 +262,51 @@ Item {
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            // MAC vendors
+            ColumnLayout {
+                spacing: ui.gap
+
+                Field {
+                    id: vendorMac
+                    Layout.fillWidth: true
+                    placeholderText: "MAC (AA:BB:CC:DD:EE:FF)"
+                    onAccepted: if (!macVendor.busy) macVendor.lookup(text)
+                }
+                Card {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    title: "Fabricante"
+                    titleIcon: "info"
+
+                    Text {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        text: macVendor.vendor
+                        color: ui.text
+                        font.pixelSize: ui.fontTitle
+                        font.weight: Font.DemiBold
+                        wrapMode: Text.Wrap
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+                RowLayout {
+                    Text {
+                        Layout.fillWidth: true
+                        text: macVendor.status
+                        color: ui.danger
+                        font.pixelSize: ui.fontSmall
+                        wrapMode: Text.Wrap
+                    }
+                    TouchButton {
+                        text: macVendor.busy ? "Consultando…" : "Consultar"
+                        icon: "refresh"
+                        kind: "neutral"
+                        enabled: !macVendor.busy
+                        onClicked: macVendor.lookup(vendorMac.text)
                     }
                 }
             }

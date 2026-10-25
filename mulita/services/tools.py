@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import time
+
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError
 from mulita.core.models import Calibration, ClimateReading, SpeedTestResult
-from mulita.core.parsers import parse_speed_test
+from mulita.core.parsers import parse_mac_vendor, parse_speed_test
 from mulita.core.ports import ClimateSensor, CommandRunner
 
 
@@ -56,3 +58,28 @@ class PublicIpService:
         if not result.ok or not address:
             raise CommandFailedError('No se pudo obtener la IP publica', result)
         return address
+
+
+class MacVendorService:
+    """Fabricante de una MAC via api.macvendors.com. Una consulta por segundo."""
+
+    def __init__(self, runner: CommandRunner, commands: CommandFactory, url: str, timeout: int):
+        self._runner = runner
+        self._commands = commands
+        self._url = url
+        self._timeout = timeout
+        self._next_at = 0.0
+
+    def lookup(self, mac: str) -> str:
+        text = validation.mac_address(mac).replace('-', ':').upper()
+        self._pace()
+        result = self._runner.run(self._commands.mac_vendor(self._url, text, self._timeout))
+        if not result.ok:
+            raise CommandFailedError('No se pudo consultar el fabricante', result)
+        return parse_mac_vendor(result.stdout)
+
+    def _pace(self) -> None:
+        wait = self._next_at - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
+        self._next_at = time.monotonic() + 1

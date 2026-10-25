@@ -456,6 +456,25 @@ def build_wifi_link(interface: str, addr: str, route: str, lease: str, details: 
     )
 
 
+def parse_mac_vendor(text: str) -> str:
+    """Cuerpo y codigo HTTP de `curl -w '\\n%{http_code}'` contra MACVendors."""
+    body, separator, code = (text or '').rpartition('\n')
+    if not separator:
+        raise CommandFailedError('No se pudo consultar el fabricante')
+    try:
+        status = int(code.strip())
+    except ValueError as exc:
+        raise CommandFailedError('No se pudo consultar el fabricante') from exc
+    name = body.strip()
+    if status == 200 and name:
+        return name
+    if status == 404:
+        raise CommandFailedError('No se encontro el fabricante de esa MAC')
+    if status == 429:
+        raise CommandFailedError('Demasiadas consultas. La API permite una por segundo y mil por dia.')
+    raise CommandFailedError(f'No se pudo consultar el fabricante ({status})')
+
+
 def parse_speed_test(text: str) -> SpeedTestResult:
     """Salida de `speedtest --json` (speedtest-cli), en bits por segundo."""
     try:

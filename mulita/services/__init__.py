@@ -10,7 +10,7 @@ from mulita.services.network import (CaptureService, InterfaceService,
 from mulita.services.settings import SettingsService
 from mulita.services.system import (KeyboardService, MaintenanceService,
                                     ShareService)
-from mulita.services.tools import (ClimateService, PublicIpService,
+from mulita.services.tools import (ClimateService, MacVendorService, PublicIpService,
                                    SpeedTestService, WakeOnLanService)
 from mulita.services.wifi import WifiService
 
@@ -30,6 +30,7 @@ class Services:
     climate: ClimateService
     speed_test: SpeedTestService
     public_ip: PublicIpService
+    mac_vendor: MacVendorService
     maintenance: MaintenanceService
     keyboard: KeyboardService
     share: ShareService

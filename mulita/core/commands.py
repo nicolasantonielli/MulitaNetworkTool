@@ -137,6 +137,11 @@ class CommandFactory:
     def public_ip(self, url: str, timeout: int) -> Argv:
         return [self._bin.curl, '-s', '--max-time', str(timeout), url]
 
+    def mac_vendor(self, url: str, mac: str, timeout: int) -> Argv:
+        # El codigo HTTP va al final de la salida. 404 y 429 no son un fallo de curl.
+        return [self._bin.curl, '-sS', '--max-time', str(timeout),
+                '-w', '\n%{http_code}', f'{url.rstrip("/")}/{mac}']
+
     def keyboard(self) -> Argv:
         return [self._bin.onboard]
 

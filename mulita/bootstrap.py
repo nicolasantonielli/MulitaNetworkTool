@@ -22,7 +22,7 @@ from mulita.services.network import (CaptureService, InterfaceService,
                                      TapService)
 from mulita.services.system import (KeyboardService, MaintenanceService,
                                     ShareService)
-from mulita.services.tools import (ClimateService, PublicIpService,
+from mulita.services.tools import (ClimateService, MacVendorService, PublicIpService,
                                    SpeedTestService, WakeOnLanService)
 from mulita.services.wifi import WifiService
 from mulita.version import __version__
@@ -56,6 +56,7 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
         climate=climate or _climate(config),
         speed_test=SpeedTestService(runner, commands),
         public_ip=PublicIpService(runner, commands, config.public_ip_url, config.public_ip_timeout),
+        mac_vendor=MacVendorService(runner, commands, config.mac_vendor_url, config.mac_vendor_timeout),
         maintenance=MaintenanceService(runner, commands, config.repository_dir, config.service_name,
                                    config.update_remote, config.update_branch),
         keyboard=KeyboardService(runner, commands),
