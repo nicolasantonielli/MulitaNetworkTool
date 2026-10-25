@@ -34,6 +34,7 @@ class QtApplication:
         from PyQt5.QtQml import QQmlApplicationEngine
 
         from mulita.ui.qt.bridge.base import BridgeContext, Notifier
+        from mulita.ui.qt.bridge.ethernet import InternalEthernetController
         from mulita.ui.qt.bridge.diagnostics import (DiscoveryController,
                                                      PingController,
                                                      PortScanController,
@@ -79,6 +80,7 @@ class QtApplication:
             'settings': SettingsController(ctx),
             'system': SystemController(ctx),
             'network': NetworkController(ctx),
+            'interna': InternalEthernetController(ctx),
             'capture': CaptureController(ctx),
             'tap': TapController(ctx),
             'trace': TraceController(ctx),

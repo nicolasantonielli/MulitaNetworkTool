@@ -26,6 +26,7 @@ class Binaries:
     ip: str = '/usr/bin/ip'
     git: str = '/usr/bin/git'
     bash: str = '/bin/bash'
+    nmcli: str = '/usr/bin/nmcli'
     systemctl: str = '/usr/bin/systemctl'
     systemd_run: str = '/usr/bin/systemd-run'
     onboard: str = 'onboard'
@@ -64,6 +65,9 @@ class AppConfig:
     public_ip_url: str = 'ifconfig.me'
     public_ip_timeout: int = 10
     repository_dir: str = '/root/repositorio/MulitaNetworkTool'
+    # Puerto de la red interna. La IP se aplica con NetworkManager.
+    internal_interface: str = 'eth0'
+    internal_connection: str = 'mulita-interna'
     update_remote: str = 'origin'
     update_branch: str = 'v3'
     service_name: str = 'mulita'

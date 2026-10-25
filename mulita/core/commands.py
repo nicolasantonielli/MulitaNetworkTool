@@ -17,6 +17,30 @@ class CommandFactory:
     def interfaces(self) -> Argv:
         return [self._bin.ip, '-j', 'addr']
 
+    def ethernet_connection(self, interface: str) -> Argv:
+        return [self._bin.nmcli, '-g', 'GENERAL.CONNECTION', 'device', 'show', interface]
+
+    def ethernet_ipv4(self, connection: str) -> Argv:
+        return [self._bin.nmcli, '-g', 'ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns',
+                'connection', 'show', connection]
+
+    def add_ethernet_connection(self, name: str, interface: str) -> Argv:
+        return [self._bin.nmcli, 'connection', 'add', 'type', 'ethernet',
+                'ifname', interface, 'con-name', name, 'ipv4.method', 'auto']
+
+    def set_dhcp(self, connection: str) -> Argv:
+        return [self._bin.nmcli, 'connection', 'modify', connection,
+                'ipv4.method', 'auto',
+                'ipv4.addresses', '', 'ipv4.gateway', '', 'ipv4.dns', '']
+
+    def set_static(self, connection: str, cidr: str, gateway: str, dns: str) -> Argv:
+        return [self._bin.nmcli, 'connection', 'modify', connection,
+                'ipv4.method', 'manual',
+                'ipv4.addresses', cidr, 'ipv4.gateway', gateway, 'ipv4.dns', dns]
+
+    def activate_connection(self, connection: str) -> Argv:
+        return [self._bin.nmcli, 'connection', 'up', connection]
+
     def capture(self, request: CaptureRequest, directory: PurePosixPath) -> Argv:
         return [self._bin.tcpdump,
                 '-Q', request.direction.value,

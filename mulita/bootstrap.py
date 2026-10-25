@@ -16,6 +16,7 @@ from mulita.services import Services
 from mulita.services.settings import SettingsService
 from mulita.services.diagnostics import (DiscoveryService, PingService,
                                          PortScanService, TraceService)
+from mulita.services.ethernet import EthernetService
 from mulita.services.network import (CaptureService, InterfaceService,
                                      TapService)
 from mulita.services.system import (KeyboardService, MaintenanceService,
@@ -41,6 +42,7 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
     commands = CommandFactory(config.binaries)
     return Services(
         interfaces=InterfaceService(runner, commands),
+        ethernet=EthernetService(runner, commands, config.internal_interface, config.internal_connection),
         capture=CaptureService(runner, commands, config.capture_dir),
         tap=TapService(),
         trace=TraceService(runner, commands, config.trace_cycles),

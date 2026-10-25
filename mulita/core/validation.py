@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import ipaddress
 import re
 import shlex
 
 from mulita.core.errors import ValidationError
 from mulita.core.models import (PING_COUNT, PING_INTERVAL, PING_SIZE,
-                                CaptureDirection, CaptureRequest, PingRequest,
-                                Range)
+                                AddressMode, CaptureDirection, CaptureRequest,
+                                EthernetConfig, PingRequest, Range)
 
 _HOST = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._:%-]*$')
 _MAC = re.compile(r'^[0-9A-Fa-f]{2}([:-])(?:[0-9A-Fa-f]{2}\1){4}[0-9A-Fa-f]{2}$')
@@ -72,6 +73,49 @@ def _in_range(value: float, limits: Range, field: str) -> float:
         raise ValidationError(
             f'{field} fuera de rango ({limits.minimum:g} a {limits.maximum:g})')
     return value
+
+
+def ipv4_address(value: str, field: str) -> str:
+    text = (value or '').strip()
+    try:
+        return str(ipaddress.IPv4Address(text))
+    except ValueError as exc:
+        raise ValidationError(f'{field} invalida: {text or "(vacia)"}') from exc
+
+
+def netmask_prefix(value: str) -> int:
+    """Acepta 255.255.255.0, 24 o /24."""
+    text = (value or '').strip()
+    if text.startswith('/'):
+        text = text[1:]
+    if text.isdigit():
+        prefix = int(text)
+    else:
+        try:
+            prefix = ipaddress.IPv4Network(f'0.0.0.0/{text}').prefixlen
+        except ValueError as exc:
+            raise ValidationError(f'Mascara invalida: {text or "(vacia)"}') from exc
+    if not 1 <= prefix <= 32:
+        raise ValidationError('Mascara fuera de rango (1 a 32)')
+    return prefix
+
+
+def static_ethernet(address: str, netmask: str, gateway: str = '', dns: str = '') -> EthernetConfig:
+    ip_text = ipv4_address(address, 'Direccion')
+    prefix = netmask_prefix(netmask)
+    gateway_text = ipv4_address(gateway, 'Puerta de enlace') if (gateway or '').strip() else ''
+    dns_text = ipv4_address(dns, 'DNS') if (dns or '').strip() else ''
+    ip = ipaddress.IPv4Address(ip_text)
+    network = ipaddress.IPv4Network(f'{ip_text}/{prefix}', strict=False)
+    if prefix <= 30 and (ip == network.network_address or ip == network.broadcast_address):
+        raise ValidationError('La direccion no puede ser la de red ni la de broadcast')
+    if gateway_text:
+        route = ipaddress.IPv4Address(gateway_text)
+        if route == ip:
+            raise ValidationError('La puerta de enlace no puede ser la misma direccion')
+        if prefix <= 30 and route not in network:
+            raise ValidationError('La puerta de enlace no esta en la misma red')
+    return EthernetConfig(AddressMode.ESTATICA, ip_text, prefix, gateway_text, dns_text)
 
 
 def ping_request(target: str, count: float, interval: float, size: float) -> PingRequest:

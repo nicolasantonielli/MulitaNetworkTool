@@ -19,6 +19,7 @@ Item {
             id: nav
             Layout.preferredWidth: Math.round(root.width * 0.27)
             Layout.fillHeight: true
+            onCurrentIndexChanged: if (currentIndex === 2 && !interna.busy) interna.refresh()
             items: [
                 { label: "General", icon: "theme" },
                 { label: "Wi-Fi", icon: "wifi" },
@@ -66,9 +67,102 @@ Item {
                 }
             }
 
-            // Wi-Fi, Ethernet interna y Ethernet externa
+            // Wi-Fi
             PendingSection { title: "Wi-Fi"; icon: "wifi"; onGoHome: root.goHome() }
-            PendingSection { title: "Ethernet interna"; icon: "ethernet"; onGoHome: root.goHome() }
+
+            // Ethernet interna
+            ScrollPage {
+                id: internaPage
+
+                function apply() {
+                    interna.apply(modeChips.value, ip.text, mask.text, gateway.text, dns.text)
+                }
+
+                Card {
+                    Layout.fillWidth: true
+                    title: "Modo"
+                    titleIcon: "ethernet"
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: interna.interfaceName + " · " + interna.summary
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontSmall
+                        wrapMode: Text.Wrap
+                    }
+                    ChoiceChips {
+                        id: modeChips
+                        Layout.fillWidth: true
+                        enabled: !interna.busy
+                        model: interna.modes
+                        value: interna.mode
+                        onActivated: modeChips.value = value
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: modeChips.value === "static"
+                              ? "La dirección queda fija en el puerto."
+                              : "El puerto pide la dirección por DHCP."
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        wrapMode: Text.Wrap
+                    }
+                }
+
+                Card {
+                    Layout.fillWidth: true
+                    visible: modeChips.value === "static"
+                    title: "Dirección estática"
+                    titleIcon: "settings"
+
+                    Text { text: "Dirección IP"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Field { id: ip; Layout.fillWidth: true; placeholderText: "192.168.1.10" }
+                    Text { text: "Máscara"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Field { id: mask; Layout.fillWidth: true; placeholderText: "255.255.255.0" }
+                    Text { text: "Puerta de enlace"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Field { id: gateway; Layout.fillWidth: true; placeholderText: "192.168.1.1" }
+                    Text { text: "DNS"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Field { id: dns; Layout.fillWidth: true; placeholderText: "8.8.8.8" }
+                }
+
+                RowLayout {
+                    BusyIndicator {
+                        running: interna.busy
+                        visible: running
+                        Layout.preferredWidth: ui.touch
+                        Layout.preferredHeight: ui.touch
+                    }
+                    TouchButton {
+                        Layout.fillWidth: true
+                        text: "Aplicar"
+                        icon: "check"
+                        kind: "success"
+                        enabled: !interna.busy
+                        onClicked: dialog.ask({
+                            title: "Ethernet interna",
+                            kind: "warning",
+                            message: modeChips.value === "static"
+                                     ? "Se asigna " + (ip.text || "la dirección ingresada") + " a " + interna.interfaceName + "."
+                                     : interna.interfaceName + " pedirá una dirección por DHCP.",
+                            confirmText: "Aplicar",
+                            confirmAction: internaPage.apply
+                        })
+                    }
+                }
+
+                Connections {
+                    target: interna
+                    function onLoaded() {
+                        modeChips.value = interna.mode
+                        ip.text = interna.address
+                        mask.text = interna.netmask
+                        gateway.text = interna.gateway
+                        dns.text = interna.dns
+                    }
+                }
+            }
+
+            // Ethernet externa
             PendingSection { title: "Ethernet externa"; icon: "ethernet"; onGoHome: root.goHome() }
 
             // Mantenimiento

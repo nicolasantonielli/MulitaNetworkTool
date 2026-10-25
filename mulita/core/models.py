@@ -49,6 +49,24 @@ class NetworkInterface:
     addresses: tuple[str, ...] = ()
 
 
+class AddressMode(Enum):
+    DHCP = 'dhcp'
+    ESTATICA = 'static'
+
+    @property
+    def label(self) -> str:
+        return 'DHCP' if self is AddressMode.DHCP else 'Estática'
+
+
+@dataclass(frozen=True)
+class EthernetConfig:
+    mode: AddressMode = AddressMode.DHCP
+    address: str = ''
+    prefix: int = 24
+    gateway: str = ''
+    dns: str = ''
+
+
 @dataclass(frozen=True)
 class CaptureRequest:
     interface: str

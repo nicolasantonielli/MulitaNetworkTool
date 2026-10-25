@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from mulita.services.diagnostics import (DiscoveryService, PingService,
                                          PortScanService, TraceService)
+from mulita.services.ethernet import EthernetService
 from mulita.services.network import (CaptureService, InterfaceService,
                                      TapService)
 from mulita.services.settings import SettingsService
@@ -16,6 +17,7 @@ from mulita.services.tools import (ClimateService, PublicIpService,
 @dataclass
 class Services:
     interfaces: InterfaceService
+    ethernet: EthernetService
     capture: CaptureService
     tap: TapService
     trace: TraceService
