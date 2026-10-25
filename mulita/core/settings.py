@@ -1,4 +1,4 @@
-"""Preferencias del equipo. La pantalla es fija; del archivo solo se lee el tema."""
+"""Preferencias del equipo. El panel es fijo; del archivo se leen el tema y la escala."""
 from __future__ import annotations
 
 import math
@@ -14,6 +14,9 @@ MM_PER_INCH = 25.4
 PANEL_WIDTH = 800
 PANEL_HEIGHT = 480
 PANEL_DIAGONAL_INCHES = 5.0
+UI_SCALE_MIN = 0.75
+UI_SCALE_MAX = 1.5
+UI_SCALE_STEP = 0.05
 
 
 class Theme(Enum):
@@ -49,7 +52,7 @@ class Settings:
     theme: Theme = Theme.OSCURO
 
     def to_dict(self) -> dict[str, Any]:
-        return {'theme': self.theme.value}
+        return {'theme': self.theme.value, 'scale': self.display.ui_scale}
 
 
 def theme(value: Any) -> Theme:
@@ -59,15 +62,34 @@ def theme(value: Any) -> Theme:
         raise ValidationError(f'Tema invalido: {value}') from exc
 
 
+def ui_scale(value: Any) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValidationError(f'Escala invalida: {value}') from exc
+    if not UI_SCALE_MIN <= number <= UI_SCALE_MAX:
+        raise ValidationError(f'Escala fuera de rango ({UI_SCALE_MIN:g} a {UI_SCALE_MAX:g})')
+    steps = round((number - UI_SCALE_MIN) / UI_SCALE_STEP)
+    return round(UI_SCALE_MIN + steps * UI_SCALE_STEP, 2)
+
+
 def settings_from_dict(data: Mapping[str, Any]) -> Settings:
-    """La pantalla no se configura. Del archivo solo se lee el tema."""
+    """El tamaño del panel no se configura. Del archivo se leen el tema y la escala."""
     defaults = Settings()
     try:
         chosen_theme = theme(data.get('theme', defaults.theme.value))
     except ValidationError:
         chosen_theme = defaults.theme
-    return Settings(theme=chosen_theme)
+    try:
+        scale = ui_scale(data.get('scale', defaults.display.ui_scale))
+    except ValidationError:
+        scale = defaults.display.ui_scale
+    return Settings(display=replace(defaults.display, ui_scale=scale), theme=chosen_theme)
 
 
 def with_theme(settings: Settings, chosen: Theme) -> Settings:
     return replace(settings, theme=chosen)
+
+
+def with_scale(settings: Settings, scale: float) -> Settings:
+    return replace(settings, display=replace(settings.display, ui_scale=ui_scale(scale)))

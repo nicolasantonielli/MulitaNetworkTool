@@ -19,9 +19,10 @@ Item {
             id: nav
             Layout.preferredWidth: Math.round(root.width * 0.27)
             Layout.fillHeight: true
-            onCurrentIndexChanged: if (currentIndex === 2 && !interna.busy) interna.refresh()
+            onCurrentIndexChanged: if (currentIndex === 3 && !interna.busy) interna.refresh()
             items: [
                 { label: "General", icon: "theme" },
+                { label: "Pantalla", icon: "display" },
                 { label: "Wi-Fi", icon: "wifi" },
                 { label: "Ethernet interna", icon: "ethernet" },
                 { label: "Ethernet externa", icon: "ethernet" },
@@ -63,6 +64,33 @@ Item {
                         text: "Versión " + system.version
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
+                    }
+                }
+            }
+
+            // Pantalla
+            ScrollPage {
+                Card {
+                    Layout.fillWidth: true
+                    title: "Tamaño"
+                    titleIcon: "display"
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Agrandá o achicá letras e íconos juntos. La resolución del panel no cambia."
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        wrapMode: Text.Wrap
+                    }
+                    LabeledSlider {
+                        Layout.fillWidth: true
+                        label: "Escala"
+                        from: 0.75
+                        to: 1.5
+                        stepSize: 0.05
+                        initial: settings.uiScale
+                        valueText: Math.round(value * 100) + " %"
+                        onValueChanged: settings.setScale(value)
                     }
                 }
             }

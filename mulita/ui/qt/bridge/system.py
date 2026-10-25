@@ -44,7 +44,7 @@ class SystemController(TaskController):
 
 
 class SettingsController(Controller):
-    """Tema. La pantalla esta fija en el codigo."""
+    """Tema y escala. El panel queda fijo en el codigo."""
     changed = pyqtSignal()
 
     def __init__(self, ctx: BridgeContext):
@@ -63,10 +63,21 @@ class SettingsController(Controller):
     def themes(self) -> list[dict]:
         return [{'label': theme.label, 'value': theme.value} for theme in Theme]
 
+    @pyqtProperty(float, notify=changed)
+    def uiScale(self) -> float:
+        return self._current.display.ui_scale
+
     @pyqtSlot(str)
     def setTheme(self, value: str) -> None:
         try:
             self._services.settings.set_theme(value)
+        except MulitaError as exc:
+            self._fail(exc)
+
+    @pyqtSlot(float)
+    def setScale(self, value: float) -> None:
+        try:
+            self._services.settings.set_scale(value)
         except MulitaError as exc:
             self._fail(exc)
 

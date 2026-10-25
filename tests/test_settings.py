@@ -40,9 +40,22 @@ class DisplayRulesTest(unittest.TestCase):
 
     def test_saved_display_is_ignored(self):
         settings = rules.settings_from_dict({'display': {'width': 1280, 'height': 800, 'diagonal_inches': 10.1},
-                                             'theme': 'light'})
-        self.assertEqual(settings.display, DisplaySettings())
+                                             'theme': 'light', 'scale': 1.25})
+        self.assertEqual((settings.display.width, settings.display.height, settings.display.diagonal_inches),
+                         (800, 480, 5))
+        self.assertEqual(settings.display.ui_scale, 1.25)
         self.assertIs(settings.theme, Theme.CLARO)
+
+    def test_scale_out_of_range_falls_back(self):
+        settings = rules.settings_from_dict({'scale': 4, 'theme': 'dark'})
+        self.assertEqual(settings.display.ui_scale, 1)
+
+    def test_scale_changes_every_metric(self):
+        normal = Metrics.for_display(DisplaySettings())
+        large = Metrics.for_display(DisplaySettings(ui_scale=1.5))
+        self.assertAlmostEqual(large.mm, normal.mm * 1.5)
+        self.assertGreater(large.font_body, normal.font_body)
+        self.assertGreater(large.icon, normal.icon)
 
 
 class MetricsTest(unittest.TestCase):
@@ -74,7 +87,9 @@ class JsonSettingsStoreTest(unittest.TestCase):
         self.assertEqual(loaded.display, DisplaySettings())
         self.assertIs(loaded.theme, Theme.CLARO)
         self.assertFalse(self.path.with_suffix('.tmp').exists())
-        self.assertEqual(json.loads(self.path.read_text(encoding='utf-8'))['theme'], 'light')
+        saved = json.loads(self.path.read_text(encoding='utf-8'))
+        self.assertEqual(saved['theme'], 'light')
+        self.assertEqual(saved['scale'], 1)
 
     def test_corrupt_file_gives_defaults(self):
         self.path.parent.mkdir(parents=True)
@@ -92,6 +107,16 @@ class SettingsServiceTest(unittest.TestCase):
 
     def test_set_theme(self):
         self.assertIs(self.service.set_theme('light').theme, Theme.CLARO)
+
+    def test_set_scale_saves_and_notifies(self):
+        updated = self.service.set_scale(1.25)
+        self.assertEqual(updated.display.ui_scale, 1.25)
+        self.assertEqual(self.notified, [updated])
+        self.assertEqual(self.store.load().display.ui_scale, 1.25)
+
+    def test_same_scale_does_not_notify(self):
+        self.service.set_scale(1)
+        self.assertEqual(self.notified, [])
 
 
 if __name__ == '__main__':
