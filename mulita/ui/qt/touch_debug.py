@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 
 from PyQt5.QtCore import QCoreApplication, QEvent, QObject, QPointF, Qt
-from PyQt5.QtGui import QMouseEvent
+from PyQt5.QtGui import QMouseEvent, QWindow
 
 log = logging.getLogger('mulita.touch')
 
@@ -117,6 +117,11 @@ class TouchDebug(QObject):
         return False
 
     def _mouse(self, watched, event, kind: str) -> bool:
+        # La ventana reparte el evento a cada item y el filtro lo vuelve a ver.
+        # Un release mandado directo al item deja a la ventana con el boton
+        # tomado, y el proximo toque cae en la tecla anterior.
+        if not isinstance(watched, QWindow):
+            return False
         position = event.globalPos()
         x, y = position.x(), position.y()
         if kind == 'press':
