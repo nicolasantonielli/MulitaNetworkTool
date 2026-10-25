@@ -13,7 +13,8 @@ MM_PER_INCH = 25.4
 
 DISPLAY_WIDTH = Range(320, 3840, 800)
 DISPLAY_HEIGHT = Range(240, 2160, 480)
-DISPLAY_DIAGONAL = Range(3, 32, 7)
+# El equipo es un panel de 5" a 800x480. La diagonal define el tamaño fisico de los controles.
+DISPLAY_DIAGONAL = Range(3, 32, 5)
 UI_SCALE = Range(0.75, 1.5, 1)
 
 

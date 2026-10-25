@@ -102,7 +102,7 @@ class SettingsServiceTest(unittest.TestCase):
         self.assertEqual(self.notified, [result])
 
     def test_unchanged_value_does_not_notify(self):
-        self.service.update_display(800, 480, 7, True, 1)
+        self.service.update_display(800, 480, 5, True, 1)
         self.assertEqual(self.notified, [])
 
     def test_invalid_display_keeps_previous(self):
