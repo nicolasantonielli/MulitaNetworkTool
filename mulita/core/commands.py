@@ -61,11 +61,24 @@ class CommandFactory:
         return [self._bin.nmcli, '-t', '-f', 'IN-USE,SSID,SIGNAL,SECURITY',
                 'device', 'wifi', 'list', 'ifname', interface]
 
+    def wifi_delete(self, name: str) -> Argv:
+        return [self._bin.nmcli, 'connection', 'delete', 'id', name]
+
     def wifi_connect(self, interface: str, ssid: str, password: str) -> Argv:
-        argv = [self._bin.nmcli, 'device', 'wifi', 'connect', ssid, 'ifname', interface]
+        # La clave va antes de ifname. Si queda despues, algunas versiones no la guardan
+        # y NetworkManager responde que falta 802-11-wireless-security.psk.
+        argv = [self._bin.nmcli, 'device', 'wifi', 'connect', ssid]
         if password:
             argv += ['password', password]
+        argv += ['ifname', interface]
         return argv
+
+    def wifi_set_psk(self, name: str, password: str) -> Argv:
+        return [self._bin.nmcli, 'connection', 'modify', name,
+                'wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', password]
+
+    def wifi_up(self, name: str, interface: str) -> Argv:
+        return [self._bin.nmcli, 'connection', 'up', name, 'ifname', interface]
 
     def capture(self, request: CaptureRequest, directory: PurePosixPath) -> Argv:
         return [self._bin.tcpdump,

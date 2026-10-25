@@ -68,10 +68,25 @@ class WifiServiceTest(unittest.TestCase):
         self.assertEqual(service(script).scan(), (None, ()))
 
     def test_connect_sends_the_password_only_when_the_network_is_secure(self):
-        script = Script([CommandResult(0, DEVICES), CommandResult(0)])
+        script = Script([CommandResult(0, DEVICES), CommandResult(10, '', 'unknown'), CommandResult(0)])
         self.assertEqual(service(script).connect('Oficina', 'secreto', True), 'Oficina')
-        self.assertEqual(script.runs[1],
-                         [NM, 'device', 'wifi', 'connect', 'Oficina', 'ifname', 'wlan0', 'password', 'secreto'])
+        self.assertEqual(script.runs[1][:4], [NM, 'connection', 'delete', 'id'])
+        self.assertEqual(script.runs[2],
+                         [NM, 'device', 'wifi', 'connect', 'Oficina', 'password', 'secreto', 'ifname', 'wlan0'])
+
+    def test_missing_psk_is_repaired_on_the_saved_connection(self):
+        script = Script([
+            CommandResult(0, DEVICES),
+            CommandResult(0),
+            CommandResult(4, '', '802-11-wireless-security.psk: property is missing'),
+            CommandResult(0),
+            CommandResult(0),
+        ])
+        self.assertEqual(service(script).connect('Oficina', 'secreto', True), 'Oficina')
+        self.assertEqual(script.runs[3],
+                         [NM, 'connection', 'modify', 'Oficina',
+                          'wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', 'secreto'])
+        self.assertEqual(script.runs[4], [NM, 'connection', 'up', 'Oficina', 'ifname', 'wlan0'])
 
     def test_open_network_does_not_send_a_password(self):
         script = Script([CommandResult(0, DEVICES), CommandResult(0)])
@@ -85,6 +100,11 @@ class WifiServiceTest(unittest.TestCase):
         self.assertEqual(script.runs, [])
 
     def test_connect_failure_is_reported(self):
-        script = Script([CommandResult(0, DEVICES), CommandResult(4, '', 'Secrets were required')])
+        script = Script([
+            CommandResult(0, DEVICES),
+            CommandResult(10, '', 'not found'),
+            CommandResult(4, '', 'Secrets were required'),
+            CommandResult(10, '', 'no connection'),
+        ])
         with self.assertRaises(CommandFailedError):
             service(script).connect('Oficina', 'mala', True)
