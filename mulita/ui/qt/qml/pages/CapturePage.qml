@@ -8,6 +8,15 @@ Item {
     property string selectedInterface: ""
     property string selectedDirection: "inout"
     property int elapsed: 0
+    readonly property var captureInterfaces: {
+        var names = network.interfaces
+        var found = []
+        for (var i = 0; i < names.length; ++i) {
+            if (names[i] !== "lo")
+                found.push(names[i])
+        }
+        return found
+    }
 
     function clock(seconds) {
         function two(n) { return n < 10 ? "0" + n : "" + n }
@@ -29,6 +38,18 @@ Item {
         }
     }
 
+    Connections {
+        target: network
+        function onInterfacesChanged() {
+            var names = root.captureInterfaces
+            for (var i = 0; i < names.length; ++i) {
+                if (names[i] === root.selectedInterface)
+                    return
+            }
+            root.selectedInterface = ""
+        }
+    }
+
     RowLayout {
         anchors.fill: parent
         anchors.margins: ui.padding
@@ -45,16 +66,25 @@ Item {
 
                 ChoiceChips {
                     Layout.fillWidth: true
-                    model: network.interfaces
+                    model: root.captureInterfaces
                     value: root.selectedInterface
                     enabled: !capture.running
                     onActivated: root.selectedInterface = value
                 }
                 Text {
-                    visible: network.interfaces.length === 0
+                    visible: root.captureInterfaces.length === 0
                     text: "No se detectaron interfaces de red"
                     color: ui.textMuted
                     font.pixelSize: ui.fontSmall
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                }
+                TouchButton {
+                    text: "Recargar interfaces"
+                    icon: "refresh"
+                    kind: "neutral"
+                    enabled: !capture.running
+                    onClicked: network.refresh()
                 }
             }
 
