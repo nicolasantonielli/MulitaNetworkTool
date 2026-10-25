@@ -34,6 +34,16 @@ ApplicationWindow {
 
     onActiveFocusItemChanged: if (keyboard.item) keyboard.item.follow(activeFocusItem)
 
+    function placeKeyboard() {
+        if (!keyboard.item)
+            return
+        var top = keyboard.item.active
+        var next = top ? Overlay.overlay : contentItem
+        if (keyboard.parent !== next)
+            keyboard.parent = next
+        keyboard.z = top ? 1000 : 100
+    }
+
     width: ui.windowWidth
     height: ui.windowHeight
     visible: true
@@ -103,12 +113,21 @@ ApplicationWindow {
 
     Loader {
         id: keyboard
-        // Encima del aviso modal, para poder escribir la clave del Wi-Fi.
-        parent: Overlay.overlay
-        z: 1000
-        width: parent.width
+        z: 100
+        anchors.left: parent.left
+        anchors.right: parent.right
         anchors.bottom: parent.bottom
         source: ui.virtualKeyboard ? "components/KeyboardPanel.qml" : ""
-        onStatusChanged: if (status === Loader.Error) console.warn("Teclado virtual no disponible")
+        onStatusChanged: {
+            if (status === Loader.Error)
+                console.warn("Teclado virtual no disponible")
+            if (status === Loader.Ready)
+                window.placeKeyboard()
+        }
+    }
+
+    Connections {
+        target: keyboard.item
+        onActiveChanged: window.placeKeyboard()
     }
 }
