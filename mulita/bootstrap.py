@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from typing import Sequence
 
@@ -63,7 +64,21 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
     )
 
 
+def _ensure_home() -> None:
+    """El servicio no define HOME. netdiscover lo pide aunque se use -d."""
+    if os.environ.get('HOME'):
+        return
+    try:
+        import pwd
+        home = pwd.getpwuid(os.getuid()).pw_dir
+    except (ImportError, KeyError, OSError, AttributeError):
+        return
+    if home:
+        os.environ['HOME'] = home
+
+
 def main(argv: Sequence[str] | None = None) -> None:
+    _ensure_home()
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s: %(message)s')
     config = load_config(sys.argv[1:] if argv is None else argv)
     logging.getLogger(__name__).info('Mulita %s', __version__)

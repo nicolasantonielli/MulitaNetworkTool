@@ -107,7 +107,9 @@ class CommandFactory:
         return [self._bin.nmap, *arguments]
 
     def discovery(self) -> Argv:
-        return [self._bin.netdiscover, '-f', '-P']
+        # -d no lee ~/.netdiscover. El servicio no trae $HOME y sin esto
+        # netdiscover se niega a escanear.
+        return [self._bin.netdiscover, '-f', '-P', '-d']
 
     def wake_on_lan(self, mac: str) -> Argv:
         return [self._bin.wakeonlan, mac]

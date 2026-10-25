@@ -1,5 +1,8 @@
+import os
 import unittest
 from pathlib import PurePosixPath
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from mulita.config import Binaries
 from mulita.core import validation
@@ -50,7 +53,7 @@ class CommandFactoryTest(unittest.TestCase):
                          ['/bin/nmap', '-p', '22,80', '192.168.0.0/24'])
 
     def test_misc_commands(self):
-        self.assertEqual(self.commands.discovery(), ['/sbin/netdiscover', '-f', '-P'])
+        self.assertEqual(self.commands.discovery(), ['/sbin/netdiscover', '-f', '-P', '-d'])
         self.assertEqual(self.commands.speed_test(), ['/bin/speedtest', '--json'])
         self.assertEqual(self.commands.update('/repo', 'origin', 'v3'),
                          ['/usr/bin/git', '-C', '/repo', 'pull', 'origin', 'v3'])
@@ -137,6 +140,22 @@ class ParsersAndModelsTest(unittest.TestCase):
         self.assertEqual(CommandResult(0, 'out', 'warn').text, 'out')
         self.assertEqual(CommandResult(1, 'out', 'boom').text, 'out\nboom')
         self.assertEqual(CommandResult(1, '', 'boom').text, 'boom')
+
+
+class HomeEnvironmentTest(unittest.TestCase):
+
+    def test_missing_home_comes_from_the_account(self):
+        import sys
+        from mulita.bootstrap import _ensure_home
+
+        fake = SimpleNamespace(getpwuid=lambda _uid: SimpleNamespace(pw_dir='/root'))
+        saved = os.environ.copy()
+        saved.pop('HOME', None)
+        with patch.dict(os.environ, saved, clear=True), \
+                patch.dict(sys.modules, {'pwd': fake}), \
+                patch('mulita.bootstrap.os.getuid', return_value=0, create=True):
+            _ensure_home()
+            self.assertEqual(os.environ['HOME'], '/root')
 
 
 if __name__ == '__main__':
