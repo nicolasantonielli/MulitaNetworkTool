@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Callable
 
 from mulita.core.commands import CommandFactory
@@ -16,17 +17,24 @@ KeyboardListener = Callable[[bool], None]
 class MaintenanceService:
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
-                 repository_dir: str, reset_script: str):
+                 repository_dir: str, service_name: str,
+                 update_remote: str = 'origin', update_branch: str = 'v3'):
         self._runner = runner
         self._commands = commands
         self._repository_dir = repository_dir
-        self._reset_script = reset_script
+        self._service_name = service_name
+        self._update_remote = update_remote
+        self._update_branch = update_branch
 
     def update(self) -> CommandResult:
-        return self._checked(self._commands.update(self._repository_dir), 'No se pudo actualizar')
+        argv = self._commands.update(self._repository_dir, self._update_remote, self._update_branch)
+        return self._checked(argv, 'No se pudo actualizar')
 
-    def reset(self) -> CommandResult:
-        return self._checked(self._commands.reset(self._reset_script), 'No se pudo reiniciar')
+    def reset(self) -> CommandResult | None:
+        """Con systemd, pide el reinicio del servicio. Sin systemd, None: el proceso se reemplaza."""
+        if not os.environ.get('INVOCATION_ID'):
+            return None
+        return self._checked(self._commands.restart_service(self._service_name), 'No se pudo reiniciar')
 
     def poweroff(self) -> CommandResult:
         return self._checked(self._commands.poweroff(), 'No se pudo apagar')

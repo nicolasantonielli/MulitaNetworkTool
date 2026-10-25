@@ -26,6 +26,8 @@ class Binaries:
     ip: str = '/usr/bin/ip'
     git: str = '/usr/bin/git'
     bash: str = '/bin/bash'
+    systemctl: str = '/usr/bin/systemctl'
+    systemd_run: str = '/usr/bin/systemd-run'
     onboard: str = 'onboard'
     killall: str = 'killall'
     poweroff: str = 'poweroff'
@@ -62,7 +64,9 @@ class AppConfig:
     public_ip_url: str = 'ifconfig.me'
     public_ip_timeout: int = 10
     repository_dir: str = '/root/repositorio/MulitaNetworkTool'
-    reset_script: str = '/root/reset.sh'
+    update_remote: str = 'origin'
+    update_branch: str = 'v3'
+    service_name: str = 'mulita'
     assets_dir: Path = PROJECT_ROOT / 'img'
     binaries: Binaries = field(default_factory=Binaries)
     sensor: SensorSettings = field(default_factory=SensorSettings)

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
+import sys
 
-from PyQt5.QtCore import QCoreApplication, pyqtProperty, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QColor
 
 from mulita.core.errors import MulitaError
@@ -26,15 +27,15 @@ class SystemController(TaskController):
 
     @pyqtSlot()
     def reset(self) -> None:
-        self._task(self._services.maintenance.reset)
+        def restarted(result) -> None:
+            if result is None:
+                os.execv(sys.executable, [sys.executable, *sys.argv])
+
+        self._task(self._services.maintenance.reset, restarted)
 
     @pyqtSlot()
     def poweroff(self) -> None:
         self._task(self._services.maintenance.poweroff)
-
-    @pyqtSlot()
-    def quit(self) -> None:
-        QCoreApplication.quit()
 
     @pyqtSlot(str)
     def share(self, source: str) -> None:

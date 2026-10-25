@@ -108,7 +108,7 @@ Item {
                         kind: "success"
                         enabled: !system.busy
                         onClicked: dialog.ask({ title: "Actualizar Mulita", kind: "success",
-                                                message: "Se descarga la última versión. Reinicie la aplicación para aplicarla.",
+                                                message: "Se descarga la rama v3 del repositorio. Reinicie la aplicación para aplicarla.",
                                                 confirmText: "Actualizar", confirmAction: system.update })
                     }
                     TouchButton {
@@ -120,15 +120,6 @@ Item {
                         onClicked: dialog.ask({ title: "Reiniciar la aplicación", kind: "warning",
                                                 message: "Se detienen las capturas y pruebas en curso.",
                                                 confirmText: "Reiniciar", confirmAction: system.reset })
-                    }
-                    TouchButton {
-                        Layout.fillWidth: true
-                        text: "Cerrar app"
-                        icon: "logout"
-                        kind: "neutral"
-                        onClicked: dialog.ask({ title: "Cerrar la aplicación", kind: "danger",
-                                                message: "Se detienen las capturas y pruebas en curso.",
-                                                confirmText: "Cerrar", confirmAction: system.quit })
                     }
                     TouchButton {
                         Layout.fillWidth: true

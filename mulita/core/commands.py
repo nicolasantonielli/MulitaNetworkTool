@@ -54,11 +54,13 @@ class CommandFactory:
     def hide_keyboard(self) -> Argv:
         return [self._bin.killall, 'onboard']
 
-    def update(self, repository_dir: str) -> Argv:
-        return [self._bin.git, '-C', repository_dir, 'pull']
+    def update(self, repository_dir: str, remote: str, branch: str) -> Argv:
+        return [self._bin.git, '-C', repository_dir, 'pull', remote, branch]
 
-    def reset(self, script: str) -> Argv:
-        return [self._bin.bash, script]
+    def restart_service(self, service_name: str) -> Argv:
+        """Fuera del cgroup del servicio: si no, systemd mata el comando al parar la app."""
+        return [self._bin.systemd_run, '--collect', '--no-block',
+                self._bin.systemctl, 'restart', service_name]
 
     def poweroff(self) -> Argv:
         return [self._bin.poweroff]

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import sys
 import tkinter as tk
 
 import ttkbootstrap as ttk
@@ -59,8 +61,7 @@ class ConfigScreen(Screen):
     def _build_maintenance(self, tab: ttk.Frame) -> None:
         maintenance = self.services.maintenance
         buttons = (
-            ('CERRAR', 'danger', self.ctx.close_app),
-            ('REINICIAR', 'danger', lambda: self.run_in_background(maintenance.reset, None)),
+            ('REINICIAR', 'danger', lambda: self.run_in_background(maintenance.reset, self._restarted)),
             ('ACTUALIZAR', 'success', lambda: self.run_in_background(maintenance.update, self._updated)),
             ('APAGAR', 'danger', lambda: self.run_in_background(maintenance.poweroff, None)),
         )
@@ -69,6 +70,10 @@ class ConfigScreen(Screen):
                        command=command).pack(pady=10)
 
         ttk.Label(tab, text=texts.version(__version__), font=('helvetica', 12)).pack(pady=5)
+
+    def _restarted(self, result) -> None:
+        if result is None:
+            os.execv(sys.executable, [sys.executable, *sys.argv])
 
     def _updated(self, _result) -> None:
         self.ctx.notifier.info('Update', texts.UPDATE_DONE)

@@ -1,6 +1,8 @@
+import os
 import sys
 import threading
 import unittest
+from unittest.mock import patch
 
 from mulita.adapters.settings_store import MemorySettingsStore
 from mulita.adapters.subprocess_runner import SubprocessCommandRunner
@@ -104,6 +106,28 @@ class BlockingServicesTest(unittest.TestCase):
         runner = FakeRunner({'/bin/curl': CommandResult(28, '', '')})
         with self.assertRaises(CommandFailedError):
             services_with(runner).public_ip.lookup()
+
+    def test_update_pulls_remote_branch(self):
+        runner = FakeRunner()
+        services_with(runner).maintenance.update()
+        self.assertEqual(runner.runs[-1],
+                         ['/usr/bin/git', '-C', '/root/repositorio/MulitaNetworkTool', 'pull', 'origin', 'v3'])
+
+    def test_restart_uses_systemd_when_it_is_the_service(self):
+        runner = FakeRunner()
+        with patch.dict(os.environ, {'INVOCATION_ID': 'abc'}):
+            services_with(runner).maintenance.reset()
+        self.assertEqual(runner.runs[-1],
+                         ['/usr/bin/systemd-run', '--collect', '--no-block',
+                          '/usr/bin/systemctl', 'restart', 'mulita'])
+
+    def test_restart_outside_systemd_does_not_call_a_script(self):
+        runner = FakeRunner()
+        environ = os.environ.copy()
+        environ.pop('INVOCATION_ID', None)
+        with patch.dict(os.environ, environ, clear=True):
+            self.assertIsNone(services_with(runner).maintenance.reset())
+        self.assertEqual(runner.runs, [])
 
     def test_update_reports_failure(self):
         runner = FakeRunner({'/usr/bin/git': CommandResult(1, '', 'not a git repository')})

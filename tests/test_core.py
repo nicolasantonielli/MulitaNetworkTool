@@ -52,8 +52,11 @@ class CommandFactoryTest(unittest.TestCase):
     def test_misc_commands(self):
         self.assertEqual(self.commands.discovery(), ['/sbin/netdiscover', '-f', '-P'])
         self.assertEqual(self.commands.speed_test(), ['/bin/speedtest', '--json'])
-        self.assertEqual(self.commands.update('/repo'), ['/usr/bin/git', '-C', '/repo', 'pull'])
-        self.assertEqual(self.commands.reset('/root/reset.sh'), ['/bin/bash', '/root/reset.sh'])
+        self.assertEqual(self.commands.update('/repo', 'origin', 'v3'),
+                         ['/usr/bin/git', '-C', '/repo', 'pull', 'origin', 'v3'])
+        self.assertEqual(self.commands.restart_service('mulita'),
+                         ['/usr/bin/systemd-run', '--collect', '--no-block',
+                          '/usr/bin/systemctl', 'restart', 'mulita'])
         self.assertEqual(self.commands.interfaces(), ['/usr/bin/ip', '-j', 'addr'])
 
 
