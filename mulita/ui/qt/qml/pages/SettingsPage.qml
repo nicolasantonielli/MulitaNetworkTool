@@ -111,6 +111,44 @@ Item {
 
                 Card {
                     Layout.fillWidth: true
+                    visible: modeChips.value !== "static"
+                    title: "Dirección obtenida"
+                    titleIcon: "info"
+
+                    Text { text: "Dirección IP"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Text {
+                        Layout.fillWidth: true
+                        text: interna.address || "Sin dirección"
+                        color: ui.text
+                        font.pixelSize: ui.fontBody
+                        wrapMode: Text.Wrap
+                    }
+                    Text { text: "Máscara"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Text {
+                        Layout.fillWidth: true
+                        text: interna.netmask || "Sin máscara"
+                        color: ui.text
+                        font.pixelSize: ui.fontBody
+                    }
+                    Text { text: "Puerta de enlace"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Text {
+                        Layout.fillWidth: true
+                        text: interna.gateway || "Sin puerta de enlace"
+                        color: ui.text
+                        font.pixelSize: ui.fontBody
+                    }
+                    Text { text: "DNS"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Text {
+                        Layout.fillWidth: true
+                        text: interna.dns || "Sin DNS"
+                        color: ui.text
+                        font.pixelSize: ui.fontBody
+                        wrapMode: Text.Wrap
+                    }
+                }
+
+                Card {
+                    Layout.fillWidth: true
                     visible: modeChips.value === "static"
                     title: "Dirección estática"
                     titleIcon: "settings"
@@ -154,6 +192,8 @@ Item {
                     target: interna
                     function onLoaded() {
                         modeChips.value = interna.mode
+                        if (interna.mode !== "static")
+                            return
                         ip.text = interna.address
                         mask.text = interna.netmask
                         gateway.text = interna.gateway

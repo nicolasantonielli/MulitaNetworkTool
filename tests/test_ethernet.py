@@ -5,10 +5,15 @@ from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.models import AddressMode, CommandResult, EthernetConfig
-from mulita.core.parsers import parse_connection_name, parse_nmcli_ipv4
+from mulita.core.parsers import parse_connection_name, parse_nmcli_device_ipv4, parse_nmcli_ipv4
 from mulita.services.ethernet import EthernetService
 
 NM = '/usr/bin/nmcli'
+LEASE = '''IP4.ADDRESS[1]:192.168.0.45/24
+IP4.GATEWAY:192.168.0.1
+IP4.DNS[1]:192.168.0.1
+IP4.DNS[2]:8.8.8.8
+'''
 
 
 class Script:
@@ -54,6 +59,9 @@ class EthernetRulesTest(unittest.TestCase):
         self.assertEqual(parse_nmcli_ipv4('auto\n\n\n\n').mode, AddressMode.DHCP)
         config = parse_nmcli_ipv4('manual\n192.168.1.10/24\n192.168.1.1\n8.8.8.8\n')
         self.assertEqual(config, EthernetConfig(AddressMode.ESTATICA, '192.168.1.10', 24, '192.168.1.1', '8.8.8.8'))
+        leased = parse_nmcli_device_ipv4(LEASE)
+        self.assertEqual(leased, EthernetConfig(AddressMode.DHCP, '192.168.0.45', 24, '192.168.0.1', '192.168.0.1, 8.8.8.8'))
+        self.assertEqual(parse_nmcli_device_ipv4('').address, '')
 
 
 class EthernetCommandsTest(unittest.TestCase):
@@ -70,6 +78,8 @@ class EthernetCommandsTest(unittest.TestCase):
                           'ipv4.addresses', '192.168.1.10/24', 'ipv4.gateway', '192.168.1.1',
                           'ipv4.dns', '8.8.8.8'])
         self.assertEqual(self.commands.activate_connection('lan'), [NM, 'connection', 'up', 'lan'])
+        self.assertEqual(self.commands.ethernet_lease('eth0'),
+                         [NM, '-t', '-f', 'IP4.ADDRESS,IP4.GATEWAY,IP4.DNS', 'device', 'show', 'eth0'])
 
 
 class EthernetServiceTest(unittest.TestCase):
@@ -84,14 +94,32 @@ class EthernetServiceTest(unittest.TestCase):
         self.assertEqual(config.prefix, 8)
         self.assertIn('Wired connection 1', script.runs[1])
 
-    def test_read_without_connection_is_dhcp(self):
-        script = Script([CommandResult(0, '--\n')])
-        self.assertEqual(service(script).read(), EthernetConfig())
-        self.assertEqual(len(script.runs), 1)
+    def test_read_without_connection_shows_the_lease(self):
+        script = Script([CommandResult(0, '--\n'), CommandResult(0, LEASE)])
+        config = service(script).read()
+        self.assertEqual(config.address, '192.168.0.45')
+        self.assertEqual(config.dns, '192.168.0.1, 8.8.8.8')
+        self.assertEqual(script.runs[1][1:4], ['-t', '-f', 'IP4.ADDRESS,IP4.GATEWAY,IP4.DNS'])
+
+    def test_read_dhcp_connection_uses_the_interface_lease(self):
+        script = Script([
+            CommandResult(0, 'Wired connection 1\n'),
+            CommandResult(0, 'auto\n\n\n\n'),
+            CommandResult(0, LEASE),
+        ])
+        config = service(script).read()
+        self.assertEqual((config.mode, config.address, config.prefix, config.gateway),
+                         (AddressMode.DHCP, '192.168.0.45', 24, '192.168.0.1'))
 
     def test_apply_dhcp_on_existing_connection(self):
-        script = Script([CommandResult(0, 'Wired connection 1\n'), CommandResult(0), CommandResult(0)])
-        self.assertEqual(service(script).apply_dhcp().mode, AddressMode.DHCP)
+        script = Script([
+            CommandResult(0, 'Wired connection 1\n'),
+            CommandResult(0),
+            CommandResult(0),
+            CommandResult(0, LEASE),
+        ])
+        config = service(script).apply_dhcp()
+        self.assertEqual(config.address, '192.168.0.45')
         self.assertEqual(script.runs[1][4:6], ['ipv4.method', 'auto'])
         self.assertEqual(script.runs[2][1:3], ['connection', 'up'])
 

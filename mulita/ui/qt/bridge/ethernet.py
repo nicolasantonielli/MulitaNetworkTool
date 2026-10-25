@@ -10,7 +10,7 @@ from mulita.ui.qt.bridge.base import TaskController
 
 
 def _netmask(config: EthernetConfig) -> str:
-    if config.mode is not AddressMode.ESTATICA or not config.address:
+    if not config.address:
         return ''
     return str(ipaddress.IPv4Network(f'0.0.0.0/{config.prefix}').netmask)
 
@@ -51,6 +51,8 @@ class InternalEthernetController(TaskController):
     def summary(self) -> str:
         if self._config.mode is AddressMode.ESTATICA and self._config.address:
             return f'En uso: {self._config.address}/{self._config.prefix}'
+        if self._config.address:
+            return f'En uso: DHCP · {self._config.address}'
         return 'En uso: DHCP'
 
     @pyqtProperty('QVariantList', constant=True)

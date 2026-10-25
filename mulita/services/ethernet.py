@@ -4,7 +4,7 @@ from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError
 from mulita.core.models import AddressMode, EthernetConfig
-from mulita.core.parsers import parse_connection_name, parse_nmcli_ipv4
+from mulita.core.parsers import parse_connection_name, parse_nmcli_device_ipv4, parse_nmcli_ipv4
 from mulita.core.ports import CommandRunner
 
 
@@ -25,15 +25,23 @@ class EthernetService:
     def read(self) -> EthernetConfig:
         name = self._connection()
         if name is None:
-            return EthernetConfig()
+            return self.lease()
         shown = self._checked(self._commands.ethernet_ipv4(name), 'No se pudo leer la ethernet interna')
-        return parse_nmcli_ipv4(shown.stdout)
+        config = parse_nmcli_ipv4(shown.stdout)
+        if config.mode is AddressMode.DHCP:
+            return self.lease()
+        return config
+
+    def lease(self) -> EthernetConfig:
+        shown = self._checked(self._commands.ethernet_lease(self._interface),
+                              'No se pudo leer la direccion DHCP')
+        return parse_nmcli_device_ipv4(shown.stdout)
 
     def apply_dhcp(self) -> EthernetConfig:
         name = self._ensure()
         self._checked(self._commands.set_dhcp(name), 'No se pudo activar DHCP')
         self._checked(self._commands.activate_connection(name), 'No se pudo aplicar DHCP')
-        return EthernetConfig(AddressMode.DHCP)
+        return self.lease()
 
     def apply_static(self, address: str, netmask: str, gateway: str = '', dns: str = '') -> EthernetConfig:
         config = validation.static_ethernet(address, netmask, gateway, dns)

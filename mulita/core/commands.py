@@ -24,6 +24,10 @@ class CommandFactory:
         return [self._bin.nmcli, '-g', 'ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns',
                 'connection', 'show', connection]
 
+    def ethernet_lease(self, interface: str) -> Argv:
+        return [self._bin.nmcli, '-t', '-f', 'IP4.ADDRESS,IP4.GATEWAY,IP4.DNS',
+                'device', 'show', interface]
+
     def add_ethernet_connection(self, name: str, interface: str) -> Argv:
         return [self._bin.nmcli, 'connection', 'add', 'type', 'ethernet',
                 'ifname', interface, 'con-name', name, 'ipv4.method', 'auto']

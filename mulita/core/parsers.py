@@ -31,6 +31,33 @@ def parse_connection_name(text: str) -> str | None:
     return name
 
 
+def parse_nmcli_device_ipv4(text: str) -> EthernetConfig:
+    """Lo que la interfaz tiene ahora: `nmcli -t -f IP4.ADDRESS,IP4.GATEWAY,IP4.DNS device show`."""
+    address = ''
+    prefix = 24
+    gateway = ''
+    dns: list[str] = []
+    for raw in (text or '').splitlines():
+        line = raw.strip()
+        if ':' not in line:
+            continue
+        key, value = line.split(':', 1)
+        value = value.replace('\\:', ':').strip()
+        key = key.split('[', 1)[0]
+        if key == 'IP4.ADDRESS' and not address and '/' in value:
+            ip, length = value.split('/', 1)
+            try:
+                prefix = int(length)
+            except ValueError as exc:
+                raise CommandFailedError(f'Prefijo de red invalido: {length}') from exc
+            address = ip
+        elif key == 'IP4.GATEWAY' and value and not gateway:
+            gateway = value
+        elif key == 'IP4.DNS' and value:
+            dns.append(value)
+    return EthernetConfig(AddressMode.DHCP, address, prefix, gateway, ', '.join(dns))
+
+
 def parse_nmcli_ipv4(text: str) -> EthernetConfig:
     """Cuatro lineas de `nmcli -g ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns`."""
     lines = (text or '').splitlines()
