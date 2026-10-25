@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.models import WifiNetwork
@@ -26,8 +28,7 @@ class WifiController(TaskController):
                 return network.ssid
         return ''
 
-    @pyqtProperty('QVariantList', notify=networksChanged)
-    def networks(self) -> list[dict]:
+    def _rows(self) -> list[dict]:
         return [{
             'ssid': network.ssid,
             'signal': network.signal,
@@ -35,6 +36,10 @@ class WifiController(TaskController):
             'secure': network.secure,
             'active': network.active,
         } for network in self._networks]
+
+    @pyqtProperty(str, notify=networksChanged)
+    def networksJson(self) -> str:
+        return json.dumps(self._rows())
 
     @pyqtSlot()
     def refresh(self) -> None:

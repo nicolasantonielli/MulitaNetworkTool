@@ -101,7 +101,7 @@ Item {
             }
 
             // Wi-Fi
-            ScrollPage {
+            Item {
                 id: wifiPage
 
                 property string chosen: ""
@@ -121,77 +121,136 @@ Item {
                         })
                 }
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    Text {
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: ui.gap
+
+                    RowLayout {
                         Layout.fillWidth: true
-                        text: wifi.deviceName === "" ? "No hay Wi-Fi"
-                              : (wifi.activeName === "" ? "Sin conexión" : "Conectada: " + wifi.activeName)
-                        color: ui.text
-                        font.pixelSize: ui.fontBody
-                        elide: Text.ElideRight
-                    }
-                    TouchButton {
-                        text: wifi.busy ? "Buscando…" : "Buscar"
-                        icon: "refresh"
-                        kind: "neutral"
-                        enabled: !wifi.busy && wifi.deviceName !== ""
-                        onClicked: wifi.refresh()
-                    }
-                }
-
-                Repeater {
-                    model: wifi.networks
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: ui.touch
-                        radius: ui.radius
-                        color: modelData.active ? ui.primary : (area.pressed ? ui.surfaceHigh : ui.surfaceAlt)
-                        border.width: 1
-                        border.color: modelData.active ? ui.primary : ui.border
-
                         Text {
-                            anchors.fill: parent
-                            anchors.leftMargin: ui.padding
-                            anchors.rightMargin: ui.padding
-                            verticalAlignment: Text.AlignVCenter
-                            text: modelData.ssid + "   " + modelData.signal + "%   " + modelData.security
-                            color: modelData.active ? ui.onAccent : ui.text
+                            Layout.fillWidth: true
+                            text: wifi.deviceName === "" ? "No hay Wi-Fi"
+                                  : (wifi.activeName === "" ? "Sin conexión" : "Conectada: " + wifi.activeName)
+                            color: ui.text
                             font.pixelSize: ui.fontBody
                             elide: Text.ElideRight
                         }
-                        TouchArea {
-                            id: area
-                            onTapped: wifiPage.pick(modelData.ssid, modelData.secure)
+                        TouchButton {
+                            text: wifi.busy ? "Buscando…" : "Buscar"
+                            icon: "refresh"
+                            kind: "neutral"
+                            enabled: !wifi.busy
+                            onClicked: wifi.refresh()
                         }
                     }
-                }
 
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    visible: wifiPage.chosen !== "" && wifiPage.chosenSecure
-                    spacing: ui.gap
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        spacing: Math.round(ui.gap * 0.5)
 
-                    Text {
-                        Layout.fillWidth: true
-                        text: "Clave de " + wifiPage.chosen
-                        color: ui.textMuted
-                        font.pixelSize: ui.fontSmall
-                        elide: Text.ElideRight
+                        ListView {
+                            id: wifiList
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            clip: true
+                            interactive: false
+                            spacing: Math.round(ui.gap * 0.4)
+                            boundsBehavior: Flickable.StopAtBounds
+                            model: {
+                                try { return JSON.parse(wifi.networksJson) }
+                                catch (e) { return [] }
+                            }
+
+                            delegate: Rectangle {
+                                readonly property string ssid: modelData.ssid || ""
+                                readonly property bool secure: modelData.secure === true
+                                readonly property bool activeNet: modelData.active === true
+                                readonly property bool selected: wifiPage.chosen === ssid
+
+                                width: wifiList.width
+                                height: ui.touch
+                                radius: ui.radius
+                                color: activeNet ? ui.primary
+                                       : (selected || area.pressed ? ui.surfaceHigh : ui.surfaceAlt)
+                                border.width: selected ? 2 : 1
+                                border.color: selected || activeNet ? ui.primary : ui.border
+
+                                Text {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: ui.padding
+                                    anchors.rightMargin: ui.padding
+                                    verticalAlignment: Text.AlignVCenter
+                                    text: ssid + "   " + modelData.signal + "%   " + modelData.security
+                                    color: activeNet ? ui.onAccent : ui.text
+                                    font.pixelSize: ui.fontBody
+                                    font.weight: selected ? Font.DemiBold : Font.Normal
+                                    elide: Text.ElideRight
+                                }
+                                TouchArea {
+                                    id: area
+                                    onTapped: wifiPage.pick(ssid, secure)
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillHeight: true
+                            Layout.preferredWidth: wifiList.contentHeight > wifiList.height + 1 ? Math.round(ui.mm * 4) : 0
+                            visible: Layout.preferredWidth > 0
+                            radius: ui.radius
+                            color: ui.surfaceHigh
+                            border.width: 1
+                            border.color: ui.border
+
+                            Rectangle {
+                                readonly property real maxY: Math.max(0, wifiList.contentHeight - wifiList.height)
+                                readonly property real handleHeight: Math.max(ui.touch * 0.6,
+                                        parent.height * wifiList.height / Math.max(wifiList.contentHeight, 1))
+                                x: 2
+                                width: Math.max(0, parent.width - 4)
+                                height: handleHeight
+                                y: maxY <= 0 ? 0 : (parent.height - height) * (wifiList.contentY / maxY)
+                                radius: width / 2
+                                color: ui.primary
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                onPressed: {
+                                    var maxY = Math.max(0, wifiList.contentHeight - wifiList.height)
+                                    var fraction = Math.max(0, Math.min(1, mouse.y / Math.max(1, height)))
+                                    wifiList.contentY = fraction * maxY
+                                }
+                            }
+                        }
                     }
-                    Field {
-                        id: wifiPassword
+
+                    ColumnLayout {
                         Layout.fillWidth: true
-                        echoMode: TextInput.Password
-                        placeholderText: "Clave"
-                    }
-                    TouchButton {
-                        Layout.fillWidth: true
-                        text: "Conectar"
-                        icon: "wifi"
-                        enabled: !wifi.busy
-                        onClicked: wifi.connectTo(wifiPage.chosen, wifiPassword.text, true)
+                        visible: wifiPage.chosen !== "" && wifiPage.chosenSecure
+                        spacing: Math.round(ui.gap * 0.4)
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: "Clave de " + wifiPage.chosen
+                            color: ui.text
+                            font.pixelSize: ui.fontBody
+                            font.weight: Font.DemiBold
+                            elide: Text.ElideRight
+                        }
+                        Field {
+                            id: wifiPassword
+                            Layout.fillWidth: true
+                            echoMode: TextInput.Password
+                            placeholderText: "Clave"
+                        }
+                        TouchButton {
+                            Layout.fillWidth: true
+                            text: "Conectar"
+                            icon: "wifi"
+                            enabled: !wifi.busy
+                            onClicked: wifi.connectTo(wifiPage.chosen, wifiPassword.text, true)
+                        }
                     }
                 }
             }
