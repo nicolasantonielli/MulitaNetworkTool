@@ -180,12 +180,13 @@ boot_dir() {
 configure_cmdline() {
   local file="$1" line word
   local -a words=() new=()
-  local seen_quiet=0 seen_log=0 seen_logo=0 seen_cursor=0 seen_blank=0 seen_status=0
+  local seen_quiet=0 seen_log=0 seen_logo=0 seen_cursor=0 seen_blank=0 seen_status=0 seen_tty3=0
   line="$(tr -s '[:space:]' ' ' < "$file")"
   read -r -a words <<< "$line"
   for word in "${words[@]}"; do
     case "$word" in
       console=tty1|splash) continue ;;
+      console=tty3) seen_tty3=1 ;;
       quiet) seen_quiet=1 ;;
       loglevel=*) seen_log=1; word="loglevel=3" ;;
       logo.nologo) seen_logo=1 ;;
@@ -201,7 +202,17 @@ configure_cmdline() {
   [[ "$seen_cursor" -eq 1 ]] || new+=(vt.global_cursor_default=0)
   [[ "$seen_blank" -eq 1 ]] || new+=(consoleblank=0)
   [[ "$seen_status" -eq 1 ]] || new+=(systemd.show_status=false)
-  printf '%s\n' "${new[*]}" | as_root tee "$file" >/dev/null
+  # tty3 queda como consola de rescate (Ctrl+Alt+F3). tty1 es la aplicacion.
+  [[ "$seen_tty3" -eq 1 ]] || new+=(console=tty3)
+  local rebuilt="${new[*]}"
+  if [[ "$rebuilt" != *root=* || "$rebuilt" != *rootwait* ]]; then
+    echo "No se modifico $file: sin esa linea la Raspberry no arranca."
+    return 0
+  fi
+  if [[ ! -f "$file.mulita-bak" ]]; then
+    as_root cp -a "$file" "$file.mulita-bak"
+  fi
+  printf '%s\n' "$rebuilt" | as_root tee "$file" >/dev/null
 }
 
 configure_boot() {
@@ -259,9 +270,11 @@ EOF
 as_root cp "$unit" /etc/systemd/system/mulita.service
 rm -f "$unit"
 as_root systemctl daemon-reload
-# Sin login en la pantalla. La sesion actual, si es por HDMI, sigue hasta el reinicio.
+# tty1 lo usa la aplicacion. No se enmascara getty: tty3 sigue permitiendo entrar
+# con teclado si la aplicacion no abre. Enmascararlo deja la pantalla negra y sin login.
+as_root systemctl unmask getty@tty1.service || true
 as_root systemctl disable getty@tty1.service || true
-as_root systemctl mask getty@tty1.service || true
+as_root systemctl enable getty@tty3.service || true
 as_root systemctl enable mulita.service
 
 echo "Listo. Al reiniciar, Mulita se abre sola en la pantalla."
