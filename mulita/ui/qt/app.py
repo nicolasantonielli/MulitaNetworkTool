@@ -44,6 +44,7 @@ class QtApplication:
                                                  TapController)
         from mulita.ui.qt.bridge.system import (Appearance, SettingsController,
                                                 SystemController)
+        from mulita.ui.qt.bridge.wifi import WifiController
         from mulita.ui.qt.bridge.tools import (ClimateController,
                                                PublicIpController,
                                                SpeedTestController,
@@ -81,6 +82,7 @@ class QtApplication:
             'system': SystemController(ctx),
             'network': NetworkController(ctx),
             'interna': InternalEthernetController(ctx),
+            'wifi': WifiController(ctx),
             'capture': CaptureController(ctx),
             'tap': TapController(ctx),
             'trace': TraceController(ctx),

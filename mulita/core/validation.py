@@ -118,6 +118,22 @@ def static_ethernet(address: str, netmask: str, gateway: str = '', dns: str = ''
     return EthernetConfig(AddressMode.ESTATICA, ip_text, prefix, gateway_text, dns_text)
 
 
+def wifi_ssid(value: str) -> str:
+    text = (value or '').strip()
+    if not text or text.startswith('-') or '\n' in text or '\r' in text or len(text) > 32:
+        raise ValidationError('Red invalida')
+    return text
+
+
+def wifi_password(value: str, required: bool) -> str:
+    text = value or ''
+    if '\n' in text or '\r' in text:
+        raise ValidationError('La clave no puede tener saltos de linea')
+    if required and not text.strip():
+        raise ValidationError('Falta la clave de la red')
+    return text
+
+
 def ping_request(target: str, count: float, interval: float, size: float) -> PingRequest:
     return PingRequest(
         target=host(target),

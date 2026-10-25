@@ -19,7 +19,12 @@ Item {
             id: nav
             Layout.preferredWidth: Math.round(root.width * 0.27)
             Layout.fillHeight: true
-            onCurrentIndexChanged: if (currentIndex === 3 && !interna.busy) interna.refresh()
+            onCurrentIndexChanged: {
+                if (currentIndex === 2 && !wifi.busy)
+                    wifi.refresh()
+                if (currentIndex === 3 && !interna.busy)
+                    interna.refresh()
+            }
             items: [
                 { label: "General", icon: "info" },
                 { label: "Pantalla", icon: "display" },
@@ -96,7 +101,100 @@ Item {
             }
 
             // Wi-Fi
-            PendingSection { title: "Wi-Fi"; icon: "wifi"; onGoHome: root.goHome() }
+            ScrollPage {
+                id: wifiPage
+
+                property string chosen: ""
+                property bool chosenSecure: false
+
+                function pick(ssid, secure) {
+                    chosen = ssid
+                    chosenSecure = secure
+                    wifiPassword.text = ""
+                    if (!secure)
+                        dialog.ask({
+                            title: "Conectar a " + ssid,
+                            kind: "success",
+                            message: "La red no pide clave.",
+                            confirmText: "Conectar",
+                            confirmAction: function() { wifi.connectTo(ssid, "", false) }
+                        })
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
+                        Layout.fillWidth: true
+                        text: wifi.deviceName === "" ? "No hay Wi-Fi"
+                              : (wifi.activeName === "" ? "Sin conexión" : "Conectada: " + wifi.activeName)
+                        color: ui.text
+                        font.pixelSize: ui.fontBody
+                        elide: Text.ElideRight
+                    }
+                    TouchButton {
+                        text: wifi.busy ? "Buscando…" : "Buscar"
+                        icon: "refresh"
+                        kind: "neutral"
+                        enabled: !wifi.busy && wifi.deviceName !== ""
+                        onClicked: wifi.refresh()
+                    }
+                }
+
+                Repeater {
+                    model: wifi.networks
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        implicitHeight: ui.touch
+                        radius: ui.radius
+                        color: modelData.active ? ui.primary : (area.pressed ? ui.surfaceHigh : ui.surfaceAlt)
+                        border.width: 1
+                        border.color: modelData.active ? ui.primary : ui.border
+
+                        Text {
+                            anchors.fill: parent
+                            anchors.leftMargin: ui.padding
+                            anchors.rightMargin: ui.padding
+                            verticalAlignment: Text.AlignVCenter
+                            text: modelData.ssid + "   " + modelData.signal + "%   " + modelData.security
+                            color: modelData.active ? ui.onAccent : ui.text
+                            font.pixelSize: ui.fontBody
+                            elide: Text.ElideRight
+                        }
+                        TouchArea {
+                            id: area
+                            onTapped: wifiPage.pick(modelData.ssid, modelData.secure)
+                        }
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    visible: wifiPage.chosen !== "" && wifiPage.chosenSecure
+                    spacing: ui.gap
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Clave de " + wifiPage.chosen
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontSmall
+                        elide: Text.ElideRight
+                    }
+                    Field {
+                        id: wifiPassword
+                        Layout.fillWidth: true
+                        echoMode: TextInput.Password
+                        placeholderText: "Clave"
+                    }
+                    TouchButton {
+                        Layout.fillWidth: true
+                        text: "Conectar"
+                        icon: "wifi"
+                        enabled: !wifi.busy
+                        onClicked: wifi.connectTo(wifiPage.chosen, wifiPassword.text, true)
+                    }
+                }
+            }
 
             // Ethernet interna
             ScrollPage {

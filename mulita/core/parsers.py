@@ -4,7 +4,8 @@ import json
 import re
 
 from mulita.core.errors import CommandFailedError
-from mulita.core.models import AddressMode, EthernetConfig, NetworkInterface, SpeedTestResult
+from mulita.core.models import (AddressMode, EthernetConfig, NetworkInterface,
+                                SpeedTestResult, WifiNetwork)
 
 
 def parse_interfaces(text: str) -> list[NetworkInterface]:
@@ -129,6 +130,49 @@ def parse_nmcli_ipv4(text: str) -> EthernetConfig:
     except ValueError as exc:
         raise CommandFailedError(f'Prefijo de red invalido: {prefix}') from exc
     return EthernetConfig(AddressMode.ESTATICA, address, length, gateway, dns)
+
+
+def _nmcli_columns(line: str) -> list[str]:
+    escaped = line.replace('\\:', '\x00')
+    return [part.replace('\x00', ':') for part in escaped.split(':')]
+
+
+def parse_wifi_device(text: str) -> str | None:
+    """Primera interfaz wifi de `nmcli -t -f DEVICE,TYPE device status`."""
+    for raw in (text or '').splitlines():
+        parts = _nmcli_columns(raw.strip())
+        if len(parts) < 2:
+            continue
+        device, kind = parts[0].strip(), parts[1].strip()
+        if kind == 'wifi' and device and not device.startswith('p2p'):
+            return device
+    return None
+
+
+def parse_wifi_list(text: str) -> list[WifiNetwork]:
+    """`nmcli -t -f IN-USE,SSID,SIGNAL,SECURITY device wifi list`."""
+    found: dict[str, WifiNetwork] = {}
+    for raw in (text or '').splitlines():
+        parts = _nmcli_columns(raw.strip())
+        if len(parts) < 4:
+            continue
+        in_use, ssid, signal = parts[0].strip(), parts[1].strip(), parts[2].strip()
+        security = ':'.join(parts[3:]).strip()
+        if not ssid:
+            continue
+        try:
+            strength = int(signal)
+        except ValueError:
+            strength = 0
+        network = WifiNetwork(
+            ssid=ssid,
+            signal=max(0, min(100, strength)),
+            security='' if security in ('', '--') else security,
+            active=in_use == '*')
+        previous = found.get(ssid)
+        if previous is None or network.active or network.signal > previous.signal:
+            found[ssid] = network
+    return sorted(found.values(), key=lambda item: (not item.active, -item.signal, item.ssid.lower()))
 
 
 def parse_speed_test(text: str) -> SpeedTestResult:

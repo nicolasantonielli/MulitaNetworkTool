@@ -59,6 +59,18 @@ class AddressMode(Enum):
 
 
 @dataclass(frozen=True)
+class WifiNetwork:
+    ssid: str
+    signal: int = 0
+    security: str = ''
+    active: bool = False
+
+    @property
+    def secure(self) -> bool:
+        return bool(self.security)
+
+
+@dataclass(frozen=True)
 class EthernetConfig:
     mode: AddressMode = AddressMode.DHCP
     address: str = ''

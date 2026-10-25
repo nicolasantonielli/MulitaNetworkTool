@@ -23,6 +23,7 @@ from mulita.services.system import (KeyboardService, MaintenanceService,
                                     ShareService)
 from mulita.services.tools import (ClimateService, PublicIpService,
                                    SpeedTestService, WakeOnLanService)
+from mulita.services.wifi import WifiService
 from mulita.version import __version__
 
 
@@ -43,6 +44,7 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
     return Services(
         interfaces=InterfaceService(runner, commands),
         ethernet=EthernetService(runner, commands, config.internal_interface, config.internal_connection),
+        wifi=WifiService(runner, commands),
         capture=CaptureService(runner, commands, config.capture_dir),
         tap=TapService(),
         trace=TraceService(runner, commands, config.trace_cycles),

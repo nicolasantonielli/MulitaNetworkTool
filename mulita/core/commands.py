@@ -51,6 +51,22 @@ class CommandFactory:
     def activate_connection(self, connection: str) -> Argv:
         return [self._bin.nmcli, 'connection', 'up', connection]
 
+    def wifi_devices(self) -> Argv:
+        return [self._bin.nmcli, '-t', '-f', 'DEVICE,TYPE', 'device', 'status']
+
+    def wifi_rescan(self, interface: str) -> Argv:
+        return [self._bin.nmcli, 'device', 'wifi', 'rescan', 'ifname', interface]
+
+    def wifi_list(self, interface: str) -> Argv:
+        return [self._bin.nmcli, '-t', '-f', 'IN-USE,SSID,SIGNAL,SECURITY',
+                'device', 'wifi', 'list', 'ifname', interface]
+
+    def wifi_connect(self, interface: str, ssid: str, password: str) -> Argv:
+        argv = [self._bin.nmcli, 'device', 'wifi', 'connect', ssid, 'ifname', interface]
+        if password:
+            argv += ['password', password]
+        return argv
+
     def capture(self, request: CaptureRequest, directory: PurePosixPath) -> Argv:
         return [self._bin.tcpdump,
                 '-Q', request.direction.value,

@@ -12,12 +12,14 @@ from mulita.services.system import (KeyboardService, MaintenanceService,
                                     ShareService)
 from mulita.services.tools import (ClimateService, PublicIpService,
                                    SpeedTestService, WakeOnLanService)
+from mulita.services.wifi import WifiService
 
 
 @dataclass
 class Services:
     interfaces: InterfaceService
     ethernet: EthernetService
+    wifi: WifiService
     capture: CaptureService
     tap: TapService
     trace: TraceService
