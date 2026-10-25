@@ -9,15 +9,20 @@ Rectangle {
 
     property Item field: null
     property bool caps: false
+    property bool typing: false
     readonly property bool active: field !== null
     readonly property int keyHeight: Math.round(ui.touch * 0.82)
+    readonly property var rows: [
+        ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
+        ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+        ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
+        ["z", "x", "c", "v", "b", "n", "m", ".", "-", "_"]
+    ]
 
-    onFieldChanged: if (!field) caps = false
-
-    function shown(letter) {
-        if (!caps || letter < "a" || letter > "z")
-            return letter
-        return letter.toUpperCase()
+    function glyph(letter) {
+        if (caps && letter >= "a" && letter <= "z")
+            return letter.toUpperCase()
+        return letter
     }
 
     function accepts(item) {
@@ -45,10 +50,11 @@ Rectangle {
     }
 
     function follow(item) {
-        if (!item || isInside(item))
+        if (typing || !item || isInside(item))
             return
         var target = keyboardItem(item)
-        field = target
+        if (target)
+            field = target
     }
 
     function remember() {
@@ -57,23 +63,28 @@ Rectangle {
             follow(win.activeFocusItem)
     }
 
-    function type(text) {
+    function type(ch) {
         var item = field
-        if (!accepts(item))
+        if (!item || !ch)
             return
-        item.forceActiveFocus()
-        item.insert(item.cursorPosition, text)
+        typing = true
+        var pos = item.cursorPosition
+        if (pos === undefined || pos < 0)
+            pos = item.text ? item.text.length : 0
+        item.insert(pos, ch)
+        typing = false
     }
 
     function backspace() {
         var item = field
-        if (!accepts(item))
+        if (!item)
             return
-        item.forceActiveFocus()
+        typing = true
         if (item.selectionStart !== undefined && item.selectionStart !== item.selectionEnd)
             item.remove(item.selectionStart, item.selectionEnd)
         else if (item.cursorPosition > 0)
             item.remove(item.cursorPosition - 1, item.cursorPosition)
+        typing = false
     }
 
     color: ui.surface
@@ -105,24 +116,24 @@ Rectangle {
         visible: root.active
 
         Repeater {
-            // El modelo no cambia con Mayus: si se reconstruye, el toque inserta otra cosa.
-            model: ["1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm.-_"]
+            model: root.rows
 
             delegate: RowLayout {
+                readonly property int row: index
                 Layout.fillWidth: true
                 spacing: Math.round(ui.gap * 0.3)
 
                 Repeater {
-                    model: modelData.split("")
+                    model: root.rows[row]
 
                     delegate: TouchButton {
-                        readonly property string letter: modelData
+                        readonly property string letter: root.rows[row][index]
 
                         Layout.fillWidth: true
                         Layout.preferredHeight: root.keyHeight
-                        text: root.shown(letter)
+                        text: root.glyph(letter)
                         kind: "neutral"
-                        onClicked: root.type(root.shown(letter))
+                        onClicked: root.type(root.glyph(letter))
                     }
                 }
             }
@@ -173,6 +184,7 @@ Rectangle {
                 icon: "close"
                 kind: "neutral"
                 onClicked: {
+                    root.caps = false
                     if (root.field)
                         root.field.focus = false
                     root.field = null
