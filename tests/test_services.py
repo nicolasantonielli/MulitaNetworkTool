@@ -32,7 +32,7 @@ class SessionServicesTest(unittest.TestCase):
         services.capture.start('eth0', 'in', 'captura', on_exit=exits.append)
 
         self.assertTrue(services.capture.is_running)
-        self.assertEqual(runner.starts[-1][-1], '/root/Desktop/captura.pcap')
+        self.assertEqual(runner.starts[-1][-1], '/root/capturas/captura.pcap')
         with self.assertRaises(AlreadyRunningError):
             services.capture.start('eth0', 'in', 'otra')
 

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from pathlib import PurePosixPath
+import os
+from pathlib import Path, PurePosixPath
 from typing import Optional
 
 from mulita.core import validation
@@ -53,8 +54,18 @@ class CaptureService(ProcessSession):
               on_output: Optional[OutputListener] = None,
               on_exit: Optional[ExitListener] = None) -> CaptureRequest:
         request = validation.capture_request(interface, direction, filename)
+        self._ensure_directory()
         self._launch(self._commands.capture(request, self._directory), on_output, on_exit)
         return request
+
+    def _ensure_directory(self) -> None:
+        """La Pi no tiene Escritorio. La carpeta se crea en el home de root."""
+        if os.name != 'posix':
+            return
+        try:
+            Path(self._directory).mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise CommandFailedError('No se pudo preparar la carpeta de capturas') from exc
 
 
 class TapService:

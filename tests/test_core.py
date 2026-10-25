@@ -30,8 +30,8 @@ class CommandFactoryTest(unittest.TestCase):
     def test_capture_writes_into_capture_dir(self):
         request = validation.capture_request('eth0', 'inout', 'prueba')
         self.assertEqual(
-            self.commands.capture(request, PurePosixPath('/root/Desktop')),
-            ['/bin/tcpdump', '-Q', 'inout', '-i', 'eth0', '-w', '/root/Desktop/prueba.pcap'])
+            self.commands.capture(request, PurePosixPath('/root/capturas')),
+            ['/bin/tcpdump', '-Q', 'inout', '-i', 'eth0', '-w', '/root/capturas/prueba.pcap'])
 
     def test_trace(self):
         self.assertEqual(self.commands.trace('8.8.8.8', 6),

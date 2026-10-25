@@ -78,10 +78,6 @@ class CaptureController(SessionController):
         return [{'label': direction.label, 'value': direction.value} for direction in CaptureDirection]
 
     @pyqtProperty(str, constant=True)
-    def directory(self) -> str:
-        return str(self._ctx.config.capture_dir)
-
-    @pyqtProperty(str, constant=True)
     def defaultFilename(self) -> str:
         return self._ctx.config.default_capture_name
 
@@ -103,7 +99,7 @@ class CaptureController(SessionController):
         super().stop()
 
     def _remember(self, request) -> None:
-        self._active_file = str(self._ctx.config.capture_dir / request.filename)
+        self._active_file = request.filename
         self.activeFileChanged.emit()
 
     def _output(self, text: str) -> None:
@@ -114,8 +110,10 @@ class CaptureController(SessionController):
 
     def _finished(self, code: int) -> None:
         if code != 0 and not self._stopping:
-            detail = ''.join(self._last_output).strip() or f'tcpdump termino con codigo {code}'
-            self._ctx.notifier.error(detail, title='Captura')
+        detail = ''.join(self._last_output).strip() or f'tcpdump termino con codigo {code}'
+        folder = str(self._ctx.config.capture_dir)
+        detail = detail.replace(folder + '/', '').replace(folder, 'la carpeta de capturas')
+        self._ctx.notifier.error(detail, title='Captura')
 
 
 class TapController(Controller):

@@ -117,7 +117,7 @@ Item {
             Text {
                 Layout.fillWidth: true
                 text: capture.running ? capture.activeFile
-                                      : capture.directory + "/" + filename.text.replace(/\.pcap$/i, "") + ".pcap"
+                                      : filename.text.replace(/\.pcap$/i, "") + ".pcap"
                 color: ui.textMuted
                 font.pixelSize: ui.fontSmall
                 font.family: ui.monoFamily

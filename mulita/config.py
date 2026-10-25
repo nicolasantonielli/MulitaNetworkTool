@@ -60,7 +60,7 @@ class AppConfig:
     themes: tuple[str, ...] = (
         'cosmo', 'darkly', 'pulse', 'lumen', 'litera',
         'journal', 'solar', 'superhero', 'vapor', 'cyborg')
-    capture_dir: PurePosixPath = PurePosixPath('/root/Desktop')
+    capture_dir: PurePosixPath = PurePosixPath('/root/capturas')
     default_capture_name: str = 'prueba'
     trace_cycles: int = 6
     public_ip_url: str = 'ifconfig.me'
