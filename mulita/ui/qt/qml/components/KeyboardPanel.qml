@@ -13,11 +13,11 @@ Rectangle {
     property double typedAt: 0
     readonly property bool active: field !== null
     readonly property int keyHeight: Math.round(ui.touch * 0.82)
-    readonly property var rows: [
-        ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
-        ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
-        ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
-        ["z", "x", "c", "v", "b", "n", "m", ".", "-", "_"]
+    readonly property var keys: [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+        "q", "w", "e", "r", "t", "y", "u", "i", "o", "p",
+        "a", "s", "d", "f", "g", "h", "j", "k", "l", "",
+        "z", "x", "c", "v", "b", "n", "m", ".", "-", "_"
     ]
 
     function glyph(letter) {
@@ -124,41 +124,47 @@ Rectangle {
         spacing: Math.round(ui.gap * 0.35)
         visible: root.active
 
-        Repeater {
-            model: root.rows
+        Item {
+            id: keyGrid
+            Layout.fillWidth: true
+            readonly property real gap: Math.round(ui.gap * 0.3)
+            readonly property real cell: Math.max(1, (width - 9 * gap) / 10)
+            implicitHeight: root.keyHeight * 4 + gap * 3
+            height: implicitHeight
 
-            delegate: Row {
-                readonly property int row: index
-                readonly property var letters: root.rows[row]
+            Repeater {
+                model: root.keys
 
-                Layout.fillWidth: true
-                Layout.preferredHeight: root.keyHeight
-                Layout.maximumHeight: root.keyHeight
-                spacing: Math.round(ui.gap * 0.3)
-                height: root.keyHeight
+                delegate: Rectangle {
+                    readonly property string letter: modelData
+                    readonly property int slot: index
 
-                Repeater {
-                    model: letters
+                    visible: letter !== ""
+                    x: (slot % 10) * (keyGrid.cell + keyGrid.gap)
+                    y: Math.floor(slot / 10) * (root.keyHeight + keyGrid.gap)
+                    width: keyGrid.cell
+                    height: root.keyHeight
+                    radius: ui.radius
+                    clip: true
+                    color: keyArea.pressed ? ui.surfaceHigh : ui.surfaceAlt
 
-                    delegate: Rectangle {
-                        readonly property string letter: modelData
-
-                        width: (parent.width - parent.spacing * (letters.length - 1)) / letters.length
-                        height: root.keyHeight
-                        radius: ui.radius
-                        clip: true
-                        color: keyArea.pressed ? ui.surfaceHigh : ui.surfaceAlt
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: root.glyph(letter)
-                            color: ui.text
-                            font.pixelSize: Math.min(ui.fontBody, root.keyHeight * 0.55)
-                            font.weight: Font.DemiBold
-                        }
-                        TouchArea {
-                            id: keyArea
-                            onPressed: root.type(root.glyph(letter))
+                    Text {
+                        anchors.centerIn: parent
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        text: root.caps && letter >= "a" && letter <= "z" ? letter.toUpperCase() : letter
+                        color: ui.text
+                        font.pixelSize: Math.min(ui.fontBody, root.keyHeight * 0.55)
+                        font.weight: Font.DemiBold
+                    }
+                    TouchArea {
+                        id: keyArea
+                        enabled: letter !== ""
+                        onPressed: {
+                            var ch = letter
+                            if (root.caps && ch >= "a" && ch <= "z")
+                                ch = ch.toUpperCase()
+                            root.type(ch)
                         }
                     }
                 }
