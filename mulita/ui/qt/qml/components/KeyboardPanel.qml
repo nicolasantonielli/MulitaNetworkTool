@@ -1,4 +1,5 @@
 import QtQuick 2.15
+import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Window 2.15
 
@@ -51,11 +52,74 @@ Rectangle {
     }
 
     function follow(item) {
-        if (typing || !item || isInside(item))
+        if (typing)
             return
-        var target = keyboardItem(item)
-        if (target)
+        if (item && isInside(item))
+            return
+        var target = item ? keyboardItem(item) : null
+        if (target) {
             field = target
+            return
+        }
+        if (field)
+            dismiss()
+    }
+
+    function dismiss() {
+        caps = false
+        var item = field
+        field = null
+        if (item)
+            item.focus = false
+    }
+
+    // El toque llega al velo que tapa la ventana. Hay que mirar tambien lo que
+    // queda debajo (un rectangulo no se queda el toque) para no cerrar cuando
+    // ahi hay un campo de texto.
+    function itemUnder(x, y) {
+        var hits = []
+        var overlay = Overlay.overlay
+        collect(overlay, x, y, hits)
+        var page = overlay.parent
+        var mapped = overlay.mapToItem(page, x, y)
+        collect(page, mapped.x, mapped.y, hits)
+        var fallback = null
+        for (var i = 0; i < hits.length; ++i) {
+            var hit = hits[i]
+            if (hit === overlay || hit === page)
+                continue
+            if (!fallback)
+                fallback = hit
+            if (isInside(hit) || keyboardItem(hit))
+                return hit
+        }
+        return fallback
+    }
+
+    function collect(item, x, y, hits) {
+        if (!item || !item.visible)
+            return
+        var stacked = []
+        var kids = item.children
+        for (var i = 0; i < kids.length; ++i) {
+            var child = kids[i]
+            if (!child || child === outside || child === Overlay.overlay || !child.visible)
+                continue
+            if (child.width <= 0 || child.height <= 0)
+                continue
+            var point = child.mapFromItem(item, x, y)
+            if (point.x < 0 || point.y < 0 || point.x >= child.width || point.y >= child.height)
+                continue
+            stacked.push({ item: child, x: point.x, y: point.y, z: child.z, index: i })
+        }
+        stacked.sort(function(a, b) {
+            if (a.z !== b.z)
+                return b.z - a.z
+            return b.index - a.index
+        })
+        for (var n = 0; n < stacked.length; ++n)
+            collect(stacked[n].item, stacked[n].x, stacked[n].y, hits)
+        hits.push(item)
     }
 
     function remember() {
@@ -108,6 +172,26 @@ Rectangle {
     }
     implicitHeight: active ? column.implicitHeight + ui.gap : 0
     height: implicitHeight
+
+    // Por encima de los avisos y por debajo de las teclas: un toque fuera de
+    // un campo cierra el teclado y el toque sigue hasta el boton de abajo.
+    MouseArea {
+        id: outside
+        parent: Overlay.overlay
+        anchors.fill: parent
+        z: 1000000
+        visible: root.active
+        enabled: root.active
+        propagateComposedEvents: true
+        onPressed: {
+            var hit = root.itemUnder(mouse.x, mouse.y)
+            if (!root.isInside(hit) && !root.keyboardItem(hit))
+                root.dismiss()
+            mouse.accepted = false
+        }
+        onReleased: mouse.accepted = false
+        onClicked: mouse.accepted = false
+    }
 
     Component.onCompleted: remember()
     Connections {
