@@ -21,8 +21,8 @@ class QtApplication:
         # aborta: "OpenGL windows cannot be mixed with others".
         os.environ.pop('QT_IM_MODULE', None)
         os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Material'
-        # EGLFS dibuja una flecha de mouse. En el equipo el dedo es el puntero.
-        os.environ['QT_QPA_EGLFS_HIDECURSOR'] = '1'
+        # Se decide en caliente: oculto con el dedo, visible si hay un mouse.
+        os.environ.pop('QT_QPA_EGLFS_HIDECURSOR', None)
         runtime = os.environ.get('XDG_RUNTIME_DIR')
         if not runtime and hasattr(os, 'getuid'):
             runtime = f'/tmp/runtime-{os.getuid()}'
@@ -54,8 +54,20 @@ class QtApplication:
         self._services = services
         self.app = QGuiApplication(sys.argv)
         self.app.setApplicationName('Mulita')
-        self.app.setOverrideCursor(QCursor(Qt.BlankCursor))
         log_input_devices()
+        self._pointer_cursor = False
+        # En el escritorio el cursor lo maneja el sistema. En la Pi, sin DISPLAY, el dedo no debe dibujar una flecha.
+        self._cursor_follows_mouse = (
+            Path('/proc/bus/input/devices').exists()
+            and not os.environ.get('DISPLAY')
+            and not os.environ.get('WAYLAND_DISPLAY'))
+        if self._cursor_follows_mouse:
+            self.app.setOverrideCursor(QCursor(Qt.BlankCursor))
+            self._cursor_timer = QTimer(self.app)
+            self._cursor_timer.setInterval(1000)
+            self._cursor_timer.timeout.connect(self._sync_cursor)
+            self._sync_cursor()
+            self._cursor_timer.start()
         self._touch_debug = TouchDebug()
         self.app.installEventFilter(self._touch_debug)
 
@@ -96,6 +108,24 @@ class QtApplication:
         self._signal_pump = QTimer()
         self._signal_pump.start(300)
         self._signal_pump.timeout.connect(lambda: None)
+
+    def _sync_cursor(self) -> None:
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtGui import QCursor
+
+        from mulita.ui.qt.touch_debug import connected_mice
+
+        names = connected_mice()
+        present = bool(names)
+        if present == self._pointer_cursor:
+            return
+        self._pointer_cursor = present
+        shape = Qt.ArrowCursor if present else Qt.BlankCursor
+        self.app.changeOverrideCursor(QCursor(shape))
+        if present:
+            log.info('mouse conectado (%s), cursor visible', ', '.join(names))
+        else:
+            log.info('sin mouse, cursor oculto')
 
     @property
     def root(self):

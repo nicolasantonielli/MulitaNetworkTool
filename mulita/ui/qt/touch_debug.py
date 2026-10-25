@@ -67,6 +67,28 @@ def log_input_devices() -> None:
             name = ''
 
 
+def real_mouse_names(text: str) -> list[str]:
+    """Mouses de puntero. El ft5x06 tambien tiene un nodo mouse y no cuenta."""
+    found = []
+    name = ''
+    for line in text.splitlines():
+        if line.startswith('N: Name='):
+            name = line.split('=', 1)[1].strip().strip('"')
+        elif line.startswith('H: Handlers=') and name:
+            handlers = line.split('=', 1)[1].split()
+            if any(handler.startswith('mouse') for handler in handlers) and 'ft5x06' not in name.lower():
+                found.append(name)
+            name = ''
+    return found
+
+
+def connected_mice() -> list[str]:
+    devices = Path('/proc/bus/input/devices')
+    if not devices.exists():
+        return []
+    return real_mouse_names(devices.read_text(encoding='utf-8', errors='replace'))
+
+
 class TouchDebug(QObject):
 
     def __init__(self):
