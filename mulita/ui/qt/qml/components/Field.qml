@@ -9,6 +9,8 @@ TextField {
     readonly property bool takesKeyboard: true
     // La clave cambia el teclado a signos. Una direccion no los necesita.
     property bool symbolKeys: false
+    // Ancho reservado a la derecha para otro icono, como el ojo de la clave.
+    property real accessoryWidth: 0
 
     implicitHeight: ui.touch
     Layout.preferredHeight: ui.touch
@@ -19,7 +21,7 @@ TextField {
     selectionColor: ui.primary
     selectedTextColor: ui.onAccent
     leftPadding: ui.padding
-    rightPadding: ui.padding
+    rightPadding: ui.padding + (clearButton.visible ? ui.touch : 0) + accessoryWidth
     topPadding: 0
     bottomPadding: 0
     verticalAlignment: TextInput.AlignVCenter
@@ -34,6 +36,20 @@ TextField {
         // Un arrastre selecciona. Solo un toque quieto enfoca el campo.
         gesturePolicy: TapHandler.DragThreshold
         onTapped: root.forceActiveFocus()
+    }
+
+    IconButton {
+        id: clearButton
+        visible: !root.readOnly && root.length > 0
+        anchors.right: parent.right
+        anchors.rightMargin: root.accessoryWidth
+        anchors.verticalCenter: parent.verticalCenter
+        icon: "close"
+        iconColor: ui.textMuted
+        onClicked: {
+            root.clear()
+            root.forceActiveFocus()
+        }
     }
 
     background: Rectangle {

@@ -176,7 +176,7 @@ Item {
                             Layout.fillWidth: true
                             echoMode: revealed ? TextInput.Normal : TextInput.Password
                             placeholderText: "Clave"
-                            rightPadding: ui.touch
+                            accessoryWidth: ui.touch
                             // Los puntos no deben destaparse al tocar Mayus.
                             Component.onCompleted: contentItem.passwordMaskDelay = 0
 
