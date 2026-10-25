@@ -180,7 +180,7 @@ boot_dir() {
 configure_cmdline() {
   local file="$1" line word
   local -a words=() new=()
-  local seen_quiet=0 seen_log=0 seen_logo=0 seen_cursor=0 seen_blank=0
+  local seen_quiet=0 seen_log=0 seen_logo=0 seen_cursor=0 seen_blank=0 seen_status=0
   line="$(tr -s '[:space:]' ' ' < "$file")"
   read -r -a words <<< "$line"
   for word in "${words[@]}"; do
@@ -191,6 +191,7 @@ configure_cmdline() {
       logo.nologo) seen_logo=1 ;;
       vt.global_cursor_default=*) seen_cursor=1; word="vt.global_cursor_default=0" ;;
       consoleblank=*) seen_blank=1; word="consoleblank=0" ;;
+      systemd.show_status=*) seen_status=1; word="systemd.show_status=false" ;;
     esac
     new+=("$word")
   done
@@ -199,6 +200,7 @@ configure_cmdline() {
   [[ "$seen_logo" -eq 1 ]] || new+=(logo.nologo)
   [[ "$seen_cursor" -eq 1 ]] || new+=(vt.global_cursor_default=0)
   [[ "$seen_blank" -eq 1 ]] || new+=(consoleblank=0)
+  [[ "$seen_status" -eq 1 ]] || new+=(systemd.show_status=false)
   printf '%s\n' "${new[*]}" | as_root tee "$file" >/dev/null
 }
 
