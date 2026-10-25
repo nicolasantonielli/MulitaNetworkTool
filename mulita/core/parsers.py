@@ -9,6 +9,19 @@ from mulita.core.models import (AddressMode, EthernetConfig, NetworkInterface,
                                 SpeedTestResult, WifiLink, WifiNetwork)
 
 
+def cable_connected(name: str, flags: list, operstate: str) -> bool:
+    """Ethernet administrativamente arriba y con cable. Wi-Fi y loopback no cuentan."""
+    if name == 'lo' or name.startswith(('wlan', 'wlp', 'wlx', 'wifi')):
+        return False
+    present = {str(flag).upper() for flag in flags or []}
+    state = (operstate or '').upper()
+    if 'NO-CARRIER' in present or state in ('DOWN', 'LOWERLAYERDOWN'):
+        return False
+    admin_up = 'UP' in present
+    carrier = 'LOWER_UP' in present or 'RUNNING' in present or state == 'UP'
+    return admin_up and carrier
+
+
 def parse_interfaces(text: str) -> list[NetworkInterface]:
     """Salida de `ip -j addr`."""
     try:
@@ -22,7 +35,11 @@ def parse_interfaces(text: str) -> list[NetworkInterface]:
         if not name:
             continue
         addresses = tuple(info['local'] for info in item.get('addr_info', []) if 'local' in info)
-        interfaces.append(NetworkInterface(name=name, mac=item.get('address'), addresses=addresses))
+        interfaces.append(NetworkInterface(
+            name=name,
+            mac=item.get('address'),
+            addresses=addresses,
+            cable=cable_connected(name, item.get('flags') or [], item.get('operstate') or '')))
     return interfaces
 
 

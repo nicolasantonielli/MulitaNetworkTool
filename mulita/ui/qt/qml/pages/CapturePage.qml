@@ -9,13 +9,38 @@ Item {
     property string selectedDirection: "inout"
     property int elapsed: 0
     readonly property var captureInterfaces: {
-        var names = network.interfaces
+        var rows = network.interfaces
         var found = []
-        for (var i = 0; i < names.length; ++i) {
-            if (names[i] !== "lo")
-                found.push(names[i])
+        for (var i = 0; i < rows.length; ++i) {
+            var row = rows[i]
+            var name = typeof row === "string" ? row : row.value
+            if (name !== "lo")
+                found.push(typeof row === "string" ? { label: name, value: name, linked: false } : row)
         }
         return found
+    }
+
+    function interfaceList() {
+        var parts = []
+        for (var i = 0; i < captureInterfaces.length; ++i)
+            parts.push(captureInterfaces[i].value)
+        return parts.join("  ·  ")
+    }
+
+    function keepSelection() {
+        var rows = captureInterfaces
+        for (var i = 0; i < rows.length; ++i) {
+            if (rows[i].value === selectedInterface && selectedInterface !== "")
+                return
+        }
+        var chosen = ""
+        for (var j = 0; j < rows.length; ++j) {
+            if (rows[j].value === "eth0")
+                chosen = "eth0"
+        }
+        if (!chosen && rows.length)
+            chosen = rows[0].value
+        selectedInterface = chosen
     }
 
     function clock(seconds) {
@@ -40,15 +65,10 @@ Item {
 
     Connections {
         target: network
-        function onInterfacesChanged() {
-            var names = root.captureInterfaces
-            for (var i = 0; i < names.length; ++i) {
-                if (names[i] === root.selectedInterface)
-                    return
-            }
-            root.selectedInterface = ""
-        }
+        function onInterfacesChanged() { root.keepSelection() }
     }
+
+    Component.onCompleted: keepSelection()
 
     RowLayout {
         anchors.fill: parent
@@ -75,7 +95,7 @@ Item {
                     Layout.fillWidth: true
                     text: root.captureInterfaces.length === 0
                           ? "No se detectaron interfaces de red"
-                          : root.captureInterfaces.join("  ·  ")
+                          : root.interfaceList()
                     color: ui.text
                     font.pixelSize: ui.fontBody
                     wrapMode: Text.Wrap

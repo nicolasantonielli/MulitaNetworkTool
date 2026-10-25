@@ -10,7 +10,7 @@ from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.models import (Calibration, CaptureDirection, ClimateReading,
                                 CommandResult)
-from mulita.core.parsers import parse_interfaces, parse_speed_test
+from mulita.core.parsers import cable_connected, parse_interfaces, parse_speed_test
 
 IP_JSON = '''[
  {"ifindex":1,"ifname":"lo","address":"00:00:00:00:00:00",
@@ -124,6 +124,13 @@ class ParsersAndModelsTest(unittest.TestCase):
         self.assertEqual(interfaces[1].addresses, ())
         self.assertEqual(interfaces[2].addresses, ('192.168.0.20', 'fe80::1'))
         self.assertEqual(interfaces[2].mac, 'b8:27:eb:00:00:02')
+        self.assertFalse(interfaces[1].cable)
+
+    def test_cable_is_up_ethernet_with_carrier(self):
+        self.assertTrue(cable_connected('eth0', ['UP', 'LOWER_UP'], 'UP'))
+        self.assertFalse(cable_connected('eth0', ['NO-CARRIER', 'UP'], 'DOWN'))
+        self.assertFalse(cable_connected('wlan0', ['UP', 'LOWER_UP'], 'UP'))
+        self.assertFalse(cable_connected('lo', ['UP', 'LOWER_UP'], 'UNKNOWN'))
 
     def test_speed_test(self):
         result = parse_speed_test('{"download": 93450000.5, "upload": 11200000}')

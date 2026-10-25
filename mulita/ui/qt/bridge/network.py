@@ -31,13 +31,13 @@ class NetworkController(Controller):
 
     def __init__(self, ctx: BridgeContext):
         super().__init__(ctx)
-        self._interfaces: list[str] = []
+        self._interfaces: list[dict] = []
         self._primary = ''
         self._refreshing = False
         self._started = 0.0
 
-    @pyqtProperty('QStringList', notify=interfacesChanged)
-    def interfaces(self) -> list[str]:
+    @pyqtProperty('QVariantList', notify=interfacesChanged)
+    def interfaces(self) -> list[dict]:
         return self._interfaces
 
     @pyqtProperty(str, notify=primaryAddressChanged)
@@ -57,9 +57,9 @@ class NetworkController(Controller):
                                         self._loaded, self._failed)
 
     def _loaded(self, interfaces: list[NetworkInterface]) -> None:
-        names = [interface.name for interface in interfaces]
-        if names != self._interfaces:
-            self._interfaces = names
+        rows = [{'label': item.name, 'value': item.name, 'linked': item.cable} for item in interfaces]
+        if rows != self._interfaces:
+            self._interfaces = rows
             self.interfacesChanged.emit()
         primary = primary_address(interfaces)
         if primary != self._primary:

@@ -22,13 +22,17 @@ Flow {
             readonly property string chipValue: typeof modelData === "string" ? modelData : modelData.value
             readonly property string chipLabel: typeof modelData === "string" ? modelData : modelData.label
             readonly property bool selected: root.value === chipValue
+            readonly property bool linked: modelData.linked === true
+            readonly property color linkFill: "#B9E8F8"
+            readonly property color linkInk: "#083044"
 
             height: ui.touch
             width: Math.max(ui.touch * 1.5, label.implicitWidth + ui.padding * 2)
             radius: height / 2
-            color: selected ? ui.primary : (area.pressed ? ui.surfaceHigh : ui.surfaceAlt)
-            border.width: 1
-            border.color: selected ? ui.primary : ui.border
+            color: linked ? linkFill
+                          : (selected ? ui.primary : (area.pressed ? ui.surfaceHigh : ui.surfaceAlt))
+            border.width: selected ? 3 : 1
+            border.color: selected ? ui.primary : (linked ? "#3AA8D8" : ui.border)
 
             Behavior on color { ColorAnimation { duration: 120 } }
 
@@ -36,7 +40,7 @@ Flow {
                 id: label
                 anchors.centerIn: parent
                 text: chip.chipLabel
-                color: chip.selected ? ui.onAccent : ui.text
+                color: chip.linked ? chip.linkInk : (chip.selected ? ui.onAccent : ui.text)
                 font.pixelSize: ui.fontBody
                 font.weight: chip.selected ? Font.DemiBold : Font.Normal
             }

@@ -47,6 +47,7 @@ class NetworkInterface:
     name: str
     mac: str | None = None
     addresses: tuple[str, ...] = ()
+    cable: bool = False
 
 
 class AddressMode(Enum):
