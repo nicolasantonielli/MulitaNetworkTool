@@ -3,8 +3,8 @@ from __future__ import annotations
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError
-from mulita.core.models import WifiNetwork
-from mulita.core.parsers import parse_wifi_device, parse_wifi_list
+from mulita.core.models import WifiLink, WifiNetwork
+from mulita.core.parsers import build_wifi_link, parse_wifi_device, parse_wifi_list
 from mulita.core.ports import CommandRunner
 
 
@@ -19,13 +19,32 @@ class WifiService:
         result = self._checked(self._commands.wifi_devices(), 'No se pudo leer el Wi-Fi')
         return parse_wifi_device(result.stdout)
 
-    def scan(self) -> tuple[str | None, tuple[WifiNetwork, ...]]:
+    def scan(self) -> tuple[str | None, tuple[WifiNetwork, ...], WifiLink]:
         device = self.interface()
         if not device:
-            return None, ()
+            return None, (), WifiLink()
         self._runner.run(self._commands.wifi_rescan(device))
         listed = self._checked(self._commands.wifi_list(device), 'No se pudieron buscar redes')
-        return device, tuple(parse_wifi_list(listed.stdout))
+        networks = tuple(parse_wifi_list(listed.stdout))
+        return device, networks, self._link(device, networks)
+
+    def _link(self, device: str, networks: tuple[WifiNetwork, ...]) -> WifiLink:
+        commands = self._commands
+        return build_wifi_link(
+            device,
+            self._text(commands.interface_ipv4(device)),
+            self._text(commands.interface_gateway(device)),
+            self._text(commands.ethernet_lease(device)),
+            self._text(commands.wifi_details(device)),
+            self._text(commands.wifi_link(device)),
+            self._text(commands.wifi_info(device)),
+            self._text(commands.wifi_station(device)),
+            self._text(commands.wifi_survey(device)),
+            networks)
+
+    def _text(self, argv: list[str]) -> str:
+        result = self._runner.run(argv)
+        return result.stdout if result.ok else ''
 
     def connect(self, ssid: str, password: str, secure: bool) -> str:
         name = validation.wifi_ssid(ssid)

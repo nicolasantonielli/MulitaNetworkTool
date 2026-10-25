@@ -4,8 +4,8 @@ from mulita.config import Binaries
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
-from mulita.core.models import CommandResult, WifiNetwork
-from mulita.core.parsers import parse_wifi_device, parse_wifi_list
+from mulita.core.models import CommandResult, WifiLink, WifiNetwork
+from mulita.core.parsers import build_wifi_link, parse_wifi_device, parse_wifi_list
 from mulita.services.wifi import WifiService
 
 NM = '/usr/bin/nmcli'
@@ -56,16 +56,22 @@ class WifiRulesTest(unittest.TestCase):
 class WifiServiceTest(unittest.TestCase):
 
     def test_scan_lists_networks_on_wlan0(self):
-        script = Script([CommandResult(0, DEVICES), CommandResult(0), CommandResult(0, LIST)])
-        device, networks = service(script).scan()
+        script = Script([
+            CommandResult(0, DEVICES), CommandResult(0), CommandResult(0, LIST),
+            *([CommandResult(0, '')] * 8),
+        ])
+        device, networks, link = service(script).scan()
         self.assertEqual(device, 'wlan0')
         self.assertEqual(networks[0].ssid, 'Oficina')
+        self.assertEqual(link.interface, 'wlan0')
         self.assertEqual(script.runs[1][1:4], ['device', 'wifi', 'rescan'])
         self.assertEqual(script.runs[2][4:7], ['device', 'wifi', 'list'])
+        self.assertEqual(script.runs[7][1:], ['dev', 'wlan0', 'link'])
+        self.assertEqual(script.runs[9][1:], ['dev', 'wlan0', 'station', 'dump'])
 
     def test_scan_without_wifi_is_empty(self):
         script = Script([CommandResult(0, 'eth0:ethernet\n')])
-        self.assertEqual(service(script).scan(), (None, ()))
+        self.assertEqual(service(script).scan(), (None, (), WifiLink()))
 
     def test_connect_saves_key_management_and_password(self):
         script = Script([
@@ -107,6 +113,82 @@ class WifiServiceTest(unittest.TestCase):
         with self.assertRaises(ValidationError):
             service(script).connect('Oficina', '', True)
         self.assertEqual(script.runs, [])
+
+    def test_link_keeps_address_and_radio(self):
+        link = build_wifi_link(
+            'wlan0',
+            '[{"address":"b8:27:eb:11:22:33","addr_info":['
+            '{"family":"inet","local":"192.168.1.50","prefixlen":24},'
+            '{"family":"inet6","local":"fe80::1"}]}]',
+            '[{"dst":"default","gateway":"192.168.1.1","dev":"wlan0"}]',
+            'IP4.DNS[1]:8.8.8.8\nIP4.DNS[2]:1.1.1.1\n',
+            '*:aa\\:bb\\:cc\\:dd\\:ee\\:ff:36:5180 MHz:270 Mbit/s:55:WPA2\n',
+            'Connected to aa:bb:cc:dd:ee:ff (on wlan0)\n'
+            '\tSSID: Oficina\n\tfreq: 5180\n'
+            '\tRX: 1048576 bytes (800 packets)\n\tTX: 2097152 bytes (900 packets)\n'
+            '\tsignal: -48 dBm\n'
+            '\trx bitrate: 390.0 MBit/s VHT-MCS 9 80MHz short GI VHT-NSS 1\n'
+            '\ttx bitrate: 433.3 MBit/s VHT-MCS 9 80MHz short GI VHT-NSS 2\n'
+            '\tdtim period: 2\n\tbeacon int: 100\n',
+            'Interface wlan0\n\taddr b8:27:eb:11:22:33\n\ttype managed\n'
+            '\tchannel 36 (5180 MHz), width: 80 MHz, center1: 5210 MHz\n'
+            '\ttxpower 20.00 dBm\n',
+            'Station aa:bb:cc:dd:ee:ff (on wlan0)\n'
+            '\ttx retries:\t3\n\ttx failed:\t1\n\tbeacon loss:\t0\n'
+            '\tsignal:\t-47 [-50, -48] dBm\n\tsignal avg:\t-49 dBm\n'
+            '\tconnected time:\t3661 seconds\n',
+            'frequency:\t\t5180 MHz [in use]\n\tnoise:\t\t-95 dBm\n',
+            (WifiNetwork('Oficina', 55, 'WPA2', True),))
+        facts = dict(link.facts())
+        self.assertEqual(facts['Red'], 'Oficina')
+        self.assertEqual(facts['BSSID'], 'aa:bb:cc:dd:ee:ff')
+        self.assertEqual(facts['Seguridad'], 'WPA2')
+        self.assertEqual(facts['Modo'], 'Infraestructura')
+        self.assertEqual(facts['MAC'], 'b8:27:eb:11:22:33')
+        self.assertEqual(facts['Dirección IP'], '192.168.1.50')
+        self.assertEqual(facts['Máscara'], '255.255.255.0 (/24)')
+        self.assertEqual(facts['Puerta de enlace'], '192.168.1.1')
+        self.assertEqual(facts['DNS'], '8.8.8.8, 1.1.1.1')
+        self.assertEqual(facts['IPv6'], 'fe80::1')
+        self.assertEqual(facts['Banda'], '5 GHz')
+        self.assertEqual(facts['Canal'], '36')
+        self.assertEqual(facts['Frecuencia'], '5180 MHz')
+        self.assertEqual(facts['Ancho de canal'], '80 MHz')
+        self.assertEqual(facts['Frecuencia central'], '5210 MHz')
+        self.assertEqual(facts['Señal'], '-47 dBm · media -49 dBm · 55 %')
+        self.assertEqual(facts['Ruido'], '-95 dBm')
+        self.assertEqual(facts['SNR'], '48 dB')
+        self.assertEqual(facts['Velocidad de bajada'], '390.0 Mbit/s')
+        self.assertEqual(facts['Velocidad de subida'], '433.3 Mbit/s')
+        self.assertEqual(facts['MCS de bajada'], 'VHT-MCS 9 · NSS 1 · 80 MHz · GI corto')
+        self.assertEqual(facts['MCS de subida'], 'VHT-MCS 9 · NSS 2 · 80 MHz · GI corto')
+        self.assertEqual(facts['Potencia de transmisión'], '20 dBm')
+        self.assertEqual(facts['Tiempo en línea'], '1 h 1 min')
+        self.assertEqual(facts['Beacon'], '100 TU')
+        self.assertEqual(facts['DTIM'], '2')
+        self.assertEqual(facts['Reintentos de envío'], '3')
+        self.assertEqual(facts['Envíos fallidos'], '1')
+        self.assertEqual(facts['Beacons perdidos'], '0')
+        self.assertEqual(facts['Recibido'], '1 MiB')
+        self.assertEqual(facts['Enviado'], '2 MiB')
+
+    def test_link_without_iw_keeps_the_address(self):
+        link = build_wifi_link(
+            'wlan0',
+            '[{"address":"b8:27:eb:11:22:33","addr_info":['
+            '{"family":"inet","local":"10.0.0.8","prefixlen":8}]}]',
+            '[]',
+            'IP4.GATEWAY:10.0.0.1\nIP4.DNS[1]:10.0.0.1\n',
+            '*:aa\\:bb\\:cc\\:dd\\:ee\\:01:6:2437 MHz:54 Mbit/s:40:WPA2\n',
+            'Not connected.\n', '', '', '', ())
+        facts = dict(link.facts())
+        self.assertEqual(facts['Dirección IP'], '10.0.0.8')
+        self.assertEqual(facts['Máscara'], '255.0.0.0 (/8)')
+        self.assertEqual(facts['Puerta de enlace'], '10.0.0.1')
+        self.assertEqual(facts['Banda'], '2.4 GHz')
+        self.assertEqual(facts['Canal'], '6')
+        self.assertEqual(facts['Velocidad de bajada'], '54 Mbit/s')
+        self.assertNotIn('MCS de bajada', facts)
 
     def test_connect_failure_is_reported(self):
         script = Script([

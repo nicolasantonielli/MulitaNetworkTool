@@ -71,6 +71,80 @@ class WifiNetwork:
 
 
 @dataclass(frozen=True)
+class WifiLink:
+    """Estado del enlace para un técnico: dirección y radio del AP asociado."""
+    interface: str = ''
+    ssid: str = ''
+    bssid: str = ''
+    security: str = ''
+    mode: str = ''
+    mac: str = ''
+    address: str = ''
+    netmask: str = ''
+    gateway: str = ''
+    dns: str = ''
+    ipv6: str = ''
+    band: str = ''
+    channel: str = ''
+    frequency: str = ''
+    width: str = ''
+    center: str = ''
+    signal: str = ''
+    noise: str = ''
+    snr: str = ''
+    mcs_rx: str = ''
+    mcs_tx: str = ''
+    rate_rx: str = ''
+    rate_tx: str = ''
+    tx_power: str = ''
+    uptime: str = ''
+    beacon: str = ''
+    dtim: str = ''
+    retries: str = ''
+    failed: str = ''
+    beacon_loss: str = ''
+    rx: str = ''
+    tx: str = ''
+
+    def facts(self) -> list[tuple[str, str]]:
+        rows = (
+            ('Red', self.ssid),
+            ('BSSID', self.bssid),
+            ('Seguridad', self.security),
+            ('Modo', self.mode),
+            ('Interfaz', self.interface),
+            ('MAC', self.mac),
+            ('Dirección IP', self.address),
+            ('Máscara', self.netmask),
+            ('Puerta de enlace', self.gateway),
+            ('DNS', self.dns),
+            ('IPv6', self.ipv6),
+            ('Banda', self.band),
+            ('Canal', self.channel),
+            ('Frecuencia', self.frequency),
+            ('Ancho de canal', self.width),
+            ('Frecuencia central', self.center),
+            ('Señal', self.signal),
+            ('Ruido', self.noise),
+            ('SNR', self.snr),
+            ('Velocidad de bajada', self.rate_rx),
+            ('Velocidad de subida', self.rate_tx),
+            ('MCS de bajada', self.mcs_rx),
+            ('MCS de subida', self.mcs_tx),
+            ('Potencia de transmisión', self.tx_power),
+            ('Tiempo en línea', self.uptime),
+            ('Beacon', self.beacon),
+            ('DTIM', self.dtim),
+            ('Reintentos de envío', self.retries),
+            ('Envíos fallidos', self.failed),
+            ('Beacons perdidos', self.beacon_loss),
+            ('Recibido', self.rx),
+            ('Enviado', self.tx),
+        )
+        return [(label, value) for label, value in rows if value]
+
+
+@dataclass(frozen=True)
 class EthernetConfig:
     mode: AddressMode = AddressMode.DHCP
     address: str = ''

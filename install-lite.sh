@@ -50,6 +50,7 @@ APT_PACKAGES=(
   fonts-dejavu-core
   libinput10
   iproute2
+  iw
   tcpdump
   mtr-tiny
   iputils-ping
@@ -93,7 +94,7 @@ ensure_path() {
 
 missing=0
 for path in \
-  /bin/tcpdump /bin/mtr /bin/ping /bin/nmap /sbin/netdiscover \
+  /bin/tcpdump /bin/mtr /bin/ping /bin/nmap /sbin/netdiscover /usr/sbin/iw \
   /bin/wakeonlan /bin/speedtest /bin/curl /usr/bin/ip /usr/bin/git /bin/bash
 do
   ensure_path "$path" || missing=1

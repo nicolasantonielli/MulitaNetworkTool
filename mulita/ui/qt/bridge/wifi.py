@@ -4,7 +4,7 @@ import json
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
-from mulita.core.models import WifiNetwork
+from mulita.core.models import WifiLink, WifiNetwork
 from mulita.ui.qt.bridge.base import TaskController
 
 
@@ -16,6 +16,7 @@ class WifiController(TaskController):
         super().__init__(ctx)
         self._device = ''
         self._networks: tuple[WifiNetwork, ...] = ()
+        self._link = WifiLink()
 
     @pyqtProperty(str, notify=networksChanged)
     def deviceName(self) -> str:
@@ -41,6 +42,12 @@ class WifiController(TaskController):
     def networksJson(self) -> str:
         return json.dumps(self._rows())
 
+    @pyqtProperty(str, notify=networksChanged)
+    def linkJson(self) -> str:
+        return json.dumps([
+            {'label': label, 'value': value} for label, value in self._link.facts()
+        ])
+
     @pyqtSlot()
     def refresh(self) -> None:
         self._task(self._services.wifi.scan, self._show)
@@ -53,8 +60,9 @@ class WifiController(TaskController):
 
         self._task(lambda: self._services.wifi.connect(ssid, password, secure), connected)
 
-    def _show(self, found: tuple[str | None, tuple[WifiNetwork, ...]]) -> None:
-        device, networks = found
+    def _show(self, found: tuple[str | None, tuple[WifiNetwork, ...], WifiLink]) -> None:
+        device, networks, link = found
         self._device = device or ''
         self._networks = networks
+        self._link = link
         self.networksChanged.emit()

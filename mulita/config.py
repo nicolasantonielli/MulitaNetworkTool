@@ -27,6 +27,7 @@ class Binaries:
     git: str = '/usr/bin/git'
     bash: str = '/bin/bash'
     nmcli: str = '/usr/bin/nmcli'
+    iw: str = '/usr/sbin/iw'
     systemctl: str = '/usr/bin/systemctl'
     systemd_run: str = '/usr/bin/systemd-run'
     onboard: str = 'onboard'

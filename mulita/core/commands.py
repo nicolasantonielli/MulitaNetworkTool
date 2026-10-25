@@ -61,6 +61,23 @@ class CommandFactory:
         return [self._bin.nmcli, '-t', '-f', 'IN-USE,SSID,SIGNAL,SECURITY',
                 'device', 'wifi', 'list', 'ifname', interface]
 
+    def wifi_details(self, interface: str) -> Argv:
+        return [self._bin.nmcli, '-t', '-f',
+                'IN-USE,BSSID,CHAN,FREQ,RATE,SIGNAL,SECURITY',
+                'device', 'wifi', 'list', 'ifname', interface]
+
+    def wifi_link(self, interface: str) -> Argv:
+        return [self._bin.iw, 'dev', interface, 'link']
+
+    def wifi_info(self, interface: str) -> Argv:
+        return [self._bin.iw, 'dev', interface, 'info']
+
+    def wifi_station(self, interface: str) -> Argv:
+        return [self._bin.iw, 'dev', interface, 'station', 'dump']
+
+    def wifi_survey(self, interface: str) -> Argv:
+        return [self._bin.iw, 'dev', interface, 'survey', 'dump']
+
     def wifi_delete(self, name: str) -> Argv:
         return [self._bin.nmcli, 'connection', 'delete', 'id', name]
 
