@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import ipaddress
+import time
 from collections import deque
 
-from PyQt5.QtCore import QObject, pyqtProperty, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QObject, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.models import CaptureDirection, NetworkInterface, TapConfig
 from mulita.ui.qt.bridge.base import (BridgeContext, Console, Controller,
@@ -26,12 +27,14 @@ def primary_address(interfaces: list[NetworkInterface]) -> str:
 class NetworkController(Controller):
     interfacesChanged = pyqtSignal()
     primaryAddressChanged = pyqtSignal()
+    refreshingChanged = pyqtSignal()
 
     def __init__(self, ctx: BridgeContext):
         super().__init__(ctx)
         self._interfaces: list[str] = []
         self._primary = ''
         self._refreshing = False
+        self._started = 0.0
 
     @pyqtProperty('QStringList', notify=interfacesChanged)
     def interfaces(self) -> list[str]:
@@ -41,16 +44,19 @@ class NetworkController(Controller):
     def primaryAddress(self) -> str:
         return self._primary
 
+    @pyqtProperty(bool, notify=refreshingChanged)
+    def refreshing(self) -> bool:
+        return self._refreshing
+
     @pyqtSlot()
     def refresh(self) -> None:
         if self._refreshing:
             return
-        self._refreshing = True
+        self._set_refreshing(True)
         self._ctx.dispatcher.background(self._services.interfaces.list_interfaces,
                                         self._loaded, self._failed)
 
     def _loaded(self, interfaces: list[NetworkInterface]) -> None:
-        self._refreshing = False
         names = [interface.name for interface in interfaces]
         if names != self._interfaces:
             self._interfaces = names
@@ -59,9 +65,29 @@ class NetworkController(Controller):
         if primary != self._primary:
             self._primary = primary
             self.primaryAddressChanged.emit()
+        self._set_refreshing(False)
 
     def _failed(self, _error: Exception) -> None:
+        self._set_refreshing(False)
+
+    def _set_refreshing(self, value: bool) -> None:
+        if value:
+            self._started = time.monotonic()
+            self._refreshing = True
+            self.refreshingChanged.emit()
+            return
+        # ip responde al instante. Sin esta espera el boton no llega a decir Leyendo.
+        wait = 0.7 - (time.monotonic() - self._started)
+        if wait > 0:
+            QTimer.singleShot(int(wait * 1000), self._end_refresh)
+            return
+        self._end_refresh()
+
+    def _end_refresh(self) -> None:
+        if not self._refreshing:
+            return
         self._refreshing = False
+        self.refreshingChanged.emit()
 
 
 class CaptureController(SessionController):

@@ -72,18 +72,20 @@ Item {
                     onActivated: root.selectedInterface = value
                 }
                 Text {
-                    visible: root.captureInterfaces.length === 0
-                    text: "No se detectaron interfaces de red"
-                    color: ui.textMuted
-                    font.pixelSize: ui.fontSmall
-                    wrapMode: Text.Wrap
                     Layout.fillWidth: true
+                    text: root.captureInterfaces.length === 0
+                          ? "No se detectaron interfaces de red"
+                          : root.captureInterfaces.join("  ·  ")
+                    color: ui.text
+                    font.pixelSize: ui.fontBody
+                    wrapMode: Text.Wrap
                 }
                 TouchButton {
-                    text: "Recargar interfaces"
+                    Layout.fillWidth: true
+                    text: network.refreshing ? "Leyendo…" : "Recargar interfaces"
                     icon: "refresh"
-                    kind: "neutral"
-                    enabled: !capture.running
+                    kind: network.refreshing ? "success" : "neutral"
+                    enabled: !capture.running && !network.refreshing
                     onClicked: network.refresh()
                 }
             }
