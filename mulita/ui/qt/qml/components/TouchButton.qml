@@ -9,6 +9,7 @@ Rectangle {
     property string kind: "primary"   // primary | success | danger | warning | neutral | ghost
     property bool autoRepeat: false
     signal clicked()
+    signal pressed()
 
     readonly property color baseColor: kind === "success" ? ui.success
                                      : kind === "danger" ? ui.danger
@@ -62,7 +63,10 @@ Rectangle {
     TouchArea {
         id: area
         enabled: root.enabled
-        onPressed: root._repeated = false
+        onPressed: {
+            root._repeated = false
+            root.pressed()
+        }
         onTapped: if (!root._repeated) root.clicked()
     }
 

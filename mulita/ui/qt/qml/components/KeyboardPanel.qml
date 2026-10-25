@@ -10,6 +10,7 @@ Rectangle {
     property Item field: null
     property bool caps: false
     property bool typing: false
+    property double typedAt: 0
     readonly property bool active: field !== null
     readonly property int keyHeight: Math.round(ui.touch * 0.82)
     readonly property var rows: [
@@ -67,11 +68,19 @@ Rectangle {
         var item = field
         if (!item || !ch)
             return
+        typedAt = Date.now()
         typing = true
+        var current = item.text || ""
         var pos = item.cursorPosition
-        if (pos === undefined || pos < 0)
-            pos = item.text ? item.text.length : 0
-        item.insert(pos, ch)
+        if (pos === undefined || pos < 0 || pos > current.length)
+            pos = current.length
+        var next = current.substring(0, pos) + ch + current.substring(pos)
+        if (item.insert)
+            item.insert(pos, ch)
+        if ((item.text || "") === current)
+            item.text = next
+        if ((item.text || "").charAt(pos) === ch)
+            item.cursorPosition = pos + ch.length
         typing = false
     }
 
@@ -133,7 +142,7 @@ Rectangle {
                         Layout.preferredHeight: root.keyHeight
                         text: root.glyph(letter)
                         kind: "neutral"
-                        onClicked: root.type(root.glyph(letter))
+                        onPressed: root.type(root.glyph(letter))
                     }
                 }
             }
@@ -148,7 +157,11 @@ Rectangle {
                 Layout.preferredHeight: root.keyHeight
                 text: "Mayús"
                 kind: root.caps ? "success" : "neutral"
-                onClicked: root.caps = !root.caps
+                onClicked: {
+                    if (Date.now() - root.typedAt < 500)
+                        return
+                    root.caps = !root.caps
+                }
             }
             TouchButton {
                 Layout.preferredWidth: ui.touch * 1.4

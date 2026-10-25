@@ -39,5 +39,5 @@ MouseArea {
         console.log("tactil press", mouse.x.toFixed(0), mouse.y.toFixed(0))
     }
     onReleased: finish("release", mouse.x - originX, mouse.y - originY)
-    onCanceled: finish("cancel", 0, 0)
+    onCanceled: armed = false
 }
