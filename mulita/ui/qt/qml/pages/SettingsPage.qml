@@ -386,35 +386,13 @@ Item {
                     titleIcon: "info"
 
                     Text { text: "Dirección IP"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
-                    Text {
-                        Layout.fillWidth: true
-                        text: interna.address || "Sin dirección"
-                        color: ui.text
-                        font.pixelSize: ui.fontBody
-                        wrapMode: Text.Wrap
-                    }
+                    SelectableText { text: interna.address || "Sin dirección" }
                     Text { text: "Máscara"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
-                    Text {
-                        Layout.fillWidth: true
-                        text: interna.netmask || "Sin máscara"
-                        color: ui.text
-                        font.pixelSize: ui.fontBody
-                    }
+                    SelectableText { text: interna.netmask || "Sin máscara" }
                     Text { text: "Puerta de enlace"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
-                    Text {
-                        Layout.fillWidth: true
-                        text: interna.gateway || "Sin puerta de enlace"
-                        color: ui.text
-                        font.pixelSize: ui.fontBody
-                    }
+                    SelectableText { text: interna.gateway || "Sin puerta de enlace" }
                     Text { text: "DNS"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
-                    Text {
-                        Layout.fillWidth: true
-                        text: interna.dns || "Sin DNS"
-                        color: ui.text
-                        font.pixelSize: ui.fontBody
-                        wrapMode: Text.Wrap
-                    }
+                    SelectableText { text: interna.dns || "Sin DNS" }
                 }
 
                 Card {

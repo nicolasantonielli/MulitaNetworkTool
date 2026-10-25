@@ -24,10 +24,16 @@ TextField {
     bottomPadding: 0
     verticalAlignment: TextInput.AlignVCenter
     selectByMouse: true
+    persistentSelection: true
     inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
 
+    // Al soltar una seleccion el texto ya queda en el portapapeles.
+    onSelectedTextChanged: if (selectedText.length > 0) copy()
+
     TapHandler {
-        onPressedChanged: if (pressed) root.forceActiveFocus()
+        // Un arrastre selecciona. Solo un toque quieto enfoca el campo.
+        gesturePolicy: TapHandler.DragThreshold
+        onTapped: root.forceActiveFocus()
     }
 
     background: Rectangle {

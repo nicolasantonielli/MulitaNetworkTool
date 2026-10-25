@@ -252,13 +252,7 @@ Item {
                                         color: ui.textMuted
                                         font.pixelSize: ui.fontSmall
                                     }
-                                    Text {
-                                        Layout.fillWidth: true
-                                        text: modelData.value
-                                        color: ui.text
-                                        font.pixelSize: ui.fontBody
-                                        wrapMode: Text.Wrap
-                                    }
+                                        SelectableText { text: modelData.value }
                                 }
                             }
                         }
@@ -282,15 +276,10 @@ Item {
                     title: "Fabricante"
                     titleIcon: "info"
 
-                    Text {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
+                    SelectableText {
                         text: macVendor.vendor
-                        color: ui.text
                         font.pixelSize: ui.fontTitle
                         font.weight: Font.DemiBold
-                        wrapMode: Text.Wrap
-                        verticalAlignment: Text.AlignVCenter
                     }
                 }
                 RowLayout {

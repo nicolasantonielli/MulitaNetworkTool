@@ -162,6 +162,18 @@ Rectangle {
         typing = false
     }
 
+    function copySelection() {
+        var item = field
+        if (!item || !item.copy || !item.text)
+            return
+        var hadSelection = item.selectedText && item.selectedText.length > 0
+        if (!hadSelection && item.selectAll)
+            item.selectAll()
+        item.copy()
+        if (!hadSelection && item.deselect)
+            item.deselect()
+    }
+
     function backspace() {
         var item = field
         if (!item)
@@ -221,6 +233,26 @@ Rectangle {
         anchors.margins: Math.round(ui.gap * 0.4)
         spacing: Math.round(ui.gap * 0.35)
         visible: root.active
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Math.round(ui.gap * 0.3)
+
+            TouchButton {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.round(root.keyHeight * 0.72)
+                text: "Copiar"
+                kind: "neutral"
+                onClicked: root.copySelection()
+            }
+            TouchButton {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.round(root.keyHeight * 0.72)
+                text: "Pegar"
+                kind: "neutral"
+                onClicked: if (root.field && root.field.paste) root.field.paste()
+            }
+        }
 
         Item {
             id: keyGrid

@@ -41,14 +41,21 @@ Card {
     RowLayout {
         spacing: Math.round(ui.gap * 0.5)
 
-        Text {
+        TextEdit {
+            readOnly: true
+            selectByMouse: true
+            persistentSelection: true
             text: root.value
             color: ui.text
             font.pixelSize: ui.fontDisplay
             font.weight: Font.Bold
-            fontSizeMode: Text.HorizontalFit
-            minimumPixelSize: ui.fontTitle
-            Layout.maximumWidth: root.width - ui.padding * 2
+            wrapMode: TextEdit.NoWrap
+            selectionColor: ui.primary
+            selectedTextColor: ui.onAccent
+            height: contentHeight
+            Layout.fillWidth: true
+            Layout.maximumWidth: Math.max(40, root.width - ui.padding * 2)
+            onSelectedTextChanged: if (selectedText.length > 0) copy()
         }
         Text {
             visible: root.unit !== ""
