@@ -28,6 +28,12 @@ class CommandFactory:
         return [self._bin.nmcli, '-t', '-f', 'IP4.ADDRESS,IP4.GATEWAY,IP4.DNS',
                 'device', 'show', interface]
 
+    def interface_ipv4(self, interface: str) -> Argv:
+        return [self._bin.ip, '-j', 'addr', 'show', 'dev', interface]
+
+    def interface_gateway(self, interface: str) -> Argv:
+        return [self._bin.ip, '-j', 'route', 'show', 'default', 'dev', interface]
+
     def add_ethernet_connection(self, name: str, interface: str) -> Argv:
         return [self._bin.nmcli, 'connection', 'add', 'type', 'ethernet',
                 'ifname', interface, 'con-name', name, 'ipv4.method', 'auto']

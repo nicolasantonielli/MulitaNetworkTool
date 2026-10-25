@@ -4,7 +4,9 @@ from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError
 from mulita.core.models import AddressMode, EthernetConfig
-from mulita.core.parsers import parse_connection_name, parse_nmcli_device_ipv4, parse_nmcli_ipv4
+from mulita.core.parsers import (parse_connection_name, parse_default_gateway,
+                                parse_interface_ipv4, parse_nmcli_device_ipv4,
+                                parse_nmcli_ipv4)
 from mulita.core.ports import CommandRunner
 
 
@@ -33,9 +35,18 @@ class EthernetService:
         return config
 
     def lease(self) -> EthernetConfig:
-        shown = self._checked(self._commands.ethernet_lease(self._interface),
-                              'No se pudo leer la direccion DHCP')
-        return parse_nmcli_device_ipv4(shown.stdout)
+        """La IP y la máscara salen de la interfaz. nmcli a veces no trae esos campos y sí el DNS."""
+        reported = parse_nmcli_device_ipv4(self._checked(
+            self._commands.ethernet_lease(self._interface), 'No se pudo leer la direccion DHCP').stdout)
+        address, prefix = parse_interface_ipv4(self._checked(
+            self._commands.interface_ipv4(self._interface), 'No se pudo leer la IP de la interfaz').stdout)
+        gateway = parse_default_gateway(self._checked(
+            self._commands.interface_gateway(self._interface), 'No se pudo leer la puerta de enlace').stdout)
+        if not address:
+            address, prefix = reported.address, reported.prefix
+        if not gateway:
+            gateway = reported.gateway
+        return EthernetConfig(AddressMode.DHCP, address, prefix, gateway, reported.dns)
 
     def apply_dhcp(self) -> EthernetConfig:
         name = self._ensure()

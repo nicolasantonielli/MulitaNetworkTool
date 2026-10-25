@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from mulita.core.errors import CommandFailedError
 from mulita.core.models import AddressMode, EthernetConfig, NetworkInterface, SpeedTestResult
@@ -31,31 +32,83 @@ def parse_connection_name(text: str) -> str | None:
     return name
 
 
+_IPV4 = re.compile(r'(\d{1,3}(?:\.\d{1,3}){3})(?:/(\d{1,2}))?')
+_NMCLI_FIELD = re.compile(
+    r'(IP4\.(?:ADDRESS|GATEWAY|DNS))(?:\[\d+\])?\s*[:=]\s*([^:\n]*)',
+    re.IGNORECASE)
+
+
+def _ipv4(value: str) -> tuple[str, int | None]:
+    match = _IPV4.search(value or '')
+    if not match:
+        return '', None
+    prefix = int(match.group(2)) if match.group(2) else None
+    return match.group(1), prefix
+
+
 def parse_nmcli_device_ipv4(text: str) -> EthernetConfig:
-    """Lo que la interfaz tiene ahora: `nmcli -t -f IP4.ADDRESS,IP4.GATEWAY,IP4.DNS device show`."""
+    """DNS y, si vienen, IP y gateway de `nmcli device show`."""
     address = ''
     prefix = 24
     gateway = ''
     dns: list[str] = []
-    for raw in (text or '').splitlines():
-        line = raw.strip()
-        if ':' not in line:
-            continue
-        key, value = line.split(':', 1)
-        value = value.replace('\\:', ':').strip()
-        key = key.split('[', 1)[0]
-        if key == 'IP4.ADDRESS' and not address and '/' in value:
-            ip, length = value.split('/', 1)
-            try:
-                prefix = int(length)
-            except ValueError as exc:
-                raise CommandFailedError(f'Prefijo de red invalido: {length}') from exc
-            address = ip
-        elif key == 'IP4.GATEWAY' and value and not gateway:
-            gateway = value
-        elif key == 'IP4.DNS' and value:
-            dns.append(value)
+    for match in _NMCLI_FIELD.finditer(text or ''):
+        key = match.group(1).upper()
+        value = match.group(2).replace('\\:', ':').strip()
+        if key == 'IP4.ADDRESS' and not address:
+            found, length = _ipv4(value)
+            if found:
+                address = found
+                if length is not None:
+                    prefix = length
+            if not gateway:
+                route = re.search(r'gw\s*=\s*(\d{1,3}(?:\.\d{1,3}){3})', value)
+                if route:
+                    gateway = route.group(1)
+        elif key == 'IP4.GATEWAY' and not gateway:
+            found, _length = _ipv4(value)
+            gateway = found
+        elif key == 'IP4.DNS':
+            found, _length = _ipv4(value)
+            if found:
+                dns.append(found)
     return EthernetConfig(AddressMode.DHCP, address, prefix, gateway, ', '.join(dns))
+
+
+def parse_interface_ipv4(text: str) -> tuple[str, int]:
+    """Primera IPv4 global de `ip -j addr show dev <if>`."""
+    try:
+        data = json.loads(text or '[]')
+    except json.JSONDecodeError as exc:
+        raise CommandFailedError(f'Respuesta de ip invalida: {exc}') from exc
+    for item in data:
+        for info in item.get('addr_info', []):
+            if info.get('family') != 'inet':
+                continue
+            local = str(info.get('local') or '')
+            if not local or local.startswith('127.'):
+                continue
+            try:
+                prefix = int(info.get('prefixlen', 24))
+            except (TypeError, ValueError) as exc:
+                raise CommandFailedError(f'Prefijo de red invalido: {info.get("prefixlen")}') from exc
+            return local, prefix
+    return '', 24
+
+
+def parse_default_gateway(text: str) -> str:
+    """Gateway de `ip -j route show default`."""
+    try:
+        data = json.loads(text or '[]')
+    except json.JSONDecodeError as exc:
+        raise CommandFailedError(f'Respuesta de ip invalida: {exc}') from exc
+    for route in data:
+        if route.get('dst') not in ('default', '0.0.0.0/0'):
+            continue
+        gateway = str(route.get('gateway') or '')
+        if gateway:
+            return gateway
+    return ''
 
 
 def parse_nmcli_ipv4(text: str) -> EthernetConfig:

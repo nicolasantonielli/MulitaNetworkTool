@@ -42,7 +42,7 @@ Item {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.right: parent.right
-        width: root.overflowing ? ui.touch : 0
+        width: root.overflowing ? Math.round(ui.mm * 4) : 0
         visible: width > 0
         radius: ui.radius
         color: ui.surfaceHigh
@@ -55,9 +55,9 @@ Item {
                 : (height - handleHeight) * (flick.contentY / maxY)
 
         Rectangle {
-            x: 3
+            x: 2
             y: bar.handleY
-            width: Math.max(0, bar.width - 6)
+            width: Math.max(0, bar.width - 4)
             height: bar.handleHeight
             radius: width / 2
             color: ui.primary
