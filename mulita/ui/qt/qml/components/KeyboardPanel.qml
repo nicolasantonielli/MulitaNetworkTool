@@ -127,22 +127,39 @@ Rectangle {
         Repeater {
             model: root.rows
 
-            delegate: RowLayout {
+            delegate: Row {
                 readonly property int row: index
+                readonly property var letters: root.rows[row]
+
                 Layout.fillWidth: true
+                Layout.preferredHeight: root.keyHeight
+                Layout.maximumHeight: root.keyHeight
                 spacing: Math.round(ui.gap * 0.3)
+                height: root.keyHeight
 
                 Repeater {
-                    model: root.rows[row]
+                    model: letters
 
-                    delegate: TouchButton {
-                        readonly property string letter: root.rows[row][index]
+                    delegate: Rectangle {
+                        readonly property string letter: modelData
 
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: root.keyHeight
-                        text: root.glyph(letter)
-                        kind: "neutral"
-                        onPressed: root.type(root.glyph(letter))
+                        width: (parent.width - parent.spacing * (letters.length - 1)) / letters.length
+                        height: root.keyHeight
+                        radius: ui.radius
+                        clip: true
+                        color: keyArea.pressed ? ui.surfaceHigh : ui.surfaceAlt
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: root.glyph(letter)
+                            color: ui.text
+                            font.pixelSize: Math.min(ui.fontBody, root.keyHeight * 0.55)
+                            font.weight: Font.DemiBold
+                        }
+                        TouchArea {
+                            id: keyArea
+                            onPressed: root.type(root.glyph(letter))
+                        }
                     }
                 }
             }
