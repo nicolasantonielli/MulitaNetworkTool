@@ -73,8 +73,8 @@ Item {
                     LabeledSlider {
                         Layout.fillWidth: true
                         label: "Escala"
-                        from: 0.75
-                        to: 1.5
+                        from: 0.5
+                        to: 1.25
                         stepSize: 0.05
                         initial: settings.uiScale
                         valueText: Math.round(value * 100) + " %"

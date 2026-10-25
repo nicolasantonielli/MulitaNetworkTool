@@ -46,9 +46,9 @@ class DisplayRulesTest(unittest.TestCase):
         self.assertEqual(settings.display.ui_scale, 1.25)
         self.assertIs(settings.theme, Theme.CLARO)
 
-    def test_scale_out_of_range_falls_back(self):
-        settings = rules.settings_from_dict({'scale': 4, 'theme': 'dark'})
-        self.assertEqual(settings.display.ui_scale, 1)
+    def test_scale_outside_the_slider_is_clamped(self):
+        self.assertEqual(rules.settings_from_dict({'scale': 4}).display.ui_scale, 1.25)
+        self.assertEqual(rules.settings_from_dict({'scale': 0.1}).display.ui_scale, 0.5)
 
     def test_scale_changes_every_metric(self):
         normal = Metrics.for_display(DisplaySettings())

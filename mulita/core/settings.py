@@ -14,8 +14,8 @@ MM_PER_INCH = 25.4
 PANEL_WIDTH = 800
 PANEL_HEIGHT = 480
 PANEL_DIAGONAL_INCHES = 5.0
-UI_SCALE_MIN = 0.75
-UI_SCALE_MAX = 1.5
+UI_SCALE_MIN = 0.5
+UI_SCALE_MAX = 1.25
 UI_SCALE_STEP = 0.05
 
 
@@ -67,8 +67,7 @@ def ui_scale(value: Any) -> float:
         number = float(value)
     except (TypeError, ValueError) as exc:
         raise ValidationError(f'Escala invalida: {value}') from exc
-    if not UI_SCALE_MIN <= number <= UI_SCALE_MAX:
-        raise ValidationError(f'Escala fuera de rango ({UI_SCALE_MIN:g} a {UI_SCALE_MAX:g})')
+    number = min(UI_SCALE_MAX, max(UI_SCALE_MIN, number))
     steps = round((number - UI_SCALE_MIN) / UI_SCALE_STEP)
     return round(UI_SCALE_MIN + steps * UI_SCALE_STEP, 2)
 
