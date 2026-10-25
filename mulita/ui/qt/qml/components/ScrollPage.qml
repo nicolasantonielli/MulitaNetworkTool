@@ -23,6 +23,8 @@ Item {
         anchors.bottom: parent.bottom
         anchors.right: bar.left
         clip: true
+        // El dedo tiene que llegar al campo. El desplazamiento va por la barra.
+        interactive: false
         flickableDirection: Flickable.VerticalFlick
         boundsBehavior: Flickable.StopAtBounds
         contentWidth: width

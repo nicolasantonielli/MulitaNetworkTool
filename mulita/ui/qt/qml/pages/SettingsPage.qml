@@ -78,6 +78,17 @@ Item {
                     interna.apply(modeChips.value, ip.text, mask.text, gateway.text, dns.text)
                 }
 
+                function showStatic(address, netmask, gatewayAddress, dnsAddress) {
+                    if (address)
+                        ip.text = address
+                    if (netmask)
+                        mask.text = netmask
+                    if (gatewayAddress)
+                        gateway.text = gatewayAddress
+                    if (dnsAddress)
+                        dns.text = dnsAddress
+                }
+
                 Card {
                     Layout.fillWidth: true
                     title: "Modo"
@@ -96,7 +107,11 @@ Item {
                         enabled: !interna.busy
                         model: interna.modes
                         value: interna.mode
-                        onActivated: modeChips.value = value
+                        onActivated: {
+                            modeChips.value = value
+                            if (value === "static")
+                                internaPage.showStatic(interna.address, interna.netmask, interna.gateway, interna.dns)
+                        }
                     }
                     Text {
                         Layout.fillWidth: true
@@ -154,13 +169,13 @@ Item {
                     titleIcon: "settings"
 
                     Text { text: "Dirección IP"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
-                    Field { id: ip; Layout.fillWidth: true; placeholderText: "192.168.1.10" }
+                    Field { id: ip; Layout.fillWidth: true; Component.onCompleted: text = "192.168.1.10" }
                     Text { text: "Máscara"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
-                    Field { id: mask; Layout.fillWidth: true; placeholderText: "255.255.255.0" }
+                    Field { id: mask; Layout.fillWidth: true; Component.onCompleted: text = "255.255.255.0" }
                     Text { text: "Puerta de enlace"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
-                    Field { id: gateway; Layout.fillWidth: true; placeholderText: "192.168.1.1" }
+                    Field { id: gateway; Layout.fillWidth: true; Component.onCompleted: text = "192.168.1.1" }
                     Text { text: "DNS"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
-                    Field { id: dns; Layout.fillWidth: true; placeholderText: "8.8.8.8" }
+                    Field { id: dns; Layout.fillWidth: true; Component.onCompleted: text = "8.8.8.8" }
                 }
 
                 RowLayout {
@@ -180,7 +195,7 @@ Item {
                             title: "Ethernet interna",
                             kind: "warning",
                             message: modeChips.value === "static"
-                                     ? "Se asigna " + (ip.text || "la dirección ingresada") + " a " + interna.interfaceName + "."
+                                     ? "Se asigna " + ip.text + " a " + interna.interfaceName + "."
                                      : interna.interfaceName + " pedirá una dirección por DHCP.",
                             confirmText: "Aplicar",
                             confirmAction: internaPage.apply
@@ -194,10 +209,7 @@ Item {
                         modeChips.value = interna.mode
                         if (interna.mode !== "static")
                             return
-                        ip.text = interna.address
-                        mask.text = interna.netmask
-                        gateway.text = interna.gateway
-                        dns.text = interna.dns
+                        internaPage.showStatic(interna.address, interna.netmask, interna.gateway, interna.dns)
                     }
                 }
             }

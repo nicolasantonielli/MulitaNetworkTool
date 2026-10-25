@@ -22,8 +22,6 @@ Rectangle {
         var item = win.activeFocusItem
         if (accepts(item))
             field = item
-        else if (item)
-            field = null
     }
 
     function type(text) {
