@@ -7,6 +7,8 @@ TextField {
 
     // El teclado de la ventana busca esta marca en el foco o en sus padres.
     readonly property bool takesKeyboard: true
+    // La clave cambia el teclado a signos. Una direccion no los necesita.
+    property bool symbolKeys: false
 
     implicitHeight: ui.touch
     Layout.preferredHeight: ui.touch

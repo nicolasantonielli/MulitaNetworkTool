@@ -168,6 +168,7 @@ Item {
 
                             property bool revealed: false
 
+                            symbolKeys: true
                             Layout.fillWidth: true
                             echoMode: revealed ? TextInput.Normal : TextInput.Password
                             placeholderText: "Clave"

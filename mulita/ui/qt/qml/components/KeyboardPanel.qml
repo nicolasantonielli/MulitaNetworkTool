@@ -10,16 +10,30 @@ Rectangle {
 
     property Item field: null
     property bool caps: false
+    property bool symbols: false
     property bool typing: false
     property double typedAt: 0
     readonly property bool active: field !== null
+    readonly property bool symbolField: field && field.symbolKeys === true
     readonly property int keyHeight: Math.round(ui.touch * 0.82)
-    readonly property var keys: [
+    readonly property var letterKeys: [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
         "q", "w", "e", "r", "t", "y", "u", "i", "o", "p",
         "a", "s", "d", "f", "g", "h", "j", "k", "l", "",
         "z", "x", "c", "v", "b", "n", "m", ".", "-", "_"
     ]
+    readonly property var symbolKeys: [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+        "!", "@", "#", "$", "%", "^", "&", "*", "(", ")",
+        "'", "\"", "`", "~", "=", "+", "[", "]", "{", "}",
+        "\\", "|", ";", ":", "<", ">", ",", ".", "/", "?"
+    ]
+    readonly property var keys: symbolField && symbols ? symbolKeys : letterKeys
+
+    onFieldChanged: {
+        caps = false
+        symbols = false
+    }
 
     function glyph(letter) {
         if (caps && letter >= "a" && letter <= "z")
@@ -271,6 +285,19 @@ Rectangle {
                 }
             }
             TouchButton {
+                visible: root.symbolField
+                Layout.preferredWidth: ui.touch * 2
+                Layout.preferredHeight: root.keyHeight
+                text: root.symbols ? "Letras" : "Signos"
+                kind: root.symbols ? "success" : "neutral"
+                onClicked: {
+                    if (Date.now() - root.typedAt < 500)
+                        return
+                    root.symbols = !root.symbols
+                    root.caps = false
+                }
+            }
+            TouchButton {
                 Layout.preferredWidth: ui.touch * 1.4
                 Layout.preferredHeight: root.keyHeight
                 icon: "back"
@@ -285,6 +312,8 @@ Rectangle {
                 onClicked: root.type(" ")
             }
             TouchButton {
+                // En la clave estos signos estan en la pagina Signos.
+                visible: !root.symbolField
                 Layout.preferredWidth: ui.touch * 1.2
                 Layout.preferredHeight: root.keyHeight
                 text: "/"
@@ -292,6 +321,7 @@ Rectangle {
                 onClicked: root.type("/")
             }
             TouchButton {
+                visible: !root.symbolField
                 Layout.preferredWidth: ui.touch * 1.2
                 Layout.preferredHeight: root.keyHeight
                 text: ":"
