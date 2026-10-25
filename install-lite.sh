@@ -167,13 +167,71 @@ EOF
   as_root udevadm trigger --subsystem-match=input || true
 fi
 
+boot_dir() {
+  if [[ -d /boot/firmware ]]; then
+    echo /boot/firmware
+  else
+    echo /boot
+  fi
+}
+
+# La consola de texto en tty1 tapa la interfaz. El kernel habla por el serial
+# y la pantalla queda libre para la aplicacion.
+configure_cmdline() {
+  local file="$1" line word
+  local -a words=() new=()
+  local seen_quiet=0 seen_log=0 seen_logo=0 seen_cursor=0 seen_blank=0
+  line="$(tr -s '[:space:]' ' ' < "$file")"
+  read -r -a words <<< "$line"
+  for word in "${words[@]}"; do
+    case "$word" in
+      console=tty1|splash) continue ;;
+      quiet) seen_quiet=1 ;;
+      loglevel=*) seen_log=1; word="loglevel=3" ;;
+      logo.nologo) seen_logo=1 ;;
+      vt.global_cursor_default=*) seen_cursor=1; word="vt.global_cursor_default=0" ;;
+      consoleblank=*) seen_blank=1; word="consoleblank=0" ;;
+    esac
+    new+=("$word")
+  done
+  [[ "$seen_quiet" -eq 1 ]] || new+=(quiet)
+  [[ "$seen_log" -eq 1 ]] || new+=(loglevel=3)
+  [[ "$seen_logo" -eq 1 ]] || new+=(logo.nologo)
+  [[ "$seen_cursor" -eq 1 ]] || new+=(vt.global_cursor_default=0)
+  [[ "$seen_blank" -eq 1 ]] || new+=(consoleblank=0)
+  printf '%s\n' "${new[*]}" | as_root tee "$file" >/dev/null
+}
+
+configure_boot() {
+  local dir file
+  dir="$(boot_dir)"
+  file="$dir/cmdline.txt"
+  if [[ -f "$file" ]]; then
+    echo "Dejando la pantalla para la aplicacion..."
+    configure_cmdline "$file"
+  else
+    echo "Aviso: no esta $file. No se cambio la consola del kernel."
+  fi
+  file="$dir/config.txt"
+  if [[ -f "$file" ]] && ! grep -q 'mulita-kiosk' "$file"; then
+    as_root tee -a "$file" >/dev/null <<'EOF'
+
+# mulita-kiosk
+disable_splash=1
+EOF
+  fi
+}
+
+configure_boot
+
 echo "Activando el arranque al boot..."
 unit="$(mktemp)"
 cat > "$unit" <<EOF
 [Unit]
 Description=Mulita Network Tool
-After=multi-user.target
+After=systemd-user-sessions.service systemd-udev-trigger.service
 Conflicts=getty@tty1.service
+Before=getty@tty1.service
 
 [Service]
 Type=simple
@@ -181,12 +239,15 @@ WorkingDirectory=$ROOT
 Environment=QT_QPA_PLATFORM=eglfs
 Environment=QT_QPA_EGLFS_INTEGRATION=eglfs_kms
 ExecStart=$ROOT/.venv/bin/python main.py
-Restart=on-failure
+Restart=always
 RestartSec=3
 StandardInput=tty
+StandardOutput=journal
+StandardError=journal
 TTYPath=/dev/tty1
 TTYReset=yes
 TTYVHangup=yes
+TTYVTDisallocate=yes
 KillSignal=SIGTERM
 TimeoutStopSec=15
 
@@ -196,8 +257,11 @@ EOF
 as_root cp "$unit" /etc/systemd/system/mulita.service
 rm -f "$unit"
 as_root systemctl daemon-reload
+# Sin login en la pantalla. La sesion actual, si es por HDMI, sigue hasta el reinicio.
+as_root systemctl disable getty@tty1.service || true
+as_root systemctl mask getty@tty1.service || true
 as_root systemctl enable mulita.service
 
 echo "Listo. Al reiniciar, Mulita se abre sola en la pantalla."
-echo "Probar ahora: sudo systemctl start mulita"
+echo "Aplicar ahora: sudo reboot"
 echo "Ver el registro: journalctl -u mulita -f"
