@@ -8,20 +8,44 @@ Rectangle {
     id: root
 
     property Item field: null
-    readonly property bool active: field !== null && field.activeFocus
+    readonly property bool active: field !== null
     readonly property int keyHeight: Math.round(ui.touch * 0.82)
 
     function accepts(item) {
         return item && item.insert !== undefined && item.cursorPosition !== undefined
     }
 
+    function keyboardItem(item) {
+        var current = item
+        while (current) {
+            if (current.takesKeyboard === true)
+                return current
+            current = current.parent
+        }
+        return null
+    }
+
+    function isInside(item) {
+        var current = item
+        while (current) {
+            if (current === root)
+                return true
+            current = current.parent
+        }
+        return false
+    }
+
+    function follow(item) {
+        if (!item || isInside(item))
+            return
+        var target = keyboardItem(item)
+        field = target
+    }
+
     function remember() {
         var win = Window.window
-        if (!win)
-            return
-        var item = win.activeFocusItem
-        if (accepts(item))
-            field = item
+        if (win)
+            follow(win.activeFocusItem)
     }
 
     function type(text) {

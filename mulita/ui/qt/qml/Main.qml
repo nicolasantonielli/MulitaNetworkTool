@@ -32,6 +32,8 @@ ApplicationWindow {
         currentPage = index
     }
 
+    onActiveFocusItemChanged: if (keyboard.item) keyboard.item.follow(activeFocusItem)
+
     width: ui.windowWidth
     height: ui.windowHeight
     visible: true

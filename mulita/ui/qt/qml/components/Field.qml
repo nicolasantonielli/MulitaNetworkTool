@@ -5,6 +5,9 @@ import QtQuick.Layouts 1.15
 TextField {
     id: root
 
+    // El teclado de la ventana busca esta marca en el foco o en sus padres.
+    readonly property bool takesKeyboard: true
+
     implicitHeight: ui.touch
     Layout.preferredHeight: ui.touch
     Layout.minimumHeight: ui.touch
@@ -20,6 +23,10 @@ TextField {
     verticalAlignment: TextInput.AlignVCenter
     selectByMouse: true
     inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
+
+    TapHandler {
+        onPressedChanged: if (pressed) root.forceActiveFocus()
+    }
 
     background: Rectangle {
         implicitWidth: 120
