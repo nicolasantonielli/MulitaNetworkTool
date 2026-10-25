@@ -41,7 +41,9 @@ ApplicationWindow {
         var next = top ? Overlay.overlay : contentItem
         if (keyboard.parent !== next)
             keyboard.parent = next
-        keyboard.z = top ? 1000 : 100
+        // El aviso modal queda cerca de 100000. El teclado tiene que quedar encima
+        // para que las teclas reciban el toque.
+        keyboard.z = top ? 1000001 : 100
     }
 
     width: ui.windowWidth

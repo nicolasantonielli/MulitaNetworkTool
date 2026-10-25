@@ -135,7 +135,8 @@ Item {
                     property bool secure: true
 
                     parent: Overlay.overlay
-                    modal: true
+                    // Sin velo modal: ese velo se queda con el toque y las teclas no responden.
+                    modal: false
                     focus: true
                     closePolicy: Popup.CloseOnEscape
                     padding: Math.round(ui.padding * 1.3)
@@ -151,8 +152,6 @@ Item {
                         border.width: 1
                         border.color: ui.border
                     }
-                    Overlay.modal: Rectangle { color: "#A0000000" }
-
                     contentItem: ColumnLayout {
                         spacing: ui.gap
 
@@ -206,6 +205,13 @@ Item {
                             }
                         }
                     }
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    visible: wifiKey.opened
+                    color: "#A0000000"
+                    z: 20
                 }
 
                 ColumnLayout {

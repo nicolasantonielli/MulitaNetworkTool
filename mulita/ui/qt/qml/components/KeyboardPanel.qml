@@ -8,8 +8,15 @@ Rectangle {
     id: root
 
     property Item field: null
+    property bool caps: false
     readonly property bool active: field !== null
     readonly property int keyHeight: Math.round(ui.touch * 0.82)
+
+    onFieldChanged: if (!field) caps = false
+
+    function glyph(letter) {
+        return caps ? letter.toUpperCase() : letter
+    }
 
     function accepts(item) {
         return item && item.insert !== undefined && item.cursorPosition !== undefined
@@ -90,7 +97,12 @@ Rectangle {
         visible: root.active
 
         Repeater {
-            model: ["1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm.-_"]
+            model: [
+                "1234567890",
+                root.glyph("qwertyuiop"),
+                root.glyph("asdfghjkl"),
+                root.glyph("zxcvbnm.-_")
+            ]
 
             delegate: RowLayout {
                 Layout.fillWidth: true
@@ -116,6 +128,13 @@ Rectangle {
 
             TouchButton {
                 Layout.preferredWidth: ui.touch * 1.7
+                Layout.preferredHeight: root.keyHeight
+                text: "Mayús"
+                kind: root.caps ? "success" : "neutral"
+                onClicked: root.caps = !root.caps
+            }
+            TouchButton {
+                Layout.preferredWidth: ui.touch * 1.4
                 Layout.preferredHeight: root.keyHeight
                 icon: "back"
                 kind: "neutral"
