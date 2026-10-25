@@ -14,8 +14,10 @@ Rectangle {
 
     onFieldChanged: if (!field) caps = false
 
-    function glyph(letter) {
-        return caps ? letter.toUpperCase() : letter
+    function shown(letter) {
+        if (!caps || letter < "a" || letter > "z")
+            return letter
+        return letter.toUpperCase()
     }
 
     function accepts(item) {
@@ -78,6 +80,12 @@ Rectangle {
     border.color: ui.border
     border.width: active ? 1 : 0
     visible: active
+    // Un toque en un hueco del teclado no debe llegar al ojo de la clave.
+    MouseArea {
+        anchors.fill: parent
+        z: -1
+        onPressed: mouse.accepted = true
+    }
     implicitHeight: active ? column.implicitHeight + ui.gap : 0
     height: implicitHeight
 
@@ -97,12 +105,8 @@ Rectangle {
         visible: root.active
 
         Repeater {
-            model: [
-                "1234567890",
-                root.glyph("qwertyuiop"),
-                root.glyph("asdfghjkl"),
-                root.glyph("zxcvbnm.-_")
-            ]
+            // El modelo no cambia con Mayus: si se reconstruye, el toque inserta otra cosa.
+            model: ["1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm.-_"]
 
             delegate: RowLayout {
                 Layout.fillWidth: true
@@ -112,11 +116,13 @@ Rectangle {
                     model: modelData.split("")
 
                     delegate: TouchButton {
+                        readonly property string letter: modelData
+
                         Layout.fillWidth: true
                         Layout.preferredHeight: root.keyHeight
-                        text: modelData
+                        text: root.shown(letter)
                         kind: "neutral"
-                        onClicked: root.type(modelData)
+                        onClicked: root.type(root.shown(letter))
                     }
                 }
             }
