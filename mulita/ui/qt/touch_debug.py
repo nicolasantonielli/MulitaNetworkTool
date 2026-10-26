@@ -83,8 +83,9 @@ def connected_mice() -> list[str]:
 
 class TouchDebug(QObject):
 
-    def __init__(self):
+    def __init__(self, diagnostics=None):
         super().__init__()
+        self._diagnostics = diagnostics
         self._last_move = 0.0
         self._anchor: tuple[float, float] | None = None
         self._rewriting = False
@@ -96,6 +97,12 @@ class TouchDebug(QObject):
     def eventFilter(self, watched, event):
         if self._rewriting:
             return False
+        if self._diagnostics is not None:
+            self._diagnostics.observe(watched, event)
+            if self._diagnostics.active and self._diagnostics.bypass:
+                self._press = None
+                self._anchor = None
+                return False
         kind = _MOUSE.get(event.type())
         if kind is not None:
             return self._mouse(watched, event, kind)

@@ -54,6 +54,7 @@ class QtApplication:
         from mulita.ui.qt.dispatcher import QtDispatcher
         from mulita.ui.qt.icons import IconProvider
         from mulita.ui.qt.touch_debug import TouchDebug, log_input_devices
+        from mulita.ui.qt.touch_test import TouchTest
 
         self._services = services
         self.app = QGuiApplication(sys.argv)
@@ -72,12 +73,14 @@ class QtApplication:
             self._cursor_timer.timeout.connect(self._sync_cursor)
             self._sync_cursor()
             self._cursor_timer.start()
-        self._touch_debug = TouchDebug()
+        self._touch_test = TouchTest()
+        self._touch_debug = TouchDebug(self._touch_test)
         self.app.installEventFilter(self._touch_debug)
 
         notifier = Notifier()
         ctx = BridgeContext(config=config, services=services, dispatcher=QtDispatcher(), notifier=notifier)
         self._controllers = {
+            'touchTest': self._touch_test,
             'ui': Appearance(ctx),
             'i18n': I18nController(ctx),
             'notifier': notifier,

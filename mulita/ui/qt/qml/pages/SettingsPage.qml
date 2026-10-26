@@ -17,6 +17,8 @@ Item {
 
         SideNav {
             id: nav
+            objectName: "settingsNav"
+            visible: currentIndex !== 5
             Layout.preferredWidth: Math.round(root.width * 0.27)
             Layout.fillHeight: true
             onCurrentIndexChanged: {
@@ -126,6 +128,13 @@ Item {
                         initial: settings.uiScale
                         valueText: Math.round(value * 100) + " %"
                         onValueChanged: settings.setScale(value)
+                    }
+                    TouchButton {
+                        Layout.fillWidth: true
+                        text: i18n.pack.touchTest
+                        icon: "display"
+                        kind: "neutral"
+                        onClicked: nav.currentIndex = 5
                     }
                 }
                 Card {
@@ -553,6 +562,8 @@ Item {
                     }
                 }
             }
+
+            TouchTestPage { onGoBack: nav.currentIndex = 1 }
         }
     }
 }

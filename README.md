@@ -2,6 +2,19 @@
 
 Aplicacion de diagnostico de red pensada para Raspberry Pi 4, con soporte de entorno de pruebas en Windows.
 
+## Prueba del panel tactil
+
+En **Configuracion > Pantalla > Test tactil**:
+
+- Tocar las nueve zonas y dibujar lineas para comprobar posiciones y continuidad.
+- Repetir cinco toques en un mismo punto y comparar el contador de la zona con el boton de prueba.
+- Los trazos verdes representan eventos tactiles recibidos por Qt; los azules, eventos de mouse o sintetizados por Qt.
+- Los contadores de la ventana muestran pulsaciones (flecha abajo), liberaciones (flecha arriba) y cancelaciones (cruz). Incluyen los controles del test. No sumar panel y Mouse/Qt: un mismo toque puede producir ambos tipos de evento.
+- El control **Modo normal / Sin correccion** permite comparar el filtro de Mulita con la entrada que recibe Qt. Al salir se restaura automaticamente el modo normal.
+- **Limpiar** borra los contadores, las marcas y el historial. Se conservan como maximo los ultimos 200 registros durante la prueba.
+
+La prueba observa lo que Qt recibe, no los eventos crudos del kernel. Que no aparezcan eventos verdes no demuestra por si solo una falla del panel: algunos sistemas entregan solamente eventos de mouse.
+
 ## Requisitos
 
 - Python 3.10 o superior.
