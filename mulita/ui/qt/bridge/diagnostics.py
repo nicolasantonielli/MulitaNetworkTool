@@ -87,7 +87,7 @@ class PingController(SessionController):
             'time': item.time,
             'status': item.status,
             'detail': item.detail,
-        } for item in self._replies])
+        } for item in reversed(self._replies)])
 
     @pyqtProperty(str, notify=summaryChanged)
     def summaryJson(self) -> str:
