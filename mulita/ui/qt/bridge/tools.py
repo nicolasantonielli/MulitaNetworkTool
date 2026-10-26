@@ -12,12 +12,58 @@ from mulita.ui.qt.bridge.base import BridgeContext, TaskController
 
 
 class WakeOnLanController(TaskController):
+    changed = pyqtSignal()
+
+    def __init__(self, ctx: BridgeContext):
+        super().__init__(ctx)
+        self._phase = ''
+        self._mac = ''
+        self._target = ''
+        self._port = ''
+        self._detail = ''
+
+    @pyqtProperty(str, notify=changed)
+    def phase(self) -> str:
+        return self._phase
+
+    @pyqtProperty(str, notify=changed)
+    def mac(self) -> str:
+        return self._mac
+
+    @pyqtProperty(str, notify=changed)
+    def target(self) -> str:
+        return self._target
+
+    @pyqtProperty(str, notify=changed)
+    def port(self) -> str:
+        return self._port
+
+    @pyqtProperty(str, notify=changed)
+    def detail(self) -> str:
+        return self._detail
 
     @pyqtSlot(str)
     def wake(self, mac: str) -> None:
-        self._console.clear()
-        self._task(lambda: self._services.wake_on_lan.wake(mac),
-                   self._console.show, lambda error: self._console.show(f'{error}\n'))
+        self._mac = (mac or '').strip().upper()
+        self._target = ''
+        self._port = ''
+        self._detail = ''
+        self._phase = 'sending'
+        self.changed.emit()
+        self._task(lambda: self._services.wake_on_lan.wake(mac), self._sent, self._failed)
+
+    def _sent(self, packet) -> None:
+        self._phase = 'sent'
+        self._mac = packet.mac
+        self._target = packet.target
+        self._port = packet.port
+        self._detail = ''
+        self.changed.emit()
+
+    def _failed(self, error: Exception) -> None:
+        self._phase = 'error'
+        self._detail = str(error)
+        self.changed.emit()
 
 
 class ClimateController(TaskController):

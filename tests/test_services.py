@@ -170,6 +170,12 @@ class BlockingServicesTest(unittest.TestCase):
         services.wake_on_lan.wake('aa:bb:cc:dd:ee:ff')
         self.assertEqual(runner.runs[-1], ['/bin/wakeonlan', 'aa:bb:cc:dd:ee:ff'])
 
+    def test_wake_on_lan_reports_where_the_packet_went(self):
+        runner = FakeRunner({'/bin/wakeonlan': CommandResult(
+            0, 'Sending magic packet to 192.168.1.255:9 with aa:bb:cc:dd:ee:ff\n')})
+        sent = services_with(runner).wake_on_lan.wake('aa:bb:cc:dd:ee:ff')
+        self.assertEqual((sent.mac, sent.target, sent.port), ('AA:BB:CC:DD:EE:FF', '192.168.1.255', '9'))
+
     def test_interfaces(self):
         runner = FakeRunner({'/usr/bin/ip': CommandResult(0, IP_JSON)})
         services = services_with(runner)

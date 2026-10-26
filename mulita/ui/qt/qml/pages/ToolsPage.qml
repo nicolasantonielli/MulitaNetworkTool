@@ -61,11 +61,133 @@ Item {
                         onClicked: wakeOnLan.wake(mac.text)
                     }
                 }
-                ConsoleView {
+                Item {
+                    id: wolStage
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    source: wakeOnLan.console
-                    placeholder: i18n.pack.wolEmpty
+
+                    property bool celebrate: false
+                    readonly property bool waving: wakeOnLan.phase === "sending" || celebrate
+                    property real wave: 0
+
+                    NumberAnimation on wave {
+                        running: wolStage.waving
+                        from: 0
+                        to: 1
+                        duration: 1800
+                        loops: Animation.Infinite
+                    }
+
+                    Timer {
+                        id: wolSettle
+                        interval: 2100
+                        onTriggered: wolStage.celebrate = false
+                    }
+
+                    Connections {
+                        target: wakeOnLan
+                        function onChanged() {
+                            if (wakeOnLan.phase === "sent") {
+                                wolStage.celebrate = true
+                                wolSettle.restart()
+                            } else if (wakeOnLan.phase !== "sending") {
+                                wolStage.celebrate = false
+                            }
+                        }
+                    }
+
+                    Item {
+                        id: orb
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.top: parent.top
+                        anchors.topMargin: ui.gap
+                        width: Math.min(parent.width * 0.46, ui.mm * 38)
+                        height: width
+
+                        Repeater {
+                            model: 3
+                            delegate: Rectangle {
+                                property real shift: (wolStage.wave + index / 3) % 1
+                                anchors.centerIn: parent
+                                width: parent.width
+                                height: width
+                                radius: width / 2
+                                color: "transparent"
+                                border.width: Math.max(1, ui.mm * 0.4)
+                                border.color: wakeOnLan.phase === "sent" ? ui.success : ui.primary
+                                visible: wolStage.waving
+                                scale: 0.34 + shift * 1.2
+                                opacity: (1 - shift) * 0.75
+                            }
+                        }
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: parent.width * 0.42
+                            height: width
+                            radius: width / 2
+                            color: wakeOnLan.phase === "error" ? ui.danger
+                                 : wakeOnLan.phase === "sent" ? ui.success
+                                 : wakeOnLan.phase === "sending" ? ui.primary
+                                 : ui.surfaceHigh
+
+                            Icon {
+                                anchors.centerIn: parent
+                                name: "power"
+                                size: parent.width * 0.46
+                                color: wakeOnLan.phase === "" ? ui.textMuted : ui.onAccent
+                            }
+
+                            SequentialAnimation on scale {
+                                running: wolStage.waving
+                                loops: Animation.Infinite
+                                NumberAnimation { from: 1; to: 1.08; duration: 420; easing.type: Easing.InOutQuad }
+                                NumberAnimation { from: 1.08; to: 1; duration: 420; easing.type: Easing.InOutQuad }
+                            }
+                        }
+                    }
+
+                    Column {
+                        anchors.top: orb.bottom
+                        anchors.topMargin: ui.gap
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: parent.width
+                        spacing: Math.round(ui.gap * 0.45)
+
+                        Text {
+                            width: parent.width
+                            horizontalAlignment: Text.AlignHCenter
+                            text: wakeOnLan.mac !== "" ? wakeOnLan.mac : i18n.pack.wolEmpty
+                            color: ui.text
+                            font.pixelSize: wakeOnLan.mac !== "" ? ui.fontTitle : ui.fontBody
+                            font.family: wakeOnLan.mac !== "" ? ui.monoFamily : ""
+                            font.weight: Font.DemiBold
+                            wrapMode: Text.Wrap
+                            elide: Text.ElideRight
+                        }
+                        Text {
+                            width: parent.width
+                            horizontalAlignment: Text.AlignHCenter
+                            visible: wakeOnLan.phase !== ""
+                            text: wakeOnLan.phase === "sending" ? i18n.pack.wolSending
+                                : wakeOnLan.phase === "sent" ? i18n.pack.wolSent
+                                : wakeOnLan.detail
+                            color: wakeOnLan.phase === "error" ? ui.danger
+                                 : wakeOnLan.phase === "sent" ? ui.success
+                                 : ui.primary
+                            font.pixelSize: ui.fontBody
+                            wrapMode: Text.Wrap
+                        }
+                        Text {
+                            width: parent.width
+                            horizontalAlignment: Text.AlignHCenter
+                            visible: wakeOnLan.phase === "sent" && wakeOnLan.target !== ""
+                            text: i18n.pack.wolVia.replace("{target}", wakeOnLan.target).replace("{port}", wakeOnLan.port)
+                            color: ui.textMuted
+                            font.pixelSize: ui.fontBody
+                            font.family: ui.monoFamily
+                        }
+                    }
                 }
             }
 

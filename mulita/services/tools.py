@@ -1,13 +1,26 @@
 from __future__ import annotations
 
+import re
 import time
+from dataclasses import dataclass
 
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError
+from mulita.presentation.i18n import tr
 from mulita.core.models import Calibration, ClimateReading, SpeedTestResult
 from mulita.core.parsers import parse_mac_vendor, parse_speed_test
 from mulita.core.ports import ClimateSensor, CommandRunner
+
+
+_WAKE_TARGET = re.compile(r'(\d+\.\d+\.\d+\.\d+):(\d+)')
+
+
+@dataclass(frozen=True)
+class MagicPacket:
+    mac: str
+    target: str
+    port: str
 
 
 class WakeOnLanService:
@@ -16,8 +29,15 @@ class WakeOnLanService:
         self._runner = runner
         self._commands = commands
 
-    def wake(self, mac: str) -> str:
-        return self._runner.run(self._commands.wake_on_lan(validation.mac_address(mac))).text
+    def wake(self, mac: str) -> MagicPacket:
+        normalized = validation.mac_address(mac)
+        result = self._runner.run(self._commands.wake_on_lan(normalized))
+        if not result.ok:
+            detail = (result.text or '').strip()
+            raise CommandFailedError(detail or tr('wolFailed'), result)
+        found = _WAKE_TARGET.search(result.stdout or '')
+        target, port = found.groups() if found else ('255.255.255.255', '9')
+        return MagicPacket(normalized.upper(), target, port)
 
 
 class ClimateService:
