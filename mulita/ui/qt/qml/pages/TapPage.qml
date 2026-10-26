@@ -5,8 +5,6 @@ import "../components"
 Item {
     id: root
 
-    property bool captureOn: false
-
     function fileName() {
         return tapFile.text.replace(/\.pcap$/i, "") + ".pcap"
     }
@@ -98,44 +96,11 @@ Item {
                     RowLayout {
                         spacing: ui.gap
 
-                        Rectangle {
-                            Layout.preferredWidth: ui.touch
-                            Layout.preferredHeight: ui.touch
-                            radius: ui.radius
-                            color: root.captureOn ? ui.primary : ui.surfaceAlt
-                            border.width: 1
-                            border.color: root.captureOn ? ui.primary : ui.border
-                            enabled: !tap.running
-
-                            Text {
-                                anchors.centerIn: parent
-                                visible: root.captureOn
-                                text: "✓"
-                                color: ui.onAccent
-                                font.pixelSize: ui.fontTitle
-                                font.weight: Font.Bold
-                            }
-                            TouchArea {
-                                enabled: !tap.running
-                                onTapped: root.captureOn = !root.captureOn
-                            }
-                        }
-                        Text {
-                            text: "Capturar"
-                            color: ui.text
-                            font.pixelSize: ui.fontBody
-                            font.weight: Font.DemiBold
-                        }
-                    }
-                    RowLayout {
-                        spacing: ui.gap
-                        enabled: root.captureOn
-
                         Field {
                             id: tapFile
                             Layout.fillWidth: true
                             text: tap.defaultFilename
-                            enabled: root.captureOn && !tap.running
+                            enabled: !tap.running
                             placeholderText: "Nombre del archivo"
                         }
                         Text {
@@ -146,7 +111,6 @@ Item {
                     }
                     Text {
                         Layout.fillWidth: true
-                        visible: root.captureOn
                         text: tap.running && tap.activeFile !== "" ? tap.activeFile : root.fileName()
                         color: ui.textMuted
                         font.pixelSize: ui.fontSmall
@@ -178,7 +142,7 @@ Item {
                         kind: tap.running ? "danger" : "success"
                         onClicked: tap.running ? tap.stop()
                                                : tap.start(groups.itemAt(0).value, groups.itemAt(1).value,
-                                                           groups.itemAt(2).value, root.captureOn, tapFile.text)
+                                                           groups.itemAt(2).value, tapFile.text)
                     }
                 }
             }

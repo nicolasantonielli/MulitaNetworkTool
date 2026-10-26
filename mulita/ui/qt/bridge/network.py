@@ -167,13 +167,13 @@ class TapController(Controller):
     def activeFile(self) -> str:
         return self._active_file
 
-    @pyqtSlot(str, str, str, bool, str)
-    def start(self, entrante: str, mirror: str, saliente: str, capture: bool, filename: str) -> None:
+    @pyqtSlot(str, str, str, str)
+    def start(self, entrante: str, mirror: str, saliente: str, filename: str) -> None:
         from mulita.core.errors import MulitaError
         try:
             name = self._services.tap.start(
                 TapConfig(entrante=entrante, mirror=mirror, saliente=saliente),
-                filename if capture else '',
+                filename,
                 on_output=self._ctx.dispatcher.wrap(self._output),
                 on_exit=self._ctx.dispatcher.wrap(self._capture_stopped))
         except MulitaError as exc:
