@@ -124,6 +124,31 @@ Item {
         self.assertGreater(view.property('contentY'), 40)
         self.assertEqual(self.root.property('hits'), 0)
 
+    def test_horizontal_pages_swipe_over_tiles_without_opening_them(self):
+        self.load('''
+    ListView {
+        objectName: "pager"
+        anchors.fill: parent
+        orientation: ListView.Horizontal
+        snapMode: ListView.SnapOneItem
+        highlightRangeMode: ListView.StrictlyEnforceRange
+        boundsBehavior: Flickable.StopAtBounds
+        model: 2
+        delegate: Rectangle {
+            width: 400; height: 260
+            TouchArea { onTapped: root.hits++ }
+        }
+    }
+''')
+        pager = self.root.findChild(QObject, 'pager')
+        self.swipe(QPoint(350, 130), QPoint(50, 130))
+        QTest.qWait(400)
+        self.assertEqual(pager.property('currentIndex'), 1)
+        self.assertEqual(self.root.property('hits'), 0)
+        QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier, QPoint(200, 130))
+        self.app.processEvents()
+        self.assertEqual(self.root.property('hits'), 1)
+
 
 if __name__ == '__main__':
     unittest.main()

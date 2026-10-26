@@ -16,9 +16,21 @@ ApplicationWindow {
         { title: i18n.pack.pageTap, share: true },
         { title: i18n.pack.pageScan, share: true },
         { title: i18n.pack.pageTools, share: true },
-        { title: i18n.pack.pageSettings, share: false }
+        { title: i18n.pack.pageSettings, share: false },
+        { title: window.cyberTools[window.cyberTool].title, share: false }
     ]
     property int currentPage: 0
+
+    readonly property int cyberPage: 7
+    readonly property var cyberTools: [
+        { tool: 0, icon: "bug", title: i18n.pack.cyberVuln, subtitle: i18n.pack.cyberVulnSub },
+        { tool: 1, icon: "wifi", title: i18n.pack.cyberWifi, subtitle: i18n.pack.cyberWifiSub },
+        { tool: 2, icon: "shield", title: i18n.pack.cyberArp, subtitle: i18n.pack.cyberArpSub },
+        { tool: 3, icon: "ethernet", title: i18n.pack.cyberDhcp, subtitle: i18n.pack.cyberDhcpSub },
+        { tool: 4, icon: "lock", title: i18n.pack.cyberTls, subtitle: i18n.pack.cyberTlsSub },
+        { tool: 5, icon: "globe", title: i18n.pack.cyberDns, subtitle: i18n.pack.cyberDnsSub }
+    ]
+    property int cyberTool: 0
 
     readonly property real keyboardHeight: keyboard.item && keyboard.item.active ? keyboard.item.height : 0
     readonly property real contentShift: {
@@ -81,13 +93,21 @@ ApplicationWindow {
 
             Behavior on y { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
-            HomePage { onOpen: window.navigate(page) }
+            HomePage {
+                cyberTools: window.cyberTools
+                onOpen: window.navigate(page)
+                onOpenTool: {
+                    window.cyberTool = tool
+                    window.navigate(window.cyberPage)
+                }
+            }
             CapturePage { }
             TracesPage { }
             TapPage { }
             ScanPage { }
             ToolsPage { }
             SettingsPage { onGoHome: window.navigate(0) }
+            CyberPage { tool: window.cyberTools[window.cyberTool] }
 
             onCurrentIndexChanged: pageFade.restart()
         }

@@ -2,6 +2,14 @@
 
 Aplicacion de diagnostico de red pensada para Raspberry Pi 4, con soporte de entorno de pruebas en Windows.
 
+## Menu de inicio
+
+El inicio tiene dos paginas de seis cuadros: **Red** y **Ciberseguridad**.
+Deslizar el dedo hacia la izquierda pasa a Ciberseguridad y hacia la derecha
+vuelve a Red. Tocar el nombre de una pagina, debajo de los cuadros, tambien la
+abre. Las herramientas de Ciberseguridad usan una plantilla comun y todavia
+estan en preparacion.
+
 ## Copiar y pegar texto
 
 Mantener presionado un texto para abrir el menu **Copiar**. Vale para un texto
