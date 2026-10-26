@@ -150,6 +150,7 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('discoverVendor', 'Fabricante', 'Vendor'),
     ('noHosts', 'No se encontraron equipos', 'No devices were found'),
     ('discoverTitle', 'Descubrimiento', 'Discovery'),
+    ('discoverFailed', 'El descubrimiento IP terminó con error (código {code})', 'IP discovery failed (exit code {code})'),
     ('saveDiscoverFailed', 'No se pudo guardar el descubrimiento', 'The discovery could not be saved'),
     ('discoverFolder', 'No se pudo preparar la carpeta de descubrimiento', 'The discovery folder could not be prepared'),
     ('scanHost', 'Equipo', 'Host'),

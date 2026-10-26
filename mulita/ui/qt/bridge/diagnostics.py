@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections import deque
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
@@ -213,6 +214,8 @@ class DiscoveryController(SessionController):
         super().__init__(ctx, ctx.services.discovery)
         self._hosts: list = []
         self._pending = ''
+        self._diagnostics: deque[str] = deque(maxlen=8)
+        self._stopping = False
 
     @pyqtProperty(str, notify=hostsChanged)
     def hostsJson(self) -> str:
@@ -225,10 +228,19 @@ class DiscoveryController(SessionController):
 
     @pyqtSlot(str, result=bool)
     def start(self, interface: str) -> bool:
+        if self._session.is_running:
+            return False
         self._hosts = []
         self._pending = ''
+        self._diagnostics.clear()
+        self._stopping = False
         self.hostsChanged.emit()
         return self._launch(lambda **callbacks: self._session.start(interface, **callbacks))
+
+    @pyqtSlot()
+    def stop(self) -> None:
+        self._stopping = True
+        super().stop()
 
     @pyqtSlot()
     def clear(self) -> None:
@@ -257,15 +269,20 @@ class DiscoveryController(SessionController):
             self._take(line)
         self.hostsChanged.emit()
 
-    def _finished(self, _code: int) -> None:
+    def _finished(self, code: int) -> None:
         if self._pending.strip():
             self._take(self._pending)
             self._pending = ''
             self.hostsChanged.emit()
+        if code != 0 and not self._stopping:
+            detail = '\n'.join(self._diagnostics) or tr('discoverFailed', code=code)
+            self._ctx.notifier.error(detail, title=tr('discoverTitle'))
 
     def _take(self, line: str) -> None:
         found = parse_discovery_line(line)
         if found is None:
+            if line.strip():
+                self._diagnostics.append(line.strip()[:500])
             return
         for index, item in enumerate(self._hosts):
             if item.ip == found.ip:
