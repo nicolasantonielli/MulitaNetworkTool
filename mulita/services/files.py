@@ -21,8 +21,9 @@ _MOUNT_ROOT = Path('/mnt/mulita-usb')
 _SYSTEM_MOUNTS = {'/', '/boot', '/boot/firmware'}
 
 _PLACES = {
-    'captura': 'Captura',
-    'tap': 'TAP',
+    'captura': ('Captura', '.pcap'),
+    'tap': ('TAP', '.pcap'),
+    'traza': ('Traza', '.csv'),
 }
 
 
@@ -43,7 +44,7 @@ class UsbDrive:
 
 
 class CaptureFilesService:
-    """Archivos .pcap de la captura y del TAP. No sale de esas carpetas."""
+    """Capturas .pcap y trazas .csv. No sale de esas carpetas."""
 
     def __init__(self, directory: PurePosixPath | Path,
                  capture_active=None, tap_active=None,
@@ -59,17 +60,17 @@ class CaptureFilesService:
 
     def list_files(self) -> tuple[StoredCapture, ...]:
         found: list[tuple[float, StoredCapture]] = []
-        for place in _PLACES:
+        for place, (label, suffix) in _PLACES.items():
             folder = self._folder(place)
             if not folder.is_dir():
                 continue
             for child in folder.iterdir():
-                if not child.is_file() or child.suffix.lower() != '.pcap':
+                if not child.is_file() or child.suffix.lower() != suffix:
                     continue
                 stat = child.stat()
                 found.append((stat.st_mtime, StoredCapture(
                     place=place,
-                    place_label=_PLACES[place],
+                    place_label=label,
                     name=child.name,
                     size=_size(stat.st_size),
                     modified=datetime.fromtimestamp(stat.st_mtime).strftime('%d/%m %H:%M'),
@@ -137,11 +138,13 @@ class CaptureFilesService:
             return self._root
         if place == 'tap':
             return self._root / 'tap'
+        if place == 'traza':
+            return self._root / 'trazas'
         raise ValidationError('Carpeta invalida')
 
     def _named(self, place: str, name: str) -> Path:
         folder = self._folder(place)
-        filename = validation.capture_filename(name)
+        filename = validation.trace_filename(name) if place == 'traza' else validation.capture_filename(name)
         path = folder / filename
         if path.parent.resolve() != folder.resolve():
             raise ValidationError('Nombre de archivo invalido')

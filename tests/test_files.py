@@ -22,11 +22,15 @@ class CaptureFilesTest(unittest.TestCase):
             tap = root / 'tap'
             tap.mkdir()
             (tap / 'dos.pcap').write_bytes(b'12345')
+            traces = root / 'trazas'
+            traces.mkdir()
+            (traces / 'ruta.csv').write_bytes(b'1,2')
+            (traces / 'no.pcap').write_bytes(b'no')
             listed = CaptureFilesService(root).list_files()
             self.assertEqual(
                 {(item.place, item.name, item.size) for item in listed},
-                {('captura', 'uno.pcap', '3 B'), ('tap', 'dos.pcap', '5 B')})
-            self.assertEqual({item.place_label for item in listed}, {'Captura', 'TAP'})
+                {('captura', 'uno.pcap', '3 B'), ('tap', 'dos.pcap', '5 B'), ('traza', 'ruta.csv', '3 B')})
+            self.assertEqual({item.place_label for item in listed}, {'Captura', 'TAP', 'Traza'})
 
     def test_rename_copy_and_delete_stay_inside_the_folder(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -43,6 +47,11 @@ class CaptureFilesTest(unittest.TestCase):
                 service.rename('captura', '../fuera', 'x')
             with self.assertRaises(ValidationError):
                 service.copy('captura', 'tres-copia', 'tres-copia')
+            traces = root / 'trazas'
+            traces.mkdir()
+            (traces / 'ruta.csv').write_text('a,b\n', encoding='utf-8')
+            self.assertEqual(service.rename('traza', 'ruta.csv', 'camino'), 'camino.csv')
+            self.assertEqual((traces / 'camino.csv').read_text(encoding='utf-8'), 'a,b\n')
 
     def test_busy_capture_blocks_changes(self):
         with tempfile.TemporaryDirectory() as folder:

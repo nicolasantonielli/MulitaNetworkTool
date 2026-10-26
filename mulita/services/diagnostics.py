@@ -19,7 +19,7 @@ _CSV_HEADER = ('Salto', 'Direccion', 'Perdida', 'Envios', 'Ultimo', 'Media', 'Me
 class TraceService:
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory, cycles: int,
-                 directory: PurePosixPath | Path = PurePosixPath('/root/trazas')):
+                 directory: PurePosixPath | Path = PurePosixPath('/root/capturas/trazas')):
         self._runner = runner
         self._commands = commands
         self._cycles = cycles

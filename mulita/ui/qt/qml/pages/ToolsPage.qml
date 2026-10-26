@@ -329,7 +329,7 @@ Item {
                 }
 
                 function baseName(name) {
-                    return name.replace(/\.pcap$/i, "")
+                    return name.replace(/\.(pcap|csv)$/i, "")
                 }
 
                 function begin(kind) {
@@ -372,7 +372,7 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         visible: filesPage.rows.length === 0
-                        text: "No hay capturas"
+                        text: "No hay archivos"
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
                     }
