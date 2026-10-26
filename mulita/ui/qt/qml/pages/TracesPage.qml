@@ -5,6 +5,40 @@ import "../components"
 Item {
     id: root
 
+    readonly property var hops: {
+        try { return JSON.parse(trace.hopsJson) }
+        catch (e) { return [] }
+    }
+    readonly property var columns: [
+        { title: "Salto", key: "hop", share: 8 },
+        { title: "Dirección", key: "address", share: 24 },
+        { title: "Pérdida", key: "loss", share: 11 },
+        { title: "Envíos", key: "sent", share: 9 },
+        { title: "Último", key: "last", share: 10 },
+        { title: "Media", key: "average", share: 10 },
+        { title: "Mejor", key: "best", share: 9 },
+        { title: "Peor", key: "worst", share: 9 },
+        { title: "Desvío", key: "deviation", share: 10 }
+    ]
+
+    function columnWidth(share) {
+        var bar = traceTable.overflowing ? Math.round(ui.mm * 4) : 0
+        return Math.max(1, (traceTable.width - bar) * share / 100)
+    }
+
+    function cellColor(hop, key) {
+        if (key === "address" && hop.address === "???")
+            return ui.textMuted
+        if (key === "loss") {
+            var loss = parseFloat(hop.loss)
+            if (loss >= 100)
+                return ui.danger
+            if (loss > 0)
+                return ui.warning
+        }
+        return ui.text
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: ui.padding
@@ -42,11 +76,124 @@ Item {
                     }
                 }
 
-                ConsoleView {
+                Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    source: trace.console
-                    placeholder: "La ruta hacia el destino aparece aquí"
+                    radius: ui.radius
+                    color: ui.surface
+                    border.width: 1
+                    border.color: ui.border
+
+                    Text {
+                        anchors.centerIn: parent
+                        width: parent.width - ui.padding * 2
+                        visible: root.hops.length === 0
+                        text: trace.busy ? "Trazando…" : "La ruta hacia el destino aparece aquí"
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.Wrap
+                    }
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: Math.round(ui.gap * 0.6)
+                        visible: root.hops.length > 0
+                        spacing: Math.round(ui.gap * 0.3)
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: "Tiempos en milisegundos"
+                            color: ui.textMuted
+                            font.pixelSize: ui.fontSmall
+                        }
+
+                        ScrollPage {
+                            id: traceTable
+                            spacing: 1
+
+                            Row {
+                                Layout.fillWidth: true
+                                spacing: 0
+
+                                Repeater {
+                                    model: root.columns
+
+                                    delegate: Text {
+                                        width: root.columnWidth(modelData.share)
+                                        text: modelData.title
+                                        color: ui.textMuted
+                                        font.pixelSize: ui.fontSmall
+                                        font.weight: Font.DemiBold
+                                        elide: Text.ElideRight
+                                        horizontalAlignment: modelData.key === "address"
+                                                              ? Text.AlignLeft : Text.AlignHCenter
+                                    }
+                                }
+                            }
+
+                            Repeater {
+                                model: root.hops
+
+                                delegate: Rectangle {
+                                    id: hopRow
+                                    readonly property var hop: modelData
+
+                                    Layout.fillWidth: true
+                                    implicitHeight: Math.round(ui.fontSmall * 2.15)
+                                    radius: ui.radius * 0.4
+                                    color: index % 2 === 0 ? "transparent" : ui.surfaceAlt
+
+                                    Row {
+                                        anchors.fill: parent
+                                        spacing: 0
+
+                                        Repeater {
+                                            model: root.columns
+
+                                            delegate: Text {
+                                                width: root.columnWidth(modelData.share)
+                                                height: hopRow.height
+                                                text: hopRow.hop[modelData.key] === undefined
+                                                      ? "" : String(hopRow.hop[modelData.key])
+                                                color: root.cellColor(hopRow.hop, modelData.key)
+                                                font.pixelSize: ui.fontSmall
+                                                font.family: ui.monoFamily
+                                                verticalAlignment: Text.AlignVCenter
+                                                elide: Text.ElideRight
+                                                horizontalAlignment: modelData.key === "address"
+                                                                      ? Text.AlignLeft : Text.AlignHCenter
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                RowLayout {
+                    spacing: ui.gap
+
+                    Field {
+                        id: traceFile
+                        Layout.fillWidth: true
+                        text: "traza"
+                        placeholderText: "Nombre del archivo"
+                        enabled: !trace.busy
+                    }
+                    Text {
+                        text: ".csv"
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                    }
+                    TouchButton {
+                        text: "Guardar"
+                        icon: "file"
+                        kind: "success"
+                        enabled: !trace.busy && root.hops.length > 0
+                        onClicked: trace.save(traceFile.text)
+                    }
                 }
             }
 

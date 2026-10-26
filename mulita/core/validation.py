@@ -13,6 +13,7 @@ _HOST = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._:%-]*$')
 _MAC = re.compile(r'^[0-9A-Fa-f]{2}([:-])(?:[0-9A-Fa-f]{2}\1){4}[0-9A-Fa-f]{2}$')
 _FILENAME = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]*$')
 CAPTURE_EXTENSION = '.pcap'
+TRACE_EXTENSION = '.csv'
 
 
 def require(value: str, field: str) -> str:
@@ -57,6 +58,16 @@ def capture_filename(value: str) -> str:
         raise ValidationError(
             'Nombre de archivo invalido: use letras, numeros, punto, guion o guion bajo')
     return name + CAPTURE_EXTENSION
+
+
+def trace_filename(value: str) -> str:
+    name = (value or '').strip()
+    if name.lower().endswith(TRACE_EXTENSION):
+        name = name[:-len(TRACE_EXTENSION)]
+    if not _FILENAME.match(name):
+        raise ValidationError(
+            'Nombre de archivo invalido: use letras, numeros, punto, guion o guion bajo')
+    return name + TRACE_EXTENSION
 
 
 def capture_request(interface: str, direction: str, filename: str) -> CaptureRequest:

@@ -42,8 +42,15 @@ class TracesScreen(Screen):
         self.run_in_background(lambda: self.services.trace.trace(target),
                                self._trace_done, self._trace_failed)
 
-    def _trace_done(self, output: str) -> None:
-        self._trace_output.append(output)
+    def _trace_done(self, hops) -> None:
+        if not hops:
+            self._trace_output.show('Sin saltos\n')
+        else:
+            lines = [
+                f'{hop.hop:>2}  {hop.address:<16}  {hop.loss:>7}  med {hop.average}'
+                for hop in hops
+            ]
+            self._trace_output.show('\n'.join(lines) + '\n')
         self._trace_target.set_busy(False)
 
     def _trace_failed(self, error: Exception) -> None:

@@ -218,6 +218,19 @@ class Calibration:
 
 
 @dataclass(frozen=True)
+class TraceHop:
+    hop: int
+    address: str
+    loss: str
+    sent: str
+    last: str
+    average: str
+    best: str
+    worst: str
+    deviation: str
+
+
+@dataclass(frozen=True)
 class SpeedTestResult:
     download_bps: float
     upload_bps: float

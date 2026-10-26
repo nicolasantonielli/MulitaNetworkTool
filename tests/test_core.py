@@ -10,7 +10,8 @@ from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.models import (Calibration, CaptureDirection, ClimateReading,
                                 CommandResult)
-from mulita.core.parsers import cable_connected, parse_interfaces, parse_speed_test
+from mulita.core.parsers import (cable_connected, parse_interfaces, parse_speed_test,
+                                parse_trace)
 
 IP_JSON = '''[
  {"ifindex":1,"ifname":"lo","address":"00:00:00:00:00:00",
@@ -35,7 +36,7 @@ class CommandFactoryTest(unittest.TestCase):
 
     def test_trace(self):
         self.assertEqual(self.commands.trace('8.8.8.8', 6),
-                         ['/bin/mtr', '8.8.8.8', '-n', '-r', '-c', '6'])
+                         ['/bin/mtr', '8.8.8.8', '-n', '-r', '--csv', '-c', '6'])
 
     def test_ping_with_count(self):
         request = validation.ping_request('8.8.8.8', 4, 1, 64)
@@ -147,6 +148,39 @@ class ParsersAndModelsTest(unittest.TestCase):
         self.assertEqual(CommandResult(0, 'out', 'warn').text, 'out')
         self.assertEqual(CommandResult(1, 'out', 'boom').text, 'out\nboom')
         self.assertEqual(CommandResult(1, '', 'boom').text, 'boom')
+
+
+class TraceParseTest(unittest.TestCase):
+
+    def test_csv_report_becomes_hops(self):
+        text = (
+            'Mtr_Version,Start_Time,Status,Host,Hop,Ip,Loss%,Snt, ,Last,Avg,Best,Wrst,StDev,\n'
+            '0.95,10,OK,8.8.8.8,1,192.168.1.1,0.0,6,6,1.2,1.3,1.0,1.8,0.3\n'
+            '0.95,10,OK,8.8.8.8,2,???,100.0,6,0,0.0,0.0,0.0,0.0,0.0\n'
+            '0.95,10,OK,8.8.8.8,3,8.8.8.8,16.7,6,5,20.1,21.0,18.5,25.0,2.1\n'
+        )
+        hops = parse_trace(text)
+        self.assertEqual([(item.hop, item.address, item.loss, item.sent, item.average)
+                          for item in hops], [
+                              (1, '192.168.1.1', '0.0%', '6', '1.3'),
+                              (2, '???', '100.0%', '6', '0.0'),
+                              (3, '8.8.8.8', '16.7%', '6', '21.0'),
+                          ])
+        self.assertEqual(hops[2].best, '18.5')
+        self.assertEqual(hops[2].deviation, '2.1')
+
+    def test_report_text_parses_the_same_columns(self):
+        text = (
+            'HOST: raspberrypi                  Loss%   Snt   Last   Avg  Best  Wrst StDev\n'
+            '  1.|-- 192.168.1.1                 0.0%     6    1.2   1.3   1.0   1.8   0.3\n'
+            '  2.|-- ???                        100.0     6    0.0   0.0   0.0   0.0   0.0\n'
+        )
+        hops = parse_trace(text)
+        self.assertEqual(hops[0].address, '192.168.1.1')
+        self.assertEqual(hops[0].loss, '0.0%')
+        self.assertEqual(hops[1].address, '???')
+        self.assertEqual(hops[1].loss, '100.0%')
+        self.assertEqual(parse_trace('HOST: x\n'), ())
 
 
 class HomeEnvironmentTest(unittest.TestCase):

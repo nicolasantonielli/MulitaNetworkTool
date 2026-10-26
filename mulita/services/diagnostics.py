@@ -1,23 +1,77 @@
 from __future__ import annotations
 
+import csv
+import os
+from pathlib import Path, PurePosixPath
 from typing import Optional
 
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
-from mulita.core.models import PingRequest
+from mulita.core.errors import CommandFailedError, ValidationError
+from mulita.core.models import PingRequest, TraceHop
+from mulita.core.parsers import parse_trace
 from mulita.core.ports import CommandRunner, ExitListener, OutputListener
 from mulita.services.base import ProcessSession
+
+_CSV_HEADER = ('Salto', 'Direccion', 'Perdida', 'Envios', 'Ultimo', 'Media', 'Mejor', 'Peor', 'Desvio')
 
 
 class TraceService:
 
-    def __init__(self, runner: CommandRunner, commands: CommandFactory, cycles: int):
+    def __init__(self, runner: CommandRunner, commands: CommandFactory, cycles: int,
+                 directory: PurePosixPath | Path = PurePosixPath('/root/trazas')):
         self._runner = runner
         self._commands = commands
         self._cycles = cycles
+        self._directory = Path(directory)
 
-    def trace(self, target: str) -> str:
-        return self._runner.run(self._commands.trace(validation.host(target), self._cycles)).text
+    def trace(self, target: str) -> tuple[TraceHop, ...]:
+        result = self._runner.run(self._commands.trace(validation.host(target), self._cycles))
+        hops = parse_trace(result.stdout)
+        if hops:
+            return hops
+        if not result.ok:
+            detail = _trace_error(result.stderr or result.stdout)
+            raise CommandFailedError(detail or 'No se pudo trazar el destino', result)
+        return ()
+
+    def save(self, hops: tuple[TraceHop, ...], filename: str) -> str:
+        if not hops:
+            raise ValidationError('No hay una traza para guardar')
+        name = validation.trace_filename(filename)
+        self._ensure_directory()
+        path = self._directory / name
+        if path.parent.resolve() != self._directory.resolve():
+            raise ValidationError('Nombre de archivo invalido')
+        if path.exists():
+            raise ValidationError('Ya existe un archivo con ese nombre')
+        try:
+            with path.open('w', encoding='utf-8', newline='') as handle:
+                writer = csv.writer(handle, lineterminator='\n')
+                writer.writerow(_CSV_HEADER)
+                for hop in hops:
+                    writer.writerow([
+                        hop.hop, hop.address, hop.loss, hop.sent,
+                        hop.last, hop.average, hop.best, hop.worst, hop.deviation,
+                    ])
+        except OSError as exc:
+            raise CommandFailedError('No se pudo guardar la traza') from exc
+        return name
+
+    def _ensure_directory(self) -> None:
+        if os.name != 'posix':
+            return
+        try:
+            self._directory.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise CommandFailedError('No se pudo preparar la carpeta de trazas') from exc
+
+
+def _trace_error(text: str) -> str:
+    line = next((part.strip() for part in (text or '').splitlines() if part.strip()), '')
+    if line.lower().startswith('mtr:'):
+        line = line.split(':', 1)[1].strip()
+    return line[:180]
 
 
 class PingService(ProcessSession):

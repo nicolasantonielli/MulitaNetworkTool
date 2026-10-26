@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import pyqtProperty, pyqtSlot
+import json
+
+from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.models import PING_COUNT, PING_INTERVAL, PING_SIZE, Range
 from mulita.presentation import texts
@@ -13,12 +15,43 @@ def _limits(limits: Range) -> dict:
 
 
 class TraceController(TaskController):
+    hopsChanged = pyqtSignal()
+
+    def __init__(self, ctx: BridgeContext):
+        super().__init__(ctx)
+        self._hops: tuple = ()
+
+    @pyqtProperty(str, notify=hopsChanged)
+    def hopsJson(self) -> str:
+        return json.dumps([{
+            'hop': item.hop,
+            'address': item.address,
+            'loss': item.loss,
+            'sent': item.sent,
+            'last': item.last,
+            'average': item.average,
+            'best': item.best,
+            'worst': item.worst,
+            'deviation': item.deviation,
+        } for item in self._hops])
 
     @pyqtSlot(str)
     def trace(self, target: str) -> None:
-        self._console.show(texts.TRACING)
-        self._task(lambda: self._services.trace.trace(target),
-                   self._console.append, lambda error: self._console.show(f'{error}\n'))
+        self._task(lambda: self._services.trace.trace(target), self._show)
+
+    @pyqtSlot(str)
+    def save(self, filename: str) -> None:
+        hops = self._hops
+        self._task(lambda: self._services.trace.save(hops, filename), self._saved)
+
+    def _show(self, hops: tuple) -> None:
+        self._hops = tuple(hops)
+        self.hopsChanged.emit()
+        if not self._hops:
+            self._ctx.notifier.info('Trazas', 'No hubo saltos')
+
+    def _saved(self, name: str) -> None:
+        self._ctx.notifier.success('Trazas', name)
 
 
 class PingController(SessionController):

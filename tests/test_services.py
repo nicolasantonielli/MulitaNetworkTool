@@ -103,11 +103,43 @@ class SessionServicesTest(unittest.TestCase):
 class BlockingServicesTest(unittest.TestCase):
 
     def test_trace_and_scan_return_output(self):
-        runner = FakeRunner({'/bin/mtr': CommandResult(0, 'HOST: x\n'),
+        csv = (
+            'Mtr_Version,Start_Time,Status,Host,Hop,Ip,Loss%,Snt, ,Last,Avg,Best,Wrst,StDev,\n'
+            '0.95,10,OK,8.8.8.8,1,192.168.1.1,0.0,6,6,1.2,1.3,1.0,1.8,0.3\n'
+        )
+        runner = FakeRunner({'/bin/mtr': CommandResult(0, csv),
                              '/bin/nmap': CommandResult(1, '', 'Failed to resolve')})
         services = services_with(runner)
-        self.assertEqual(services.trace.trace('8.8.8.8'), 'HOST: x\n')
+        self.assertEqual(services.trace.trace('8.8.8.8')[0].address, '192.168.1.1')
+        self.assertIn('--csv', runner.runs[0])
         self.assertEqual(services.port_scan.scan('nohost'), 'Failed to resolve')
+
+    def test_trace_saves_a_csv_without_exposing_a_path(self):
+        import tempfile
+        from pathlib import Path
+
+        csv = (
+            'Mtr_Version,Start_Time,Status,Host,Hop,Ip,Loss%,Snt,Last,Avg,Best,Wrst,StDev\n'
+            '0.95,10,OK,8.8.8.8,1,10.0.0.1,0.0,6,1.2,1.3,1.0,1.8,0.3\n'
+        )
+        with tempfile.TemporaryDirectory() as folder:
+            services = services_with(FakeRunner({'/bin/mtr': CommandResult(0, csv)}))
+            services.trace._directory = Path(folder)
+            hops = services.trace.trace('8.8.8.8')
+            self.assertEqual(services.trace.save(hops, 'ruta'), 'ruta.csv')
+            saved = (Path(folder) / 'ruta.csv').read_text(encoding='utf-8')
+            self.assertTrue(saved.startswith('Salto,Direccion,Perdida,Envios,Ultimo,Media,Mejor,Peor,Desvio\n'))
+            self.assertIn('1,10.0.0.1,0.0%,6,1.2,1.3,1.0,1.8,0.3\n', saved)
+            with self.assertRaises(ValidationError):
+                services.trace.save(hops, 'ruta')
+            with self.assertRaises(ValidationError):
+                services.trace.save((), 'otra')
+
+    def test_trace_failure_does_not_invent_hops(self):
+        runner = FakeRunner({'/bin/mtr': CommandResult(1, '', 'mtr: Failed to resolve host\n')})
+        with self.assertRaises(CommandFailedError) as caught:
+            services_with(runner).trace.trace('no.such')
+        self.assertIn('Failed to resolve host', str(caught.exception))
 
     def test_wake_on_lan_validates_mac(self):
         runner = FakeRunner()

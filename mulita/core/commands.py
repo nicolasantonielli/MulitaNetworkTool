@@ -150,7 +150,7 @@ class CommandFactory:
                 '-w', str(directory / request.filename)]
 
     def trace(self, target: str, cycles: int) -> Argv:
-        return [self._bin.mtr, target, '-n', '-r', '-c', str(cycles)]
+        return [self._bin.mtr, target, '-n', '-r', '--csv', '-c', str(cycles)]
 
     def ping(self, request: PingRequest) -> Argv:
         argv = [self._bin.ping, request.target, '-n']
