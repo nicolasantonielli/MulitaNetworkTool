@@ -5,6 +5,19 @@ import "../components"
 Item {
     id: root
 
+    // Misma lista que la captura: sin lo, y celeste si hay cable.
+    readonly property var tapInterfaces: {
+        var rows = network.interfaces
+        var found = []
+        for (var i = 0; i < rows.length; ++i) {
+            var row = rows[i]
+            var name = typeof row === "string" ? row : row.value
+            if (name !== "lo")
+                found.push(typeof row === "string" ? { label: name, value: name, linked: false } : row)
+        }
+        return found
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: ui.padding
@@ -50,10 +63,21 @@ Item {
 
                             ChoiceChips {
                                 Layout.fillWidth: true
-                                model: network.interfaces
+                                model: root.tapInterfaces
                                 value: group.value
                                 enabled: !tap.running
                                 onActivated: group.value = value
+                            }
+                            Connections {
+                                target: network
+                                function onInterfacesChanged() {
+                                    var rows = root.tapInterfaces
+                                    for (var i = 0; i < rows.length; ++i) {
+                                        if (rows[i].value === group.value)
+                                            return
+                                    }
+                                    group.value = ""
+                                }
                             }
                             Item { Layout.fillHeight: true }
                         }
@@ -64,10 +88,10 @@ Item {
                     spacing: ui.gap
 
                     TouchButton {
-                        text: "Actualizar interfaces"
+                        text: network.refreshing ? "Leyendo…" : "Actualizar interfaces"
                         icon: "refresh"
-                        kind: "neutral"
-                        enabled: !tap.running
+                        kind: network.refreshing ? "success" : "neutral"
+                        enabled: !tap.running && !network.refreshing
                         onClicked: network.refresh()
                     }
                     Item { Layout.fillWidth: true }
