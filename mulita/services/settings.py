@@ -26,6 +26,9 @@ class SettingsService:
     def set_theme(self, value: Any) -> Settings:
         return self._commit(rules.with_theme(self._current, rules.theme(value)))
 
+    def set_language(self, value: Any) -> Settings:
+        return self._commit(rules.with_language(self._current, rules.language(value)))
+
     def set_scale(self, value: Any) -> Settings:
         return self._commit(rules.with_scale(self._current, value))
 

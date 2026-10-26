@@ -28,6 +28,20 @@ class Theme(Enum):
         return 'Oscuro' if self is Theme.OSCURO else 'Claro'
 
 
+class Language(Enum):
+    ES = 'es'
+    EN = 'en'
+
+    @property
+    def label(self) -> str:
+        return 'Español' if self is Language.ES else 'Inglés'
+
+    @property
+    def available(self) -> bool:
+        """Inglés queda visible hasta que la interfaz se traduzca."""
+        return self is Language.ES
+
+
 @dataclass(frozen=True)
 class DisplaySettings:
     width: int = PANEL_WIDTH
@@ -50,9 +64,24 @@ class DisplaySettings:
 class Settings:
     display: DisplaySettings = field(default_factory=DisplaySettings)
     theme: Theme = Theme.OSCURO
+    language: Language = Language.ES
 
     def to_dict(self) -> dict[str, Any]:
-        return {'theme': self.theme.value, 'scale': self.display.ui_scale}
+        return {
+            'theme': self.theme.value,
+            'scale': self.display.ui_scale,
+            'language': self.language.value,
+        }
+
+
+def language(value: Any) -> Language:
+    try:
+        chosen = Language(value)
+    except ValueError as exc:
+        raise ValidationError(f'Idioma invalido: {value}') from exc
+    if not chosen.available:
+        raise ValidationError('El inglés todavía no está disponible')
+    return chosen
 
 
 def theme(value: Any) -> Theme:
@@ -83,11 +112,25 @@ def settings_from_dict(data: Mapping[str, Any]) -> Settings:
         scale = ui_scale(data.get('scale', defaults.display.ui_scale))
     except ValidationError:
         scale = defaults.display.ui_scale
-    return Settings(display=replace(defaults.display, ui_scale=scale), theme=chosen_theme)
+    chosen_language = _stored_language(data.get('language', defaults.language.value))
+    return Settings(display=replace(defaults.display, ui_scale=scale), theme=chosen_theme,
+                    language=chosen_language)
+
+
+def _stored_language(value: Any) -> Language:
+    try:
+        chosen = Language(value)
+    except ValueError:
+        return Language.ES
+    return chosen if chosen.available else Language.ES
 
 
 def with_theme(settings: Settings, chosen: Theme) -> Settings:
     return replace(settings, theme=chosen)
+
+
+def with_language(settings: Settings, chosen: Language) -> Settings:
+    return replace(settings, language=chosen)
 
 
 def with_scale(settings: Settings, scale: float) -> Settings:

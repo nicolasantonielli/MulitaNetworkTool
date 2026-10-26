@@ -7,7 +7,7 @@ from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QColor
 
 from mulita.core.errors import MulitaError
-from mulita.core.settings import Settings, Theme
+from mulita.core.settings import Language, Settings, Theme
 from mulita.presentation import texts
 from mulita.presentation.theme import Metrics, palette_for
 from mulita.ui.qt.bridge.base import BridgeContext, Controller, TaskController
@@ -44,7 +44,7 @@ class SystemController(TaskController):
 
 
 class SettingsController(Controller):
-    """Tema y escala. El panel queda fijo en el codigo."""
+    """Tema, escala e idioma. El panel queda fijo en el codigo."""
     changed = pyqtSignal()
 
     def __init__(self, ctx: BridgeContext):
@@ -66,6 +66,21 @@ class SettingsController(Controller):
     @pyqtProperty(float, notify=changed)
     def uiScale(self) -> float:
         return self._current.display.ui_scale
+
+    @pyqtProperty(str, notify=changed)
+    def language(self) -> str:
+        return self._current.language.value
+
+    @pyqtProperty('QVariantList', constant=True)
+    def languages(self) -> list[dict]:
+        return [{'label': item.label, 'value': item.value} for item in Language]
+
+    @pyqtSlot(str)
+    def setLanguage(self, value: str) -> None:
+        try:
+            self._services.settings.set_language(value)
+        except MulitaError as exc:
+            self._fail(exc)
 
     @pyqtSlot(str)
     def setTheme(self, value: str) -> None:

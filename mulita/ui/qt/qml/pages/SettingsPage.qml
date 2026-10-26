@@ -59,6 +59,25 @@ Item {
                         font.pixelSize: ui.fontBody
                     }
                 }
+                Card {
+                    Layout.fillWidth: true
+                    title: "Idioma"
+                    titleIcon: "globe"
+
+                    ChoiceChips {
+                        Layout.fillWidth: true
+                        model: settings.languages
+                        value: settings.language
+                        onActivated: settings.setLanguage(value)
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Por ahora la interfaz está en español."
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        wrapMode: Text.Wrap
+                    }
+                }
             }
 
             // Pantalla

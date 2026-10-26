@@ -8,7 +8,7 @@ from pathlib import Path
 from mulita.adapters.settings_store import JsonSettingsStore, MemorySettingsStore
 from mulita.core import settings as rules
 from mulita.core.errors import ValidationError
-from mulita.core.settings import DisplaySettings, Settings, Theme
+from mulita.core.settings import DisplaySettings, Language, Settings, Theme
 from mulita.presentation.theme import Metrics
 from mulita.services.settings import SettingsService
 
@@ -107,6 +107,14 @@ class SettingsServiceTest(unittest.TestCase):
 
     def test_set_theme(self):
         self.assertIs(self.service.set_theme('light').theme, Theme.CLARO)
+
+    def test_language_stays_spanish_until_english_exists(self):
+        self.assertIs(self.service.current.language, Language.ES)
+        with self.assertRaises(ValidationError):
+            self.service.set_language('en')
+        self.assertIs(self.service.current.language, Language.ES)
+        self.assertIs(rules.settings_from_dict({'language': 'en'}).language, Language.ES)
+        self.assertIs(self.service.set_language('es').language, Language.ES)
 
     def test_set_scale_saves_and_notifies(self):
         updated = self.service.set_scale(1.25)
