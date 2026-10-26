@@ -1,8 +1,8 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
 
-// El alto lo fija quien contiene la pagina. El contenido, si no entra, se mueve
-// tocando la barra: el panel no entrega un arrastre continuo, solo toques.
+// El alto lo fija quien contiene la pagina. El contenido se desplaza con el
+// dedo o con la barra cuando no entra en el espacio disponible.
 Item {
     id: root
 
@@ -25,8 +25,7 @@ Item {
         anchors.right: bar.left
         anchors.rightMargin: root.overflowing ? ui.gap : 0
         clip: true
-        // El dedo tiene que llegar al campo. El desplazamiento va por la barra.
-        interactive: false
+        interactive: root.overflowing
         flickableDirection: Flickable.VerticalFlick
         boundsBehavior: Flickable.StopAtBounds
         contentWidth: width

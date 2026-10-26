@@ -74,7 +74,7 @@ Rectangle {
         id: repeater
         interval: 450
         repeat: true
-        running: root.autoRepeat && area.pressed
+        running: root.autoRepeat && area.pressed && area.armed
         onTriggered: {
             interval = 60
             root._repeated = true

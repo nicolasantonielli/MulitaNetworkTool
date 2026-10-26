@@ -311,7 +311,7 @@ Item {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             clip: true
-                            interactive: false
+                            interactive: contentHeight > height + 1
                             spacing: Math.round(ui.gap * 0.4)
                             boundsBehavior: Flickable.StopAtBounds
                             model: wifiPage.networks
