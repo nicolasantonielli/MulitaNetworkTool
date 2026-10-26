@@ -158,8 +158,8 @@ class PublicIpService:
         try:
             with path.open('w', encoding='utf-8', newline='') as handle:
                 writer = csv.writer(handle, lineterminator='\n')
-                writer.writerow([label for label, _value in facts])
-                writer.writerow([value for _label, value in facts])
+                for label, value in facts:
+                    writer.writerow([label, value])
         except OSError as exc:
             raise CommandFailedError(tr('savePublicFailed')) from exc
         if hasattr(os, 'sync'):

@@ -250,8 +250,10 @@ class BlockingServicesTest(unittest.TestCase):
             name = services.public_ip.save(info, datetime(2026, 10, 26, 0, 6, 30))
             self.assertEqual(name, 'publicIP-20261026-000630.csv')
             saved = (Path(folder) / name).read_text(encoding='utf-8')
-            self.assertIn('Dirección,Versión,ASN,Organización\n', saved)
-            self.assertIn('181.1.2.3,IPv4,AS7303,Telecom\n', saved)
+            self.assertTrue(saved.startswith('Dirección,181.1.2.3\n'))
+            self.assertIn('Versión,IPv4\n', saved)
+            self.assertIn('ASN,AS7303\n', saved)
+            self.assertIn('Organización,Telecom\n', saved)
 
     def test_wifi_info_saves_a_csv_named_with_the_moment(self):
         import tempfile

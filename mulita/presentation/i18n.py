@@ -122,7 +122,6 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('speedNoIpv4', 'Sin dirección IPv4', 'No IPv4 address'),
     ('publicIp', 'IP pública', 'Public IP'),
     ('pubTitle', 'Salida a Internet', 'Internet egress'),
-    ('pubHint', 'Ubicación estimada de la dirección pública.', 'Estimated location of the public address.'),
     ('pubEmpty', 'Consultá para ver la salida a Internet.', 'Look up to see the Internet egress.'),
     ('pubIp', 'Dirección', 'Address'),
     ('pubVersion', 'Versión', 'Version'),

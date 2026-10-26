@@ -427,6 +427,15 @@ Item {
                     try { return JSON.parse(publicIp.factsJson) }
                     catch (e) { return [] }
                 }
+                readonly property var columns: [
+                    { key: "label", share: 40 },
+                    { key: "value", share: 60 }
+                ]
+
+                function columnWidth(share) {
+                    var bar = publicTable.overflowing ? Math.round(ui.mm * 4) : 0
+                    return Math.max(1, (publicTable.width - bar) * share / 100)
+                }
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -462,47 +471,60 @@ Item {
                     wrapMode: Text.Wrap
                 }
 
-                ScrollPage {
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    radius: ui.radius
+                    color: ui.surface
+                    border.width: 1
+                    border.color: ui.border
+
                     Text {
-                        Layout.fillWidth: true
-                        visible: publicPage.facts.length === 0 && publicIp.status === ""
+                        anchors.centerIn: parent
+                        width: parent.width - ui.padding * 2
+                        visible: publicPage.facts.length === 0
                         text: publicIp.busy ? i18n.pack.lookingUp : i18n.pack.pubEmpty
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
+                        horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.Wrap
                     }
-                    Card {
-                        Layout.fillWidth: true
-                        visible: publicPage.facts.length > 0
-                        title: i18n.pack.pubTitle
-                        titleIcon: "globe"
 
-                        Text {
-                            Layout.fillWidth: true
-                            text: i18n.pack.pubHint
-                            color: ui.textMuted
-                            font.pixelSize: ui.fontSmall
-                            wrapMode: Text.Wrap
-                        }
-                        GridLayout {
-                            Layout.fillWidth: true
-                            columns: 2
-                            columnSpacing: ui.gap
-                            rowSpacing: Math.round(ui.gap * 0.45)
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: Math.round(ui.gap * 0.6)
+                        visible: publicPage.facts.length > 0
+                        spacing: Math.round(ui.gap * 0.3)
+
+                        ScrollPage {
+                            id: publicTable
+                            spacing: 1
 
                             Repeater {
                                 model: publicPage.facts
-
-                                delegate: ColumnLayout {
+                                delegate: Rectangle {
+                                    id: publicRow
+                                    readonly property var fact: modelData
                                     Layout.fillWidth: true
-                                    spacing: 0
-
-                                    Text {
-                                        text: modelData.label
-                                        color: ui.textMuted
-                                        font.pixelSize: ui.fontSmall
+                                    implicitHeight: Math.round(ui.fontSmall * 2.15)
+                                    color: index % 2 === 0 ? "transparent" : ui.surfaceAlt
+                                    Row {
+                                        anchors.fill: parent
+                                        Repeater {
+                                            model: publicPage.columns
+                                            delegate: CopyableCell {
+                                                width: publicPage.columnWidth(modelData.share)
+                                                height: publicRow.height
+                                                text: publicRow.fact[modelData.key] === undefined
+                                                      ? "" : String(publicRow.fact[modelData.key])
+                                                color: ui.text
+                                                font.pixelSize: ui.fontSmall
+                                                font.family: modelData.key === "value" ? ui.monoFamily : ""
+                                                verticalAlignment: Text.AlignVCenter
+                                                elide: Text.ElideRight
+                                            }
+                                        }
                                     }
-                                    SelectableText { text: modelData.value }
                                 }
                             }
                         }
