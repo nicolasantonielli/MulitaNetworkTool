@@ -171,10 +171,23 @@ class CommandFactory:
         return [self._bin.wakeonlan, mac]
 
     def speed_test(self, source: str = '') -> Argv:
-        argv = [self._bin.speedtest, '--json']
+        argv = [self._bin.speedtest, '--json', '--timeout', '25']
         if source:
             argv += ['--source', source]
         return argv
+
+    def rule_add_from(self, source: str, table: str) -> Argv:
+        return [self._bin.ip, 'rule', 'add', 'from', source, 'lookup', table, 'priority', '50']
+
+    def rule_del_from(self, source: str, table: str) -> Argv:
+        return [self._bin.ip, 'rule', 'del', 'from', source, 'lookup', table, 'priority', '50']
+
+    def route_replace_default(self, gateway: str, interface: str, table: str) -> Argv:
+        return [self._bin.ip, 'route', 'replace', 'default', 'via', gateway,
+                'dev', interface, 'onlink', 'table', table]
+
+    def route_flush_table(self, table: str) -> Argv:
+        return [self._bin.ip, 'route', 'flush', 'table', table]
 
     def public_ip(self, url: str, timeout: int) -> Argv:
         return [self._bin.curl, '-s', '--max-time', str(timeout), url]

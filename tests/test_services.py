@@ -23,6 +23,18 @@ def services_with(runner: FakeRunner, test_mode: bool = True):
                           settings_store=MemorySettingsStore())
 
 
+class _RouteRunner(FakeRunner):
+    """Responde segun la linea completa, no solo el ejecutable."""
+
+    def __init__(self, by_argv: dict[tuple[str, ...], CommandResult]):
+        super().__init__()
+        self.by_argv = by_argv
+
+    def run(self, argv, timeout=None):
+        self.runs.append(list(argv))
+        return self.by_argv.get(tuple(argv), CommandResult(0, 'ok\n'))
+
+
 class SessionServicesTest(unittest.TestCase):
 
     def test_capture_start_stop(self):
@@ -191,13 +203,24 @@ class BlockingServicesTest(unittest.TestCase):
                              '/bin/curl': CommandResult(0, '181.1.2.3')})
         services = services_with(runner)
         self.assertEqual(services.speed_test.measure().download_mbps, 50)
-        bound = FakeRunner({
-            '/usr/bin/ip': CommandResult(0, IP_JSON),
-            '/bin/speedtest': CommandResult(0, '{"download": 10e6, "upload": 5e6}'),
+        bound = _RouteRunner({
+            ('/usr/bin/ip', '-j', 'addr'): CommandResult(0, IP_JSON),
+            ('/usr/bin/ip', '-j', 'route', 'show', 'default', 'dev', 'wlan0'): CommandResult(
+                0, '[{"dst":"default","gateway":"192.168.1.1","dev":"wlan0"}]'),
+            ('/bin/speedtest', '--json', '--timeout', '25', '--source', '192.168.0.20'): CommandResult(
+                0, '{"download": 10e6, "upload": 5e6}'),
         })
         measured = services_with(bound).speed_test.measure('wlan0')
         self.assertEqual(measured.download_mbps, 10)
-        self.assertEqual(bound.runs[-1], ['/bin/speedtest', '--json', '--source', '192.168.0.20'])
+        self.assertIn(['/bin/speedtest', '--json', '--timeout', '25', '--source', '192.168.0.20'], bound.runs)
+        self.assertIn(
+            ['/usr/bin/ip', 'route', 'replace', 'default', 'via', '192.168.1.1',
+             'dev', 'wlan0', 'onlink', 'table', '185'],
+            bound.runs)
+        self.assertEqual(bound.runs[-2:], [
+            ['/usr/bin/ip', 'rule', 'del', 'from', '192.168.0.20', 'lookup', '185', 'priority', '50'],
+            ['/usr/bin/ip', 'route', 'flush', 'table', '185'],
+        ])
         with self.assertRaises(ValidationError):
             services_with(bound).speed_test.measure('eth0')
         self.assertEqual(services.public_ip.lookup().ip, '181.1.2.3')

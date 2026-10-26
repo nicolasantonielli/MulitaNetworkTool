@@ -106,6 +106,8 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('startTest', 'Iniciar test', 'Start test'),
     ('speedIface', 'Interfaz de la prueba', 'Test interface'),
     ('speedNoAddress', '{interface} no tiene una dirección IPv4', '{interface} has no IPv4 address'),
+    ('speedNoGateway', '{interface} no tiene puerta de enlace', '{interface} has no gateway'),
+    ('speedRoute', 'No se pudo usar {interface} para la prueba', 'The test could not use {interface}'),
     ('speedNoIface', 'No se pudieron leer las interfaces', 'The interfaces could not be read'),
     ('speedNoIpv4', 'Sin dirección IPv4', 'No IPv4 address'),
     ('publicIp', 'IP pública', 'Public IP'),

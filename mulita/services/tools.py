@@ -14,8 +14,8 @@ from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.presentation.i18n import tr
 from mulita.core.models import Calibration, ClimateReading, SpeedTestResult
-from mulita.core.parsers import (parse_interfaces, parse_mac_vendor,
-                                parse_public_address, parse_speed_test)
+from mulita.core.parsers import (parse_default_gateway, parse_interfaces,
+                                parse_mac_vendor, parse_public_address, parse_speed_test)
 from mulita.core.ports import ClimateSensor, CommandRunner
 
 
@@ -57,6 +57,9 @@ class ClimateService:
         return self._calibration.apply(reading) if reading else None
 
 
+_SPEED_TABLE = '185'
+
+
 class SpeedTestService:
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory):
@@ -64,11 +67,47 @@ class SpeedTestService:
         self._commands = commands
 
     def measure(self, interface: str = '') -> SpeedTestResult:
-        source = self._source_address(interface) if (interface or '').strip() else ''
-        result = self._runner.run(self._commands.speed_test(source))
+        name = (interface or '').strip()
+        source = ''
+        gateway = ''
+        if name:
+            source = self._source_address(name)
+            gateway = self._gateway(name)
+            if not gateway:
+                raise ValidationError(tr('speedNoGateway', interface=name))
+        try:
+            if source:
+                self._pin(source, name, gateway)
+            result = self._runner.run(self._commands.speed_test(source))
+        finally:
+            if source:
+                self._unpin(source)
         if not result.ok:
             raise CommandFailedError(f'Fallo el test de velocidad: {result.text}', result)
         return parse_speed_test(result.stdout)
+
+    def _gateway(self, interface: str) -> str:
+        result = self._runner.run(self._commands.interface_gateway(interface))
+        if not result.ok:
+            raise CommandFailedError(tr('speedNoIface'), result)
+        return parse_default_gateway(result.stdout)
+
+    def _pin(self, source: str, interface: str, gateway: str) -> None:
+        """Mientras dura la prueba, esa IP sale por su propia puerta de enlace."""
+        commands = self._commands
+        self._runner.run(commands.rule_del_from(source, _SPEED_TABLE))
+        route = self._runner.run(commands.route_replace_default(gateway, interface, _SPEED_TABLE))
+        if not route.ok:
+            raise CommandFailedError(tr('speedRoute', interface=interface), route)
+        rule = self._runner.run(commands.rule_add_from(source, _SPEED_TABLE))
+        if not rule.ok:
+            self._runner.run(commands.route_flush_table(_SPEED_TABLE))
+            raise CommandFailedError(tr('speedRoute', interface=interface), rule)
+
+    def _unpin(self, source: str) -> None:
+        commands = self._commands
+        self._runner.run(commands.rule_del_from(source, _SPEED_TABLE))
+        self._runner.run(commands.route_flush_table(_SPEED_TABLE))
 
     def _source_address(self, interface: str) -> str:
         name = (interface or '').strip()
