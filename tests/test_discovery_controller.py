@@ -2,7 +2,7 @@ import json
 import unittest
 from types import SimpleNamespace
 
-from PyQt5.QtCore import QCoreApplication
+from tests.qt_support import qt_app
 
 from mulita.config import Binaries
 from mulita.core.commands import CommandFactory
@@ -18,7 +18,7 @@ from tests.fakes import FakeRunner
 class DiscoveryControllerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = QCoreApplication.instance() or QCoreApplication([])
+        cls.app = qt_app()
 
     def setUp(self):
         use('es')

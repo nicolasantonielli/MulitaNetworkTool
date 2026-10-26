@@ -1,12 +1,7 @@
-"""Registro del tactil y correccion del ft5x06.
+"""Registro del tactil y correccion de saltos aislados en eventos sintetizados.
 
-Con el dedo quieto el panel manda un toque completo cada ~25 ms, siempre en
-el mismo pixel, y a veces sigue muchos segundos despues de soltar. El primer
-par es el toque. Lo que sigue en ese punto se ignora hasta que el panel se
-calla. Un salto a coordenadas imposibles no se entrega.
-
-Tragar el evento tactil crudo deja el dedo apretado para Qt, asi que esos
-solo se registran.
+Cada pulsacion completa se entrega a Qt, incluso al repetir en el mismo punto.
+El mouse real y los eventos tactiles crudos conservan su comportamiento nativo.
 """
 from __future__ import annotations
 
@@ -21,11 +16,8 @@ log = logging.getLogger('mulita.touch')
 
 # Un dedo no cruza media pantalla en un solo reporte. Mas que esto es un salto del driver.
 _JUMP = 280
-# Dos toques a esta distancia son el mismo apoyo del ft5x06.
+# Solo se usa para limitar mensajes repetidos del registro.
 _BURST_PX = 45
-# Despues de soltar, el panel puede seguir hablando. Recien un silencio de
-# este largo habilita otro toque en el mismo punto.
-_QUIET_S = 0.25
 
 _MOUSE = {
     QEvent.MouseButtonPress: 'press',
@@ -97,11 +89,7 @@ class TouchDebug(QObject):
         self._anchor: tuple[float, float] | None = None
         self._rewriting = False
         self._seen: tuple | None = None
-        self._down: tuple[float, float] | None = None
         self._press = None
-        self._closed = False
-        self._ignore_until = 0.0
-        self._noted = False
         self._touch_pos: tuple[float, float] | None = None
         self._touch_at = 0.0
 
@@ -122,66 +110,49 @@ class TouchDebug(QObject):
         # tomado, y el proximo toque cae en la tecla anterior.
         if not isinstance(watched, QWindow):
             return False
+        # Qt distingue el mouse fisico de los eventos derivados del tactil.
+        # No modificar un mouse real ni gestos de otros botones.
+        if event.source() == Qt.MouseEventNotSynthesized:
+            return False
+        if kind in ('press', 'release') and event.button() != Qt.LeftButton:
+            return False
         position = event.globalPos()
         x, y = position.x(), position.y()
         if kind == 'press':
-            if self._ghost(x, y):
-                return True
             if self._press is not None:
                 self._send_release(self._press)
-            self._down = (x, y)
             self._anchor = (x, y)
-            self._closed = False
-            self._press = (
-                watched, QPointF(event.localPos()), QPointF(x, y),
-                event.button(), event.modifiers())
+            self._press = self._snapshot(watched, event)
             self._log('mouse press', x, y, _target(watched), button=int(event.button()))
             return False
         if kind == 'release':
-            if self._ghost(x, y):
-                return True
-            # Se suelta donde apoyo. El reporte de soltar a veces cae en otro lado.
-            pending = self._press or (
-                watched, QPointF(event.localPos()), QPointF(x, y),
-                event.button(), event.modifiers())
+            pending = self._press
             self._press = None
-            self._closed = True
-            self._ignore_until = time.monotonic() + _QUIET_S
-            self._noted = False
-            self._send_release(pending)
-            return True
-        if self._anchor is not None and _far(self._anchor, x, y):
-            return True
-        self._anchor = (x, y)
+            anchor = self._anchor
+            self._anchor = None
+            # Conservar la posicion real al soltar un slider o una seleccion.
+            # Solo corregir un salto imposible al ultimo punto valido.
+            if pending is not None and anchor is not None and _far(anchor, x, y):
+                self._send_release(pending)
+                return True
+            return False
+        if self._press is not None:
+            if self._anchor is not None and _far(self._anchor, x, y):
+                return True
+            self._anchor = (x, y)
+            self._press = self._snapshot(watched, event)
         if self._due():
             source = _SOURCE.get(int(event.source()), str(int(event.source())))
             self._log(f'mouse {kind} {source}', x, y, _target(watched))
         return False
 
-    def _ghost(self, x: float, y: float) -> bool:
-        """True si este reporte es la repeticion del toque que ya se solto."""
-        if not self._closed or self._down is None:
-            return False
-        now = time.monotonic()
-        if now > self._ignore_until:
-            self._closed = False
-            self._noted = False
-            return False
-        # Un salto afuera de la pantalla no abre otro toque.
-        if x < 0 or y < 0:
-            return True
-        if not _near(self._down, x, y):
-            self._closed = False
-            self._noted = False
-            return False
-        self._ignore_until = now + _QUIET_S
-        if not self._noted:
-            self._noted = True
-            log.info('el panel repite %d,%d; se ignora', self._down[0], self._down[1])
-        return True
+    @staticmethod
+    def _snapshot(watched, event):
+        return (watched, QPointF(event.localPos()), QPointF(event.screenPos()),
+                Qt.LeftButton, event.modifiers(), event.source())
 
     def _send_release(self, pending) -> None:
-        watched, local, screen, button, modifiers = pending
+        watched, local, screen, button, modifiers, source = pending
         try:
             from PyQt5 import sip
         except ImportError:
@@ -190,7 +161,7 @@ class TouchDebug(QObject):
             return
         self._log('mouse release', screen.x(), screen.y(), _target(watched), button=int(button))
         fixed = QMouseEvent(
-            QEvent.MouseButtonRelease, local, screen, button, Qt.NoButton, modifiers)
+            QEvent.MouseButtonRelease, local, local, screen, button, Qt.NoButton, modifiers, source)
         self._rewriting = True
         try:
             QCoreApplication.sendEvent(watched, fixed)
@@ -206,7 +177,7 @@ class TouchDebug(QObject):
             position = point.screenPos()
             x, y = position.x(), position.y()
             state = _POINT.get(int(point.state()), str(int(point.state())))
-            if self._ghost(x, y) or (state == 'move' and not self._due()):
+            if state == 'move' and not self._due():
                 continue
             repeated = (
                 self._touch_pos is not None
