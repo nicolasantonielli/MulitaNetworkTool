@@ -7,7 +7,7 @@ from typing import Optional
 
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
-from mulita.core.errors import CommandFailedError
+from mulita.core.errors import AlreadyRunningError, CommandFailedError, ValidationError
 from mulita.core.models import CaptureRequest, NetworkInterface, TapConfig
 from mulita.core.parsers import parse_interfaces
 from mulita.core.ports import CommandRunner, ExitListener, OutputListener
@@ -69,10 +69,15 @@ class CaptureService(ProcessSession):
 
 
 class TapService:
-    """Guarda la configuracion del TAP. El puente entre interfaces aun no existe."""
+    """Guarda las interfaces del TAP. El puente todavía no existe.
 
-    def __init__(self):
+    Si hay un nombre de archivo, graba el puerto mirror en la carpeta del TAP.
+    """
+
+    def __init__(self, capture: CaptureService | None = None):
         self._config: TapConfig | None = None
+        self._capture = capture
+        self._recording = False
 
     @property
     def is_running(self) -> bool:
@@ -82,8 +87,25 @@ class TapService:
     def config(self) -> TapConfig | None:
         return self._config
 
-    def start(self, config: TapConfig) -> None:
+    def start(self, config: TapConfig, filename: str = '',
+              on_output: Optional[OutputListener] = None,
+              on_exit: Optional[ExitListener] = None) -> str:
+        if self.is_running:
+            raise AlreadyRunningError('El TAP ya esta en ejecucion')
+        recorded = ''
+        if filename.strip():
+            if not (config.mirror or '').strip():
+                raise ValidationError('Elegí la interfaz mirror para capturar')
+            if self._capture is None:
+                raise CommandFailedError('No se pudo preparar la captura del TAP')
+            request = self._capture.start(config.mirror, 'inout', filename, on_output, on_exit)
+            self._recording = True
+            recorded = request.filename
         self._config = config
+        return recorded
 
     def stop(self) -> None:
+        if self._recording and self._capture is not None:
+            self._capture.stop()
+            self._recording = False
         self._config = None

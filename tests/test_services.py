@@ -67,6 +67,17 @@ class SessionServicesTest(unittest.TestCase):
         self.assertTrue(all(not handle.running for handle in runner.handles))
         self.assertFalse(services.tap.is_running)
 
+    def test_tap_capture_records_the_mirror_without_showing_a_folder(self):
+        runner = FakeRunner()
+        services = services_with(runner)
+        name = services.tap.start(TapConfig('eth0', 'eth1', 'eth2'), 'sesion')
+        self.assertEqual(name, 'sesion.pcap')
+        self.assertEqual(runner.starts[-1][-1], '/root/capturas/tap/sesion.pcap')
+        self.assertEqual(runner.starts[-1][runner.starts[-1].index('-i') + 1], 'eth1')
+        services.tap.stop()
+        self.assertEqual(runner.handles[-1].signals, ['TERM'])
+        self.assertFalse(services.tap.is_running)
+
 
 class BlockingServicesTest(unittest.TestCase):
 

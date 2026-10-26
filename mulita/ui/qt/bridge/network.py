@@ -144,10 +144,12 @@ class CaptureController(SessionController):
 
 class TapController(Controller):
     runningChanged = pyqtSignal()
+    activeFileChanged = pyqtSignal()
 
     def __init__(self, ctx: BridgeContext):
         super().__init__(ctx)
         self._console = Console()
+        self._active_file = ''
 
     @pyqtProperty(bool, notify=runningChanged)
     def running(self) -> bool:
@@ -157,12 +159,41 @@ class TapController(Controller):
     def console(self) -> Console:
         return self._console
 
-    @pyqtSlot(str, str, str)
-    def start(self, entrante: str, mirror: str, saliente: str) -> None:
-        self._services.tap.start(TapConfig(entrante=entrante, mirror=mirror, saliente=saliente))
+    @pyqtProperty(str, constant=True)
+    def defaultFilename(self) -> str:
+        return self._ctx.config.default_capture_name
+
+    @pyqtProperty(str, notify=activeFileChanged)
+    def activeFile(self) -> str:
+        return self._active_file
+
+    @pyqtSlot(str, str, str, bool, str)
+    def start(self, entrante: str, mirror: str, saliente: str, capture: bool, filename: str) -> None:
+        from mulita.core.errors import MulitaError
+        try:
+            name = self._services.tap.start(
+                TapConfig(entrante=entrante, mirror=mirror, saliente=saliente),
+                filename if capture else '',
+                on_output=self._ctx.dispatcher.wrap(self._output),
+                on_exit=self._ctx.dispatcher.wrap(self._capture_stopped))
+        except MulitaError as exc:
+            self._fail(exc)
+            return
+        self._active_file = name
+        self.activeFileChanged.emit()
         self.runningChanged.emit()
 
     @pyqtSlot()
     def stop(self) -> None:
         self._services.tap.stop()
+        self._active_file = ''
+        self.activeFileChanged.emit()
         self.runningChanged.emit()
+
+    def _output(self, text: str) -> None:
+        folder = str(self._ctx.config.capture_dir / 'tap')
+        self._console.append(text.replace(folder + '/', '').replace(folder, ''))
+
+    def _capture_stopped(self, code: int) -> None:
+        if code != 0 and self._services.tap.is_running:
+            self._ctx.notifier.error('La captura del TAP se detuvo', title='TAP')
