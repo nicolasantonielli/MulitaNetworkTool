@@ -520,8 +520,8 @@ Item {
                     catch (e) { return [] }
                 }
                 readonly property var columns: [
-                    { title: i18n.pack.wifiField, key: "label", share: 40 },
-                    { title: i18n.pack.wifiValue, key: "value", share: 60 }
+                    { key: "label", share: 40 },
+                    { key: "value", share: 60 }
                 ]
 
                 function columnWidth(share) {
@@ -580,32 +580,9 @@ Item {
                         visible: wifiInfo.linkFacts.length > 0
                         spacing: Math.round(ui.gap * 0.3)
 
-                        Text {
-                            Layout.fillWidth: true
-                            text: i18n.pack.tableCopyHint
-                            color: ui.textMuted
-                            font.pixelSize: ui.fontSmall
-                            wrapMode: Text.Wrap
-                        }
-
                         ScrollPage {
                             id: wifiTable
                             spacing: 1
-
-                            Row {
-                                Layout.fillWidth: true
-                                Repeater {
-                                    model: wifiInfo.columns
-                                    delegate: Text {
-                                        width: wifiInfo.columnWidth(modelData.share)
-                                        text: modelData.title
-                                        color: ui.textMuted
-                                        font.pixelSize: ui.fontSmall
-                                        font.weight: Font.DemiBold
-                                        elide: Text.ElideRight
-                                    }
-                                }
-                            }
 
                             Repeater {
                                 model: wifiInfo.linkFacts

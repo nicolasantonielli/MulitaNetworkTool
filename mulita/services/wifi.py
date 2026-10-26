@@ -50,7 +50,6 @@ class WifiService:
         try:
             with path.open('w', encoding='utf-8', newline='') as handle:
                 writer = csv.writer(handle, lineterminator='\n')
-                writer.writerow([tr('wifiField'), tr('wifiValue')])
                 for label, value in facts:
                     writer.writerow([label, value])
         except OSError as exc:

@@ -266,8 +266,8 @@ class BlockingServicesTest(unittest.TestCase):
             name = services.wifi.save(link, datetime(2026, 10, 26, 0, 10, 30))
             self.assertEqual(name, 'wifi-info-20261026-001030.csv')
             saved = (Path(folder) / name).read_text(encoding='utf-8')
-            self.assertIn('Dato,Valor\n', saved)
-            self.assertIn('Red,Oficina\n', saved)
+            self.assertNotIn('Dato,Valor', saved)
+            self.assertTrue(saved.startswith('Red,Oficina\n'))
             self.assertIn('Dirección IP,192.168.1.20\n', saved)
 
     def test_public_ip_without_answer_fails(self):
