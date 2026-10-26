@@ -280,7 +280,6 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('powerBody', 'El equipo se apaga por completo.', 'The device powers off completely.'),
     ('power', 'Apagar', 'Shut down'),
     ('revertsIn', 'Se revierte en', 'Reverts in'),
-    ('kbCopy', 'Copiar', 'Copy'),
     ('kbPaste', 'Pegar', 'Paste'),
     ('kbShift', 'Mayús', 'Shift'),
     ('kbLetters', 'Letras', 'Letters'),
