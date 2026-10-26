@@ -104,6 +104,39 @@ class CommandFactory:
     def wifi_up(self, name: str, interface: str) -> Argv:
         return [self._bin.nmcli, 'connection', 'up', name, 'ifname', interface]
 
+    def link_add_bridge(self, name: str) -> Argv:
+        return [self._bin.ip, 'link', 'add', 'name', name, 'type', 'bridge']
+
+    def link_prepare_bridge(self, name: str) -> Argv:
+        return [self._bin.ip, 'link', 'set', 'dev', name, 'type', 'bridge',
+                'stp_state', '0', 'forward_delay', '0']
+
+    def link_up(self, name: str) -> Argv:
+        return [self._bin.ip, 'link', 'set', 'dev', name, 'up']
+
+    def link_master(self, interface: str, bridge: str) -> Argv:
+        return [self._bin.ip, 'link', 'set', 'dev', interface, 'master', bridge]
+
+    def link_nomaster(self, interface: str) -> Argv:
+        return [self._bin.ip, 'link', 'set', 'dev', interface, 'nomaster']
+
+    def link_promisc(self, interface: str, enabled: bool) -> Argv:
+        return [self._bin.ip, 'link', 'set', 'dev', interface, 'promisc', 'on' if enabled else 'off']
+
+    def link_delete(self, name: str) -> Argv:
+        return [self._bin.ip, 'link', 'del', 'dev', name]
+
+    def ingress_add(self, interface: str) -> Argv:
+        return [self._bin.tc, 'qdisc', 'add', 'dev', interface, 'ingress']
+
+    def ingress_delete(self, interface: str) -> Argv:
+        return [self._bin.tc, 'qdisc', 'del', 'dev', interface, 'ingress']
+
+    def mirror_traffic(self, interface: str, mirror: str) -> Argv:
+        return [self._bin.tc, 'filter', 'add', 'dev', interface, 'parent', 'ffff:',
+                'protocol', 'all', 'u32', 'match', 'u32', '0', '0',
+                'action', 'mirred', 'egress', 'mirror', 'dev', mirror]
+
     def capture(self, request: CaptureRequest, directory: PurePosixPath) -> Argv:
         return [self._bin.tcpdump,
                 '-Q', request.direction.value,

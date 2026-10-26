@@ -67,16 +67,37 @@ class SessionServicesTest(unittest.TestCase):
         self.assertTrue(all(not handle.running for handle in runner.handles))
         self.assertFalse(services.tap.is_running)
 
-    def test_tap_capture_records_the_mirror_without_showing_a_folder(self):
+    def test_tap_bridges_the_ports_and_records_without_a_folder_name(self):
         runner = FakeRunner()
         services = services_with(runner)
         name = services.tap.start(TapConfig('eth0', 'eth1', 'eth2'), 'sesion')
         self.assertEqual(name, 'sesion.pcap')
-        self.assertEqual(runner.starts[-1][-1], '/root/capturas/tap/sesion.pcap')
-        self.assertEqual(runner.starts[-1][runner.starts[-1].index('-i') + 1], 'eth1')
+        self.assertEqual(runner.starts[-1], [
+            '/bin/tcpdump', '-Q', 'inout', '-i', 'br-mulita', '-w', '/root/capturas/tap/sesion.pcap'])
+        commands = [' '.join(argv) for argv in runner.runs]
+        self.assertIn('/usr/bin/ip link add name br-mulita type bridge', commands)
+        self.assertIn('/usr/bin/ip link set dev eth0 master br-mulita', commands)
+        self.assertIn('/usr/bin/ip link set dev eth2 master br-mulita', commands)
+        self.assertTrue(any(line.endswith('mirror dev eth1') for line in commands))
+        before = len(runner.runs)
         services.tap.stop()
+        stopped = [' '.join(argv) for argv in runner.runs[before:]]
         self.assertEqual(runner.handles[-1].signals, ['TERM'])
+        self.assertIn('/usr/bin/ip link del dev br-mulita', stopped)
         self.assertFalse(services.tap.is_running)
+
+    def test_tap_without_mirror_does_not_copy_the_traffic(self):
+        runner = FakeRunner()
+        services_with(runner).tap.start(TapConfig('eth0', '', 'eth1'), 'sesion')
+        self.assertFalse(any('mirror' in argv for argv in runner.runs))
+        self.assertEqual(runner.starts[-1][4], 'br-mulita')
+
+    def test_tap_rejects_reusing_one_port(self):
+        runner = FakeRunner()
+        with self.assertRaises(ValidationError):
+            services_with(runner).tap.start(TapConfig('eth0', 'eth1', 'eth0'), 'sesion')
+        self.assertEqual(runner.runs, [])
+        self.assertEqual(runner.starts, [])
 
 
 class BlockingServicesTest(unittest.TestCase):

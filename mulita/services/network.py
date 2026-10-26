@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Optional
 
@@ -68,15 +69,29 @@ class CaptureService(ProcessSession):
             raise CommandFailedError('No se pudo preparar la carpeta de capturas') from exc
 
 
-class TapService:
-    """Guarda las interfaces del TAP. El puente todavía no existe.
+@dataclass
+class _TapLinks:
+    entrante: str
+    saliente: str
+    mirror: str
+    bridge: str = 'br-mulita'
 
-    Si hay un nombre de archivo, graba el puerto mirror en la carpeta del TAP.
+
+class TapService:
+    """Pone el equipo entre la boca del switch y otro dispositivo.
+
+    El trafico pasa de la interfaz entrante a la saliente y se graba.
+    Si hay una interfaz mirror, ademas se copia hacia ese puerto.
     """
 
-    def __init__(self, capture: CaptureService | None = None):
-        self._config: TapConfig | None = None
+    def __init__(self, runner: CommandRunner | None = None,
+                 commands: CommandFactory | None = None,
+                 capture: CaptureService | None = None):
+        self._runner = runner
+        self._commands = commands
         self._capture = capture
+        self._config: TapConfig | None = None
+        self._links: _TapLinks | None = None
         self._recording = False
 
     @property
@@ -92,20 +107,89 @@ class TapService:
               on_exit: Optional[ExitListener] = None) -> str:
         if self.is_running:
             raise AlreadyRunningError('El TAP ya esta en ejecucion')
+        links = self._links_from(config)
+        if self._commands is None or self._runner is None:
+            raise CommandFailedError('No se pudo preparar el TAP')
+        self._quiet(self._commands.link_delete(links.bridge))
+        try:
+            self._connect(links)
+        except Exception:
+            self._disconnect(links)
+            raise
         recorded = ''
         if filename.strip():
-            if not (config.mirror or '').strip():
-                raise ValidationError('Elegí la interfaz mirror para capturar')
             if self._capture is None:
+                self._disconnect(links)
                 raise CommandFailedError('No se pudo preparar la captura del TAP')
-            request = self._capture.start(config.mirror, 'inout', filename, on_output, on_exit)
+            try:
+                request = self._capture.start(links.bridge, 'inout', filename, on_output, on_exit)
+            except Exception:
+                self._disconnect(links)
+                raise
             self._recording = True
             recorded = request.filename
-        self._config = config
+        self._links = links
+        self._config = TapConfig(links.entrante, links.saliente, links.mirror)
         return recorded
 
     def stop(self) -> None:
         if self._recording and self._capture is not None:
             self._capture.stop()
             self._recording = False
+        if self._links is not None:
+            self._disconnect(self._links)
+            self._links = None
         self._config = None
+
+    def _links_from(self, config: TapConfig) -> _TapLinks:
+        entrante = (config.entrante or '').strip()
+        saliente = (config.saliente or '').strip()
+        mirror = (config.mirror or '').strip()
+        if not entrante:
+            raise ValidationError('Elegí la interfaz entrante')
+        if not saliente:
+            raise ValidationError('Elegí la interfaz saliente')
+        if entrante == saliente or entrante == 'lo' or saliente == 'lo' or mirror == 'lo':
+            raise ValidationError('Esas interfaces no se pueden usar juntas')
+        if mirror and mirror in (entrante, saliente):
+            raise ValidationError('La interfaz mirror tiene que ser distinta')
+        return _TapLinks(entrante, saliente, mirror)
+
+    def _connect(self, links: _TapLinks) -> None:
+        commands = self._commands
+        self._checked(commands.link_add_bridge(links.bridge), 'No se pudo crear el puente')
+        self._checked(commands.link_prepare_bridge(links.bridge), 'No se pudo preparar el puente')
+        self._checked(commands.link_up(links.bridge), 'No se pudo levantar el puente')
+        self._checked(commands.link_promisc(links.bridge, True), 'No se pudo abrir el puente')
+        for interface in (links.entrante, links.saliente):
+            self._checked(commands.link_up(interface), f'No se pudo levantar {interface}')
+            self._checked(commands.link_master(interface, links.bridge), f'No se pudo unir {interface}')
+            self._checked(commands.link_promisc(interface, True), f'No se pudo abrir {interface}')
+        if not links.mirror:
+            return
+        self._checked(commands.link_up(links.mirror), f'No se pudo levantar {links.mirror}')
+        self._checked(commands.link_promisc(links.mirror, True), f'No se pudo abrir {links.mirror}')
+        for interface in (links.entrante, links.saliente):
+            self._checked(commands.ingress_add(interface), f'No se pudo espejar {interface}')
+            self._checked(commands.mirror_traffic(interface, links.mirror), f'No se pudo copiar {interface}')
+
+    def _disconnect(self, links: _TapLinks) -> None:
+        if self._commands is None:
+            return
+        commands = self._commands
+        for interface in (links.entrante, links.saliente):
+            self._quiet(commands.ingress_delete(interface))
+            self._quiet(commands.link_nomaster(interface))
+            self._quiet(commands.link_promisc(interface, False))
+        if links.mirror:
+            self._quiet(commands.link_promisc(links.mirror, False))
+        self._quiet(commands.link_promisc(links.bridge, False))
+        self._quiet(commands.link_delete(links.bridge))
+
+    def _checked(self, argv: list[str], message: str) -> None:
+        result = self._runner.run(argv)
+        if not result.ok:
+            raise CommandFailedError(f'{message}: {result.text}', result)
+
+    def _quiet(self, argv: list[str]) -> None:
+        self._runner.run(argv)

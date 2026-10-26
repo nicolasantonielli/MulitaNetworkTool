@@ -67,6 +67,7 @@ Item {
 
                             ChoiceChips {
                                 Layout.fillWidth: true
+                                clearable: modelData.title === "Mirror"
                                 model: root.tapInterfaces
                                 value: group.value
                                 enabled: !tap.running

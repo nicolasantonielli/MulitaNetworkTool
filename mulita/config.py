@@ -24,6 +24,7 @@ class Binaries:
     speedtest: str = '/bin/speedtest'
     curl: str = '/bin/curl'
     ip: str = '/usr/bin/ip'
+    tc: str = '/usr/sbin/tc'
     git: str = '/usr/bin/git'
     bash: str = '/bin/bash'
     nmcli: str = '/usr/bin/nmcli'

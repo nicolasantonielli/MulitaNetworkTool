@@ -8,6 +8,7 @@ Flow {
 
     property var model: []
     property string value: ""
+    property bool clearable: false
     signal activated(string value)
 
     spacing: Math.round(ui.gap * 0.6)
@@ -48,7 +49,7 @@ Flow {
             TouchArea {
                 id: area
                 enabled: root.enabled
-                onTapped: root.activated(chip.chipValue)
+                onTapped: root.activated(root.clearable && chip.selected ? "" : chip.chipValue)
             }
         }
     }
