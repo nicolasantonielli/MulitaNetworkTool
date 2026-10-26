@@ -313,10 +313,12 @@ Item {
                 id: filesPage
                 spacing: ui.gap
 
-                property string chosenPlace: ""
-                property string chosenName: ""
+                property var picked: []
                 property string chosenDrive: ""
                 property string action: ""
+
+                readonly property string activePlace: picked.length === 1 ? picked[0].place : ""
+                readonly property string activeName: picked.length === 1 ? picked[0].name : ""
 
                 readonly property var drives: {
                     try { return JSON.parse(files.drivesJson) }
@@ -332,8 +334,34 @@ Item {
                     return name.replace(/\.(pcap|csv|txt)$/i, "")
                 }
 
+                function isPicked(place, name) {
+                    for (var i = 0; i < picked.length; ++i) {
+                        if (picked[i].place === place && picked[i].name === name)
+                            return true
+                    }
+                    return false
+                }
+
+                function togglePick(place, name) {
+                    var next = []
+                    var found = false
+                    for (var i = 0; i < picked.length; ++i) {
+                        if (picked[i].place === place && picked[i].name === name)
+                            found = true
+                        else
+                            next.push(picked[i])
+                    }
+                    if (!found)
+                        next.push({ place: place, name: name })
+                    picked = next
+                    if (next.length !== 1)
+                        action = ""
+                }
+
                 function begin(kind) {
-                    if (chosenName === "")
+                    if (kind !== "export" && picked.length !== 1)
+                        return
+                    if (picked.length === 0)
                         return
                     action = kind
                     chosenDrive = ""
@@ -341,7 +369,24 @@ Item {
                         files.refreshDrives()
                         return
                     }
-                    newName.text = kind === "copy" ? baseName(chosenName) + i18n.pack.copySuffix : baseName(chosenName)
+                    newName.text = kind === "copy"
+                            ? baseName(activeName) + i18n.pack.copySuffix
+                            : baseName(activeName)
+                }
+
+                onRowsChanged: {
+                    var next = []
+                    for (var i = 0; i < picked.length; ++i) {
+                        var item = picked[i]
+                        for (var j = 0; j < rows.length; ++j) {
+                            if (rows[j].place === item.place && rows[j].name === item.name) {
+                                next.push(item)
+                                break
+                            }
+                        }
+                    }
+                    if (next.length !== picked.length)
+                        picked = next
                 }
 
                 function cancel() {
@@ -380,19 +425,38 @@ Item {
                         model: filesPage.rows
 
                         delegate: Rectangle {
-                            readonly property bool selected: filesPage.chosenPlace === modelData.place
-                                                             && filesPage.chosenName === modelData.name
+                            readonly property bool picked: filesPage.isPicked(modelData.place, modelData.name)
 
                             Layout.fillWidth: true
                             Layout.preferredHeight: ui.touch
                             radius: ui.radius
-                            color: selected ? ui.primary : (area.pressed ? ui.surfaceHigh : ui.surfaceAlt)
+                            color: picked ? ui.primary : (area.pressed ? ui.surfaceHigh : ui.surfaceAlt)
                             border.width: 1
-                            border.color: selected ? ui.primary : ui.border
+                            border.color: picked ? ui.primary : ui.border
 
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.leftMargin: ui.gap
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: Math.round(ui.touch * 0.46)
+                                height: width
+                                radius: ui.radius * 0.4
+                                color: picked ? ui.onAccent : "transparent"
+                                border.width: 2
+                                border.color: picked ? ui.onAccent : ui.border
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    visible: picked
+                                    text: "✓"
+                                    color: ui.primary
+                                    font.pixelSize: ui.fontBody
+                                    font.weight: Font.Bold
+                                }
+                            }
                             Text {
                                 anchors.fill: parent
-                                anchors.leftMargin: ui.padding
+                                anchors.leftMargin: ui.touch * 0.85
                                 anchors.rightMargin: ui.padding
                                 verticalAlignment: Text.AlignVCenter
                                 text: (modelData.place === "captura" ? i18n.pack.placeCapture
@@ -401,17 +465,13 @@ Item {
                                       : modelData.place === "ping" ? i18n.pack.placePing
                                       : modelData.placeLabel) + "   " + modelData.name
                                       + "   " + modelData.size + "   " + modelData.modified
-                                color: selected ? ui.onAccent : ui.text
+                                color: picked ? ui.onAccent : ui.text
                                 font.pixelSize: ui.fontSmall
                                 elide: Text.ElideRight
                             }
                             TouchArea {
                                 id: area
-                                onTapped: {
-                                    filesPage.chosenPlace = modelData.place
-                                    filesPage.chosenName = modelData.name
-                                    filesPage.action = ""
-                                }
+                                onTapped: filesPage.togglePick(modelData.place, modelData.name)
                             }
                         }
                     }
@@ -419,42 +479,42 @@ Item {
 
                 RowLayout {
                     spacing: ui.gap
-                    enabled: filesPage.chosenName !== "" && !files.busy
 
                     TouchButton {
                         Layout.fillWidth: true
                         text: i18n.pack.rename
                         kind: "neutral"
-                        enabled: parent.enabled
+                        enabled: !files.busy && filesPage.picked.length === 1
                         onClicked: filesPage.begin("rename")
                     }
                     TouchButton {
                         Layout.fillWidth: true
                         text: i18n.pack.copy
                         kind: "neutral"
-                        enabled: parent.enabled
+                        enabled: !files.busy && filesPage.picked.length === 1
                         onClicked: filesPage.begin("copy")
                     }
                     TouchButton {
                         Layout.fillWidth: true
                         text: i18n.pack.export
                         kind: "neutral"
-                        enabled: parent.enabled
+                        enabled: !files.busy && filesPage.picked.length > 0
                         onClicked: filesPage.begin("export")
                     }
                     TouchButton {
                         Layout.fillWidth: true
                         text: i18n.pack.delete
                         kind: "danger"
-                        enabled: parent.enabled
+                        enabled: !files.busy && filesPage.picked.length > 0
                         onClicked: dialog.ask({
                             title: i18n.pack.deleteTitle,
                             kind: "danger",
-                            message: i18n.pack.deleteBody.replace("{name}", filesPage.chosenName),
+                            message: filesPage.picked.length > 1
+                                     ? i18n.pack.deleteMany.replace("{count}", filesPage.picked.length)
+                                     : i18n.pack.deleteBody.replace("{name}", filesPage.activeName),
                             confirmText: i18n.pack.delete,
                             confirmAction: function() {
-                                files.remove(filesPage.chosenPlace, filesPage.chosenName)
-                                filesPage.chosenName = ""
+                                files.removeMany(JSON.stringify(filesPage.picked))
                                 filesPage.action = ""
                             }
                         })
@@ -517,11 +577,11 @@ Item {
                                  ? filesPage.chosenDrive !== "" : true)
                         onClicked: {
                             if (filesPage.action === "rename")
-                                files.rename(filesPage.chosenPlace, filesPage.chosenName, newName.text)
+                                files.rename(filesPage.activePlace, filesPage.activeName, newName.text)
                             else if (filesPage.action === "copy")
-                                files.copyFile(filesPage.chosenPlace, filesPage.chosenName, newName.text)
+                                files.copyFile(filesPage.activePlace, filesPage.activeName, newName.text)
                             else
-                                files.exportFile(filesPage.chosenPlace, filesPage.chosenName, filesPage.chosenDrive)
+                                files.exportMany(JSON.stringify(filesPage.picked), filesPage.chosenDrive)
                         }
                     }
                 }

@@ -5,6 +5,7 @@ import json
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.models import ClimateReading, SpeedTestResult
+from mulita.core.errors import ValidationError
 from mulita.presentation import texts
 from mulita.presentation.i18n import tr
 from mulita.ui.qt.bridge.base import BridgeContext, TaskController
@@ -143,6 +144,24 @@ class MacVendorController(TaskController):
         self.vendorChanged.emit()
 
 
+def _picked(payload: str) -> list[tuple[str, str]]:
+    try:
+        data = json.loads(payload or '[]')
+    except json.JSONDecodeError as exc:
+        raise ValidationError(tr('noFilesSelected')) from exc
+    items = []
+    for row in data if isinstance(data, list) else []:
+        if not isinstance(row, dict):
+            continue
+        place = str(row.get('place') or '')
+        name = str(row.get('name') or '')
+        if place and name:
+            items.append((place, name))
+    if not items:
+        raise ValidationError(tr('noFilesSelected'))
+    return items
+
+
 class FilesController(TaskController):
     filesChanged = pyqtSignal()
     drivesChanged = pyqtSignal()
@@ -188,9 +207,17 @@ class FilesController(TaskController):
     def remove(self, place: str, name: str) -> None:
         self._task(lambda: self._services.files.delete(place, name), self._done)
 
+    @pyqtSlot(str)
+    def removeMany(self, payload: str) -> None:
+        self._task(lambda: self._services.files.delete_many(_picked(payload)), self._done)
+
     @pyqtSlot(str, str, str)
     def exportFile(self, place: str, name: str, drive: str) -> None:
         self._task(lambda: self._services.files.export(place, name, drive), self._done)
+
+    @pyqtSlot(str, str)
+    def exportMany(self, payload: str, drive: str) -> None:
+        self._task(lambda: self._services.files.export_many(_picked(payload), drive), self._done)
 
     def _show(self, found: tuple) -> None:
         self._files = found

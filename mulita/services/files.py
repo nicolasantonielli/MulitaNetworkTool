@@ -105,6 +105,16 @@ class CaptureFilesService:
         self._guard(place)
         self._existing(place, name).unlink()
 
+    def delete_many(self, items: list[tuple[str, str]]) -> None:
+        if not items:
+            raise ValidationError(tr('noFilesSelected'))
+        paths = []
+        for place, name in items:
+            self._guard(place)
+            paths.append(self._existing(place, name))
+        for path in paths:
+            path.unlink()
+
     def list_drives(self) -> tuple[UsbDrive, ...]:
         found = list(self._found_drives())
         labels: dict[str, int] = {}
@@ -129,6 +139,30 @@ class CaptureFilesService:
         if hasattr(os, 'sync'):
             os.sync()
         return source.name
+
+    def export_many(self, items: list[tuple[str, str]], drive_id: str) -> int:
+        if not items:
+            raise ValidationError(tr('noFilesSelected'))
+        if not _DEVICE.fullmatch(drive_id or ''):
+            raise ValidationError(tr('badDrive'))
+        folder = self._drive_folder(drive_id)
+        planned: list[tuple[Path, Path]] = []
+        names: set[str] = set()
+        for place, name in items:
+            self._guard(place)
+            source = self._existing(place, name)
+            if source.name in names:
+                raise ValidationError(tr('sameFileName'))
+            names.add(source.name)
+            target = folder / source.name
+            if target.exists():
+                raise ValidationError(tr('usbExists'))
+            planned.append((source, target))
+        for source, target in planned:
+            shutil.copyfile(source, target)
+        if hasattr(os, 'sync'):
+            os.sync()
+        return len(planned)
 
     def _guard(self, place: str) -> None:
         if place == 'captura' and self._capture_active():

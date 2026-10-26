@@ -85,6 +85,27 @@ class CaptureFilesTest(unittest.TestCase):
             with self.assertRaises(ValidationError):
                 CaptureFilesService(root, drives=lambda: ()).export('captura', 'uno.pcap', 'sda1')
 
+    def test_batch_delete_and_export(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'uno.pcap').write_bytes(b'abc')
+            tap = root / 'tap'
+            tap.mkdir()
+            (tap / 'dos.pcap').write_bytes(b'zz')
+            (tap / 'uno.pcap').write_bytes(b'same')
+            stick = root / 'stick'
+            stick.mkdir()
+            service = CaptureFilesService(root, drives=lambda: (UsbDrive('sda1', 'KINGSTON', str(stick)),))
+            with self.assertRaises(ValidationError):
+                service.export_many([('captura', 'uno.pcap'), ('tap', 'uno.pcap')], 'sda1')
+            self.assertFalse((stick / 'uno.pcap').exists())
+            self.assertEqual(service.export_many([('captura', 'uno.pcap'), ('tap', 'dos.pcap')], 'sda1'), 2)
+            self.assertEqual((stick / 'dos.pcap').read_bytes(), b'zz')
+            service.delete_many([('captura', 'uno.pcap'), ('tap', 'dos.pcap')])
+            self.assertFalse((root / 'uno.pcap').exists())
+            self.assertFalse((tap / 'dos.pcap').exists())
+            self.assertTrue((tap / 'uno.pcap').is_file())
+
     def test_unmounted_usb_stick_is_listed_and_the_sd_card_is_not(self):
         listed = parse_usb_drives(json.dumps({'blockdevices': [
             {'name': 'mmcblk0', 'tran': 'mmc', 'type': 'disk', 'children': [

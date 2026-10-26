@@ -330,6 +330,9 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('captureFolder', 'la carpeta de capturas', 'the captures folder'),
     ('captureEnded', 'tcpdump termino con codigo {code}', 'tcpdump stopped with code {code}'),
     ('deleteBody', 'Se elimina {name}.', '{name} will be deleted.'),
+    ('deleteMany', 'Se eliminan {count} archivos.', '{count} files will be deleted.'),
+    ('sameFileName', 'Hay archivos con el mismo nombre.', 'Some files have the same name.'),
+    ('noFilesSelected', 'No hay archivos elegidos.', 'No files selected.'),
     ('assignStatic', 'Se asigna {ip} a {iface}.', '{ip} will be assigned to {iface}.'),
     ('assignDhcp', '{iface} pedirá una dirección por DHCP.', '{iface} will request an address with DHCP.'),
 )
