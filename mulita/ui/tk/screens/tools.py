@@ -111,5 +111,5 @@ class ToolsScreen(Screen):
 
     def _lookup_public_ip(self) -> None:
         self.run_in_background(self.services.public_ip.lookup,
-                               lambda address: self._public_ip.config(text=texts.public_ip(address)),
+                               lambda info: self._public_ip.config(text=texts.public_ip(info.ip)),
                                lambda error: self._public_ip.config(text=str(error)))

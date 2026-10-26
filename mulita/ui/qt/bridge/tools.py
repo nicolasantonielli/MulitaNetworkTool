@@ -137,12 +137,21 @@ class PublicIpController(TaskController):
 
     def __init__(self, ctx: BridgeContext):
         super().__init__(ctx)
-        self._address = ''
+        self._info = None
         self._status = ''
+        ctx.services.settings.subscribe(lambda _settings: self.addressChanged.emit())
 
     @pyqtProperty(str, notify=addressChanged)
     def address(self) -> str:
-        return self._address or texts.NO_VALUE
+        return self._info.ip if self._info else texts.NO_VALUE
+
+    @pyqtProperty(str, notify=addressChanged)
+    def factsJson(self) -> str:
+        if self._info is None:
+            return '[]'
+        return json.dumps([
+            {'label': label, 'value': value} for label, value in self._info.facts()
+        ])
 
     @pyqtProperty(str, notify=addressChanged)
     def status(self) -> str:
@@ -152,8 +161,8 @@ class PublicIpController(TaskController):
     def lookup(self) -> None:
         self._task(self._services.public_ip.lookup, self._show, self._failed)
 
-    def _show(self, address: str) -> None:
-        self._address, self._status = address, ''
+    def _show(self, info) -> None:
+        self._info, self._status = info, ''
         self.addressChanged.emit()
 
     def _failed(self, error: Exception) -> None:

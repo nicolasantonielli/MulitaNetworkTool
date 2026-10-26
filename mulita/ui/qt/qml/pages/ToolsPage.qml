@@ -352,22 +352,22 @@ Item {
 
             // IP publica
             ColumnLayout {
+                id: publicPage
                 spacing: ui.gap
 
-                StatCard {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    label: i18n.pack.publicIp
-                    icon: "globe"
-                    value: publicIp.address
+                readonly property var facts: {
+                    try { return JSON.parse(publicIp.factsJson) }
+                    catch (e) { return [] }
                 }
+
                 RowLayout {
+                    Layout.fillWidth: true
                     Text {
                         Layout.fillWidth: true
-                        text: publicIp.status
-                        color: ui.danger
-                        font.pixelSize: ui.fontSmall
-                        wrapMode: Text.Wrap
+                        text: publicIp.busy ? i18n.pack.lookingUp : i18n.pack.pubTitle
+                        color: ui.text
+                        font.pixelSize: ui.fontBody
+                        elide: Text.ElideRight
                     }
                     TouchButton {
                         text: publicIp.busy ? i18n.pack.lookingUp : i18n.pack.lookup
@@ -375,6 +375,62 @@ Item {
                         kind: "neutral"
                         enabled: !publicIp.busy
                         onClicked: publicIp.lookup()
+                    }
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    visible: publicIp.status !== ""
+                    text: publicIp.status
+                    color: ui.danger
+                    font.pixelSize: ui.fontSmall
+                    wrapMode: Text.Wrap
+                }
+
+                ScrollPage {
+                    Text {
+                        Layout.fillWidth: true
+                        visible: publicPage.facts.length === 0 && publicIp.status === ""
+                        text: publicIp.busy ? i18n.pack.lookingUp : i18n.pack.pubEmpty
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        wrapMode: Text.Wrap
+                    }
+                    Card {
+                        Layout.fillWidth: true
+                        visible: publicPage.facts.length > 0
+                        title: i18n.pack.pubTitle
+                        titleIcon: "globe"
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: i18n.pack.pubHint
+                            color: ui.textMuted
+                            font.pixelSize: ui.fontSmall
+                            wrapMode: Text.Wrap
+                        }
+                        GridLayout {
+                            Layout.fillWidth: true
+                            columns: 2
+                            columnSpacing: ui.gap
+                            rowSpacing: Math.round(ui.gap * 0.45)
+
+                            Repeater {
+                                model: publicPage.facts
+
+                                delegate: ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 0
+
+                                    Text {
+                                        text: modelData.label
+                                        color: ui.textMuted
+                                        font.pixelSize: ui.fontSmall
+                                    }
+                                    SelectableText { text: modelData.value }
+                                }
+                            }
+                        }
                     }
                 }
             }

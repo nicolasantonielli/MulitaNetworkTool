@@ -191,7 +191,7 @@ class BlockingServicesTest(unittest.TestCase):
                              '/bin/curl': CommandResult(0, '181.1.2.3')})
         services = services_with(runner)
         self.assertEqual(services.speed_test.measure().download_mbps, 50)
-        self.assertEqual(services.public_ip.lookup(), '181.1.2.3')
+        self.assertEqual(services.public_ip.lookup().ip, '181.1.2.3')
 
     def test_public_ip_without_answer_fails(self):
         runner = FakeRunner({'/bin/curl': CommandResult(28, '', '')})

@@ -11,8 +11,8 @@ from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.models import (Calibration, CaptureDirection, ClimateReading,
                                 CommandResult)
 from mulita.core.models import PingSummary
-from mulita.core.parsers import (cable_connected, parse_interfaces, parse_speed_test,
-                                parse_trace, read_ping_line)
+from mulita.core.parsers import (cable_connected, parse_interfaces, parse_public_address,
+                                parse_speed_test, parse_trace, read_ping_line)
 
 IP_JSON = '''[
  {"ifindex":1,"ifname":"lo","address":"00:00:00:00:00:00",
@@ -204,6 +204,29 @@ rtt min/avg/max/mdev = 19.400/20.100/20.100/0.200 ms
         self.assertEqual(summary.loss, '50%')
         self.assertEqual(summary.minimum, '19.400')
         self.assertEqual(summary.deviation, '0.200')
+
+    def test_public_address_keeps_the_network_facts(self):
+        info = parse_public_address('''{
+            "ip": "181.1.2.3", "success": true, "type": "IPv4",
+            "country": "Argentina", "country_code": "AR",
+            "region": "Buenos Aires", "city": "Buenos Aires",
+            "latitude": -34.6037, "longitude": -58.3816,
+            "connection": {"asn": 7303, "org": "Telecom Argentina S.A.",
+                           "isp": "Telecom Argentina S.A.", "domain": "telecom.com.ar"},
+            "timezone": {"id": "America/Argentina/Buenos_Aires", "utc": "-03:00"}
+        }''')
+        facts = dict(info.facts())
+        self.assertEqual(facts['Dirección'], '181.1.2.3')
+        self.assertEqual(facts['Versión'], 'IPv4')
+        self.assertEqual(facts['ASN'], 'AS7303')
+        self.assertEqual(facts['Organización'], 'Telecom Argentina S.A.')
+        self.assertEqual(facts['ISP'], 'Telecom Argentina S.A.')
+        self.assertEqual(facts['Dominio'], 'telecom.com.ar')
+        self.assertEqual(facts['País'], 'Argentina (AR)')
+        self.assertEqual(facts['Ciudad'], 'Buenos Aires')
+        self.assertEqual(facts['Coordenadas'], '-34.6037, -58.3816')
+        self.assertEqual(facts['Zona horaria'], 'America/Argentina/Buenos_Aires (UTC-03:00)')
+        self.assertEqual(parse_public_address('181.1.2.3\n').ip, '181.1.2.3')
 
 
 class HomeEnvironmentTest(unittest.TestCase):

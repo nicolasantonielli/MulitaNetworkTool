@@ -9,8 +9,8 @@ import re
 from mulita.core.errors import CommandFailedError
 from mulita.presentation.i18n import tr
 from mulita.core.models import (AddressMode, EthernetConfig, NetworkInterface,
-                                PingReply, PingSummary, SpeedTestResult, TraceHop,
-                                WifiLink, WifiNetwork)
+                                PingReply, PingSummary, PublicAddress, SpeedTestResult,
+                                TraceHop, WifiLink, WifiNetwork)
 
 
 def cable_connected(name: str, flags: list, operstate: str) -> bool:
@@ -672,6 +672,76 @@ def _copy_summary(summary: PingSummary, **changes: str) -> PingSummary:
     }
     data.update({key: value for key, value in changes.items() if value})
     return PingSummary(**data)
+
+
+def parse_public_address(text: str) -> PublicAddress:
+    """JSON de ipwho.is, o una sola linea con la direccion."""
+    body = (text or '').strip()
+    if not body:
+        raise CommandFailedError(tr('pubFail'))
+    if not body.startswith('{'):
+        address = body.splitlines()[0].strip()
+        if not _ip_text(address):
+            raise CommandFailedError(tr('pubFail'))
+        return PublicAddress(ip=address, version=_ip_version(address))
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise CommandFailedError(tr('pubFail')) from exc
+    if not isinstance(data, dict) or data.get('success') is False or not data.get('ip'):
+        raise CommandFailedError(tr('pubFail'))
+    connection = data.get('connection') if isinstance(data.get('connection'), dict) else {}
+    zone = data.get('timezone') if isinstance(data.get('timezone'), dict) else {}
+    asn = connection.get('asn')
+    asn_text = f'AS{asn}' if isinstance(asn, int) or (isinstance(asn, str) and asn.isdigit()) else _text(asn)
+    country = _text(data.get('country'))
+    code = _text(data.get('country_code'))
+    if country and code:
+        country = f'{country} ({code})'
+    utc = _text(zone.get('utc'))
+    zone_id = _text(zone.get('id'))
+    if zone_id and utc:
+        zone_id = f'{zone_id} (UTC{utc})'
+    latitude = data.get('latitude')
+    longitude = data.get('longitude')
+    coordinates = ''
+    if isinstance(latitude, (int, float)) and isinstance(longitude, (int, float)):
+        coordinates = f'{latitude:.4f}, {longitude:.4f}'
+    address = _text(data.get('ip'))
+    return PublicAddress(
+        ip=address,
+        version=_text(data.get('type')) or _ip_version(address),
+        asn=asn_text,
+        organization=_text(connection.get('org')),
+        isp=_text(connection.get('isp')),
+        domain=_text(connection.get('domain')),
+        country=country,
+        region=_text(data.get('region')),
+        city=_text(data.get('city')),
+        coordinates=coordinates,
+        timezone=zone_id,
+    )
+
+
+def _text(value) -> str:
+    if value is None:
+        return ''
+    return str(value).strip()
+
+
+def _ip_text(value: str) -> bool:
+    try:
+        ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _ip_version(value: str) -> str:
+    try:
+        return f'IPv{ipaddress.ip_address(value).version}'
+    except ValueError:
+        return ''
 
 
 def parse_speed_test(text: str) -> SpeedTestResult:

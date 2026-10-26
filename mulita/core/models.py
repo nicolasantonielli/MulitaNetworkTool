@@ -271,3 +271,35 @@ class SpeedTestResult:
     @property
     def upload_mbps(self) -> float:
         return self.upload_bps / 1_000_000
+
+
+@dataclass(frozen=True)
+class PublicAddress:
+    """Salida a Internet vista desde afuera."""
+    ip: str
+    version: str = ''
+    asn: str = ''
+    organization: str = ''
+    isp: str = ''
+    domain: str = ''
+    country: str = ''
+    region: str = ''
+    city: str = ''
+    coordinates: str = ''
+    timezone: str = ''
+
+    def facts(self) -> list[tuple[str, str]]:
+        rows = (
+            (tr('pubIp'), self.ip),
+            (tr('pubVersion'), self.version),
+            (tr('pubAsn'), self.asn),
+            (tr('pubOrg'), self.organization),
+            (tr('pubIsp'), self.isp),
+            (tr('pubDomain'), self.domain),
+            (tr('pubCountry'), self.country),
+            (tr('pubRegion'), self.region),
+            (tr('pubCity'), self.city),
+            (tr('pubCoords'), self.coordinates),
+            (tr('pubZone'), self.timezone),
+        )
+        return [(label, value) for label, value in rows if value]

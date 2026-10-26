@@ -9,7 +9,7 @@ from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError
 from mulita.presentation.i18n import tr
 from mulita.core.models import Calibration, ClimateReading, SpeedTestResult
-from mulita.core.parsers import parse_mac_vendor, parse_speed_test
+from mulita.core.parsers import parse_mac_vendor, parse_public_address, parse_speed_test
 from mulita.core.ports import ClimateSensor, CommandRunner
 
 
@@ -72,12 +72,11 @@ class PublicIpService:
         self._url = url
         self._timeout = timeout
 
-    def lookup(self) -> str:
+    def lookup(self) -> PublicAddress:
         result = self._runner.run(self._commands.public_ip(self._url, self._timeout))
-        address = result.stdout.strip().splitlines()[0] if result.stdout.strip() else ''
-        if not result.ok or not address:
-            raise CommandFailedError('No se pudo obtener la IP publica', result)
-        return address
+        if not result.ok or not (result.stdout or '').strip():
+            raise CommandFailedError(tr('pubFail'), result)
+        return parse_public_address(result.stdout)
 
 
 class MacVendorService:
