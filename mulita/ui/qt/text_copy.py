@@ -1,6 +1,6 @@
 """Un menu de copia comun para textos, campos y salidas de Qt Quick."""
 from PyQt5 import sip
-from PyQt5.QtCore import QObject, QEvent, QPointF, Qt, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QObject, QEvent, QMetaObject, QPointF, Qt, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QGuiApplication, QWindow
 from PyQt5.QtQuick import QQuickWindow
 
@@ -16,6 +16,7 @@ class TextCopyController(QObject):
         super().__init__()
         self._menu_visible = False
         self._target = None
+        self._menu_target = None
         self._pressed = False
         self._held = False
         self._origin = QPointF()
@@ -25,16 +26,38 @@ class TextCopyController(QObject):
         self._timer.setSingleShot(True)
         self._timer.setInterval(600)
         self._timer.timeout.connect(self._hold)
+        QGuiApplication.clipboard().dataChanged.connect(self.menuVisibleChanged.emit)
 
     @pyqtProperty(bool, notify=menuVisibleChanged)
     def menuVisible(self):
         return self._menu_visible
+
+    @pyqtProperty(bool, notify=menuVisibleChanged)
+    def editable(self):
+        item = self._menu_target
+        return (item is not None and not sip.isdeleted(item) and item.isEnabled()
+                and item.isVisible() and self._is_editor(item)
+                and not item.property('readOnly'))
+
+    @pyqtProperty(bool, notify=menuVisibleChanged)
+    def canPaste(self):
+        return self.editable and bool(QGuiApplication.clipboard().text())
+
+    @pyqtSlot(result=bool)
+    def paste(self):
+        if not self.canPaste:
+            return False
+        self._menu_target.forceActiveFocus()
+        QMetaObject.invokeMethod(self._menu_target, 'paste', Qt.DirectConnection)
+        return True
 
     @pyqtSlot(bool)
     def setMenuVisible(self, visible):
         self._menu_visible = visible
         self._raw_touch = False
         self._cancel()
+        if not visible:
+            self._menu_target = None
         self.menuVisibleChanged.emit()
 
     @pyqtSlot(QObject)
@@ -132,15 +155,20 @@ class TextCopyController(QObject):
         if item is None or sip.isdeleted(item) or not item.isVisible():
             return
         echo = item.property('echoMode')
-        if echo is not None and echo != 0:
-            return
-        text = item.property('selectedText') or item.property('text')
-        if isinstance(text, str) and text:
+        text = '' if echo is not None and echo != 0 else (
+            item.property('selectedText') or item.property('text') or '')
+        if isinstance(text, str) and (text or (self._is_editor(item) and not item.property('readOnly'))):
+            self._menu_target = item
+            self.menuVisibleChanged.emit()
             self.requested.emit(text, point.x(), point.y())
 
     @staticmethod
     def _selection_range(item):
         return item.property('selectionStart'), item.property('selectionEnd')
+
+    @staticmethod
+    def _is_editor(item):
+        return item.property('cursorPosition') is not None and item.property('readOnly') is not None
 
     def _find(self, item, local):
         if item.property('allowsTextCopy') is False:
@@ -154,6 +182,8 @@ class TextCopyController(QObject):
                 continue
             found = self._find(child, position)
             if found is not None:
+                if found is not _BLOCKED and self._is_editor(item) and not self._is_editor(found):
+                    return item
                 return found
         text = item.property('text')
-        return item if isinstance(text, str) and text else None
+        return item if self._is_editor(item) or (isinstance(text, str) and text) else None

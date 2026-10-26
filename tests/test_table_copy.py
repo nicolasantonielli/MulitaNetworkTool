@@ -94,7 +94,7 @@ ApplicationWindow {
         QTest.qWait(20)
 
     def choose_copy(self):
-        action = self.menu.property('contentItem')
+        action = self.window.findChild(QObject, 'textCopyAction')
         position = action.mapToScene(QPointF(action.width() / 2, action.height() / 2)).toPoint()
         QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier, position)
         QTest.qWait(20)
@@ -177,8 +177,72 @@ ApplicationWindow {
         field = self.window.findChild(QObject, 'field')
         field.setProperty('echoMode', 2)
         self.hold(QPoint(270, 45))
-        self.assertFalse(self.menu.property('opened'))
+        self.assertTrue(self.menu.property('opened'))
+        self.assertEqual(self.menu.property('value'), '')
+        self.assertFalse(self.window.findChild(QObject, 'textCopyAction').isVisible())
+        self.assertTrue(self.window.findChild(QObject, 'textPasteAction').isVisible())
         self.assertEqual(QGuiApplication.clipboard().text(), 'unchanged')
+
+    def choose_paste(self):
+        action = self.window.findChild(QObject, 'textPasteAction')
+        position = action.mapToScene(QPointF(action.width() / 2, action.height() / 2)).toPoint()
+        QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier, position)
+        QTest.qWait(20)
+
+    def test_hold_on_empty_field_offers_paste(self):
+        field = self.window.findChild(QObject, 'field')
+        field.setProperty('text', '')
+        field.setProperty('placeholderText', 'Destination')
+        self.hold(QPoint(270, 45))
+        self.assertTrue(self.menu.property('opened'))
+        self.assertTrue(self.copy.canPaste)
+        self.assertEqual(field.property('text'), '')
+        self.choose_paste()
+        self.assertEqual(field.property('text'), 'unchanged')
+
+    def test_paste_inserts_at_cursor_and_can_be_undone(self):
+        field = self.window.findChild(QObject, 'field')
+        field.setProperty('text', 'abcd')
+        field.setProperty('cursorPosition', 2)
+        QGuiApplication.clipboard().setText('XYZ')
+        self.copy.showForItem(field)
+        QTest.qWait(20)
+        self.choose_paste()
+        self.assertEqual(field.property('text'), 'abXYZcd')
+        field.undo()
+        self.assertEqual(field.property('text'), 'abcd')
+
+    def test_paste_replaces_selected_text(self):
+        field = self.window.findChild(QObject, 'field')
+        field.setProperty('text', 'abcd')
+        field.select(1, 3)
+        QGuiApplication.clipboard().setText('XYZ')
+        self.copy.showForItem(field)
+        QTest.qWait(20)
+        self.choose_paste()
+        self.assertEqual(field.property('text'), 'aXYZd')
+
+    def test_read_only_output_has_no_paste_action(self):
+        self.hold(QPoint(80, 25))
+        self.assertFalse(self.copy.editable)
+        self.assertFalse(self.window.findChild(QObject, 'textPasteAction').isVisible())
+        self.assertFalse(self.copy.paste())
+
+    def test_paste_disabled_when_clipboard_is_empty(self):
+        QGuiApplication.clipboard().clear()
+        self.hold(QPoint(270, 45))
+        self.assertTrue(self.menu.property('opened'))
+        self.assertFalse(self.copy.canPaste)
+        self.assertFalse(self.window.findChild(QObject, 'textPasteAction').isEnabled())
+
+    def test_dismissal_does_not_paste_and_discards_the_target(self):
+        field = self.window.findChild(QObject, 'field')
+        before = field.property('text')
+        self.hold(QPoint(270, 45))
+        QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier, QPoint(410, 380))
+        QTest.qWait(20)
+        self.assertEqual(field.property('text'), before)
+        self.assertFalse(self.copy.paste())
 
     def test_field_selection_opens_menu_without_automatic_copy(self):
         field = self.window.findChild(QObject, 'field')

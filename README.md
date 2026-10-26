@@ -2,13 +2,17 @@
 
 Aplicacion de diagnostico de red pensada para Raspberry Pi 4, con soporte de entorno de pruebas en Windows.
 
-## Copiar texto
+## Copiar y pegar texto
 
 Mantener presionado un texto informativo, un resultado o una celda abre el menu
 flotante **Copiar**. Seleccionar texto con el cursor y soltar abre el mismo menu
 para esa seleccion. El clic derecho tambien permite abrirlo. El portapapeles
 solo se modifica al elegir **Copiar**; tocar fuera o presionar Escape cierra el
-menu sin copiar. El arrastre vertical conserva el desplazamiento de las tablas.
+menu sin copiar. En cuadros editables, incluso vacios, el menu tambien ofrece
+**Pegar**: inserta el portapapeles en el cursor o reemplaza la seleccion. Tocar
+fuera cierra el menu sin modificar el campo. Pegar queda deshabilitado cuando
+el portapapeles no contiene texto. El arrastre vertical conserva el desplazamiento
+de las tablas.
 
 ## Prueba del panel tactil
 
