@@ -50,8 +50,9 @@ class WifiService:
         try:
             with path.open('w', encoding='utf-8', newline='') as handle:
                 writer = csv.writer(handle, lineterminator='\n')
-                writer.writerow([label for label, _value in facts])
-                writer.writerow([value for _label, value in facts])
+                writer.writerow([tr('wifiField'), tr('wifiValue')])
+                for label, value in facts:
+                    writer.writerow([label, value])
         except OSError as exc:
             raise CommandFailedError(tr('saveWifiFailed')) from exc
         if hasattr(os, 'sync'):

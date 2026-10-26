@@ -141,6 +141,8 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('readingLink', 'Leyendo el enlace…', 'Reading the link…'),
     ('noWifi', 'No hay Wi-Fi', 'No Wi-Fi'),
     ('wifiInfo', 'Info Wi-Fi', 'Wi-Fi info'),
+    ('wifiField', 'Dato', 'Field'),
+    ('wifiValue', 'Valor', 'Value'),
     ('noWifiIface', 'No hay interfaz Wi-Fi.', 'There is no Wi-Fi interface.'),
     ('noLink', 'Sin enlace.', 'No link.'),
     ('macField', 'MAC (AA:BB:CC:DD:EE:FF)', 'MAC (AA:BB:CC:DD:EE:FF)'),
