@@ -102,9 +102,10 @@ Item {
 
                         Text {
                             Layout.fillWidth: true
-                            text: i18n.pack.traceTimes
+                            text: i18n.pack.traceTimes + " · " + i18n.pack.tableCopyHint
                             color: ui.textMuted
                             font.pixelSize: ui.fontSmall
+                            wrapMode: Text.Wrap
                         }
 
                         ScrollPage {
@@ -150,7 +151,7 @@ Item {
                                         Repeater {
                                             model: root.columns
 
-                                            delegate: Text {
+                                            delegate: CopyableCell {
                                                 width: root.columnWidth(modelData.share)
                                                 height: hopRow.height
                                                 text: hopRow.hop[modelData.key] === undefined
@@ -333,6 +334,14 @@ Item {
                         visible: pingPage.replies.length > 0
                         spacing: Math.round(ui.gap * 0.3)
 
+                        Text {
+                            Layout.fillWidth: true
+                            text: i18n.pack.tableCopyHint
+                            color: ui.textMuted
+                            font.pixelSize: ui.fontSmall
+                            wrapMode: Text.Wrap
+                        }
+
                         Row {
                             Layout.fillWidth: true
                             spacing: 0
@@ -366,7 +375,7 @@ Item {
                                         anchors.fill: parent
                                         Repeater {
                                             model: pingPage.columns
-                                            delegate: Text {
+                                            delegate: CopyableCell {
                                                 width: pingPage.columnWidth(modelData.share)
                                                 height: pingRow.height
                                                 text: modelData.key === "status"
@@ -426,7 +435,7 @@ Item {
                             width: parent.width
                             Repeater {
                                 model: pingPage.statColumns
-                                delegate: Text {
+                                delegate: CopyableCell {
                                     width: pingPage.statWidth(modelData.share)
                                     text: pingPage.summary ? (pingPage.summary[modelData.key] || "") : ""
                                     color: ui.text

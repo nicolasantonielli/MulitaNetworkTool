@@ -94,6 +94,14 @@ Item {
                         visible: scanPage.ports.length > 0
                         spacing: Math.round(ui.gap * 0.3)
 
+                        Text {
+                            Layout.fillWidth: true
+                            text: i18n.pack.tableCopyHint
+                            color: ui.textMuted
+                            font.pixelSize: ui.fontSmall
+                            wrapMode: Text.Wrap
+                        }
+
                         ScrollPage {
                             id: scanTable
                             spacing: 1
@@ -127,7 +135,7 @@ Item {
                                         anchors.fill: parent
                                         Repeater {
                                             model: scanPage.columns
-                                            delegate: Text {
+                                            delegate: CopyableCell {
                                                 width: scanPage.columnWidth(modelData.share)
                                                 height: portRow.height
                                                 text: portRow.finding[modelData.key] === undefined
@@ -312,6 +320,14 @@ Item {
                         visible: discoverPage.hosts.length > 0
                         spacing: Math.round(ui.gap * 0.3)
 
+                        Text {
+                            Layout.fillWidth: true
+                            text: i18n.pack.tableCopyHint
+                            color: ui.textMuted
+                            font.pixelSize: ui.fontSmall
+                            wrapMode: Text.Wrap
+                        }
+
                         ScrollPage {
                             id: discoverTable
                             spacing: 1
@@ -345,7 +361,7 @@ Item {
                                         anchors.fill: parent
                                         Repeater {
                                             model: discoverPage.columns
-                                            delegate: Text {
+                                            delegate: CopyableCell {
                                                 width: discoverPage.columnWidth(modelData.share)
                                                 height: hostRow.height
                                                 text: hostRow.host[modelData.key] === undefined

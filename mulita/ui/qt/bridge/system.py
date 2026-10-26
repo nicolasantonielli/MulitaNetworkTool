@@ -4,7 +4,7 @@ import os
 import sys
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QGuiApplication
 
 from mulita.core.errors import MulitaError
 from mulita.core.settings import Language, Settings, Theme
@@ -15,6 +15,13 @@ from mulita.version import __version__
 
 
 class SystemController(TaskController):
+
+    @pyqtSlot(str)
+    def copyText(self, text: str) -> None:
+        if not text:
+            return
+        QGuiApplication.clipboard().setText(text)
+        self._ctx.notifier.success(i18n.tr('copy'), i18n.tr('textCopied'))
 
     @pyqtProperty(str, constant=True)
     def version(self) -> str:

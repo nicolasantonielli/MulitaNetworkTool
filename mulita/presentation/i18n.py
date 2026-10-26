@@ -207,6 +207,8 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('noFiles', 'No hay archivos', 'No files'),
     ('rename', 'Renombrar', 'Rename'),
     ('copy', 'Copiar', 'Copy'),
+    ('textCopied', 'Texto copiado al portapapeles', 'Text copied to clipboard'),
+    ('tableCopyHint', 'Mantené presionada una celda para copiar su valor', 'Hold a cell to copy its value'),
     ('export', 'Exportar', 'Export'),
     ('delete', 'Borrar', 'Delete'),
     ('deleteTitle', 'Borrar', 'Delete'),
