@@ -79,30 +79,6 @@ Item {
                         wrapMode: Text.Wrap
                     }
                 }
-                Card {
-                    Layout.fillWidth: true
-                    title: i18n.pack.brightness
-                    titleIcon: "display"
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: settings.brightnessReady ? i18n.pack.brightnessHint : i18n.pack.noBacklight
-                        color: ui.textMuted
-                        font.pixelSize: ui.fontBody
-                        wrapMode: Text.Wrap
-                    }
-                    LabeledSlider {
-                        Layout.fillWidth: true
-                        enabled: settings.brightnessReady
-                        label: i18n.pack.brightness
-                        from: 1
-                        to: 100
-                        stepSize: 1
-                        initial: settings.brightness
-                        valueText: Math.round(value) + " %"
-                        onValueChanged: settings.setBrightness(value)
-                    }
-                }
             }
 
             // Pantalla
@@ -129,12 +105,29 @@ Item {
                         valueText: Math.round(value * 100) + " %"
                         onValueChanged: settings.setScale(value)
                     }
-                    TouchButton {
+                }
+                Card {
+                    Layout.fillWidth: true
+                    title: i18n.pack.brightness
+                    titleIcon: "display"
+
+                    Text {
                         Layout.fillWidth: true
-                        text: i18n.pack.touchTest
-                        icon: "display"
-                        kind: "neutral"
-                        onClicked: nav.currentIndex = 5
+                        text: settings.brightnessReady ? i18n.pack.brightnessHint : i18n.pack.noBacklight
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        wrapMode: Text.Wrap
+                    }
+                    LabeledSlider {
+                        Layout.fillWidth: true
+                        enabled: settings.brightnessReady
+                        label: i18n.pack.brightness
+                        from: 1
+                        to: 100
+                        stepSize: 1
+                        initial: settings.brightness
+                        valueText: Math.round(value) + " %"
+                        onValueChanged: settings.setBrightness(value)
                     }
                 }
                 Card {
@@ -147,6 +140,19 @@ Item {
                         model: settings.themes
                         value: settings.theme
                         onActivated: settings.setTheme(value)
+                    }
+                }
+                Card {
+                    Layout.fillWidth: true
+                    title: i18n.pack.touchTest
+                    titleIcon: "display"
+
+                    TouchButton {
+                        Layout.fillWidth: true
+                        text: i18n.pack.start
+                        icon: "play"
+                        kind: "neutral"
+                        onClicked: nav.currentIndex = 5
                     }
                 }
             }
