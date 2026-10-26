@@ -28,6 +28,7 @@ _PLACES = {
     'ping': ('Ping', ('.csv',)),
     'publica': ('IP pública', ('.csv',)),
     'wifi': ('Info Wi-Fi', ('.csv',)),
+    'escaneo': ('Escaneo', ('.csv',)),
 }
 
 
@@ -185,6 +186,8 @@ class CaptureFilesService:
             return self._root / 'internet'
         if place == 'wifi':
             return self._root / 'wifi'
+        if place == 'escaneo':
+            return self._root / 'escaneo'
         raise ValidationError(tr('badFolder'))
 
     def _named(self, place: str, name: str, suffix: str = '') -> Path:
@@ -192,7 +195,7 @@ class CaptureFilesService:
         if place == 'ping':
             chosen = suffix if suffix in ('.csv', '.statics.csv') else _ping_suffix(name)
             filename = validation.named_file(validation.ping_basename(name), chosen)
-        elif place in ('traza', 'publica', 'wifi'):
+        elif place in ('traza', 'publica', 'wifi', 'escaneo'):
             filename = validation.trace_filename(name)
         else:
             filename = validation.capture_filename(name)

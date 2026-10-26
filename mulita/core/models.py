@@ -247,6 +247,15 @@ class Calibration:
 
 
 @dataclass(frozen=True)
+class PortFinding:
+    host: str
+    port: str
+    protocol: str
+    state: str
+    service: str
+
+
+@dataclass(frozen=True)
 class TraceHop:
     hop: int
     address: str

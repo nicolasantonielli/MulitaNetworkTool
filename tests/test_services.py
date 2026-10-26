@@ -124,7 +124,9 @@ class BlockingServicesTest(unittest.TestCase):
         services = services_with(runner)
         self.assertEqual(services.trace.trace('8.8.8.8')[0].address, '192.168.1.1')
         self.assertIn('--csv', runner.runs[0])
-        self.assertEqual(services.port_scan.scan('nohost'), 'Failed to resolve')
+        with self.assertRaises(CommandFailedError) as failed:
+            services.port_scan.scan('nohost')
+        self.assertIn('Failed to resolve', str(failed.exception))
 
     def test_trace_saves_a_csv_without_exposing_a_path(self):
         import tempfile

@@ -11,8 +11,9 @@ from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.models import (Calibration, CaptureDirection, ClimateReading,
                                 CommandResult)
 from mulita.core.models import PingSummary
-from mulita.core.parsers import (cable_connected, parse_interfaces, parse_public_address,
-                                parse_speed_test, parse_trace, read_ping_line)
+from mulita.core.parsers import (cable_connected, parse_interfaces, parse_port_scan,
+                                parse_public_address, parse_speed_test, parse_trace,
+                                read_ping_line)
 
 IP_JSON = '''[
  {"ifindex":1,"ifname":"lo","address":"00:00:00:00:00:00",
@@ -230,6 +231,28 @@ rtt min/avg/max/mdev = 19.400/20.100/20.100/0.200 ms
         self.assertEqual(facts['Coordenadas'], '-34.6037, -58.3816')
         self.assertEqual(facts['Zona horaria'], 'America/Argentina/Buenos_Aires (UTC-03:00)')
         self.assertEqual(parse_public_address('181.1.2.3\n').ip, '181.1.2.3')
+
+    def test_port_scan_report_becomes_rows(self):
+        text = """Starting Nmap 7.93
+Nmap scan report for router.lan (192.168.0.1)
+Host is up (0.0020s latency).
+Not shown: 997 closed tcp ports (reset)
+PORT     STATE SERVICE
+22/tcp   open  ssh
+80/tcp   open  http
+Nmap scan report for 192.168.0.20
+PORT   STATE    SERVICE VERSION
+53/udp filtered domain
+Nmap done: 2 IP addresses (2 hosts up) scanned in 1.20 seconds
+"""
+        found = parse_port_scan(text)
+        self.assertEqual(
+            [(item.host, item.port, item.protocol, item.state, item.service) for item in found],
+            [
+                ('router.lan (192.168.0.1)', '22', 'tcp', 'open', 'ssh'),
+                ('router.lan (192.168.0.1)', '80', 'tcp', 'open', 'http'),
+                ('192.168.0.20', '53', 'udp', 'filtered', 'domain'),
+            ])
 
 
 class HomeEnvironmentTest(unittest.TestCase):

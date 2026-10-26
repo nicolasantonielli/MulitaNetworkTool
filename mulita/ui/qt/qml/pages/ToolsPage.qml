@@ -782,6 +782,7 @@ Item {
                                       : modelData.place === "ping" ? i18n.pack.placePing
                                       : modelData.place === "publica" ? i18n.pack.placePublic
                                       : modelData.place === "wifi" ? i18n.pack.placeWifi
+                                      : modelData.place === "escaneo" ? i18n.pack.placeScan
                                       : modelData.placeLabel) + "   " + modelData.name
                                       + "   " + modelData.size + "   " + modelData.modified
                                 color: picked ? ui.onAccent : ui.text

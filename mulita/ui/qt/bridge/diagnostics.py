@@ -164,12 +164,46 @@ class PingController(SessionController):
 
 
 class PortScanController(TaskController):
+    portsChanged = pyqtSignal()
+
+    def __init__(self, ctx: BridgeContext):
+        super().__init__(ctx)
+        self._ports: tuple = ()
+
+    @pyqtProperty(str, notify=portsChanged)
+    def portsJson(self) -> str:
+        return json.dumps([{
+            'host': item.host,
+            'port': item.port,
+            'protocol': item.protocol,
+            'state': item.state,
+            'service': item.service,
+        } for item in self._ports])
 
     @pyqtSlot(str)
     def scan(self, arguments: str) -> None:
-        self._console.show(texts.SCANNING)
-        self._task(lambda: self._services.port_scan.scan(arguments),
-                   self._console.show, lambda error: self._console.show(f'{error}\n'))
+        self._task(lambda: self._services.port_scan.scan(arguments), self._show)
+
+    @pyqtSlot()
+    def clear(self) -> None:
+        if self._busy:
+            return
+        self._ports = ()
+        self.portsChanged.emit()
+
+    @pyqtSlot(str)
+    def save(self, filename: str) -> None:
+        found = self._ports
+        self._task(lambda: self._services.port_scan.save(found, filename), self._saved)
+
+    def _show(self, found: tuple) -> None:
+        self._ports = tuple(found)
+        self.portsChanged.emit()
+        if not self._ports:
+            self._ctx.notifier.info(tr('scanTitle'), tr('noPorts'))
+
+    def _saved(self, name: str) -> None:
+        self._ctx.notifier.success(tr('scanTitle'), name)
 
 
 class DiscoveryController(SessionController):

@@ -8,8 +8,8 @@ from typing import Optional
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
-from mulita.core.models import PingReply, PingRequest, PingSummary, TraceHop
-from mulita.core.parsers import parse_trace, read_ping_line
+from mulita.core.models import PingReply, PingRequest, PingSummary, PortFinding, TraceHop
+from mulita.core.parsers import parse_port_scan, parse_trace, read_ping_line
 from mulita.presentation.i18n import tr
 from mulita.core.ports import CommandRunner, ExitListener, OutputListener
 from mulita.services.base import ProcessSession
@@ -159,12 +159,53 @@ class PingService(ProcessSession):
 
 class PortScanService:
 
-    def __init__(self, runner: CommandRunner, commands: CommandFactory):
+    def __init__(self, runner: CommandRunner, commands: CommandFactory,
+                 directory: PurePosixPath | Path = PurePosixPath('/root/capturas/escaneo')):
         self._runner = runner
         self._commands = commands
+        self._directory = Path(directory)
 
-    def scan(self, arguments: str) -> str:
-        return self._runner.run(self._commands.port_scan(validation.scan_arguments(arguments))).text
+    def scan(self, arguments: str) -> tuple[PortFinding, ...]:
+        result = self._runner.run(self._commands.port_scan(validation.scan_arguments(arguments)))
+        found = parse_port_scan(result.stdout)
+        if found:
+            return found
+        if not result.ok:
+            detail = (result.text or '').strip()
+            raise CommandFailedError(detail or tr('scanFailed'), result)
+        return ()
+
+    def save(self, findings: tuple[PortFinding, ...], filename: str) -> str:
+        if not findings:
+            raise ValidationError(tr('noPorts'))
+        name = validation.trace_filename(filename)
+        self._ensure_directory()
+        path = self._directory / name
+        if path.parent.resolve() != self._directory.resolve():
+            raise ValidationError(tr('badStoredName'))
+        if path.exists():
+            raise ValidationError(tr('nameExists'))
+        try:
+            with path.open('w', encoding='utf-8', newline='') as handle:
+                writer = csv.writer(handle, lineterminator='\n')
+                writer.writerow([
+                    tr('scanHost'), tr('scanPort'), tr('scanProto'), tr('scanState'), tr('scanService'),
+                ])
+                for item in findings:
+                    writer.writerow([item.host, item.port, item.protocol, item.state, item.service])
+        except OSError as exc:
+            raise CommandFailedError(tr('saveScanFailed')) from exc
+        if hasattr(os, 'sync'):
+            os.sync()
+        return name
+
+    def _ensure_directory(self) -> None:
+        if os.name != 'posix':
+            return
+        try:
+            self._directory.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise CommandFailedError(tr('scanFolder')) from exc
 
 
 class DiscoveryService(ProcessSession):

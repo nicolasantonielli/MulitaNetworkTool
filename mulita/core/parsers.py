@@ -9,8 +9,8 @@ import re
 from mulita.core.errors import CommandFailedError
 from mulita.presentation.i18n import tr
 from mulita.core.models import (AddressMode, EthernetConfig, NetworkInterface,
-                                PingReply, PingSummary, PublicAddress, SpeedTestResult,
-                                TraceHop, WifiLink, WifiNetwork)
+                                PingReply, PingSummary, PortFinding, PublicAddress,
+                                SpeedTestResult, TraceHop, WifiLink, WifiNetwork)
 
 
 def cable_connected(name: str, flags: list, operstate: str) -> bool:
@@ -742,6 +742,35 @@ def _ip_version(value: str) -> str:
         return f'IPv{ipaddress.ip_address(value).version}'
     except ValueError:
         return ''
+
+
+_SCAN_HOST = re.compile(r'^Nmap scan report for (?P<host>.+)$')
+_SCAN_PORT = re.compile(
+    r'^(?P<port>\d+)/(?P<protocol>tcp|udp|sctp|ip)\s+(?P<state>\S+)'
+    r'(?:\s+(?P<service>.*\S))?\s*$',
+    re.IGNORECASE)
+
+
+def parse_port_scan(text: str) -> tuple[PortFinding, ...]:
+    """Informe normal de nmap: un puerto por linea, bajo cada host."""
+    host = ''
+    found: list[PortFinding] = []
+    for line in (text or '').splitlines():
+        report = _SCAN_HOST.match(line.strip())
+        if report:
+            host = report.group('host').strip()
+            continue
+        port = _SCAN_PORT.match(line.strip())
+        if not port or not host:
+            continue
+        found.append(PortFinding(
+            host=host,
+            port=port.group('port'),
+            protocol=port.group('protocol').lower(),
+            state=port.group('state').lower(),
+            service=(port.group('service') or '').strip(),
+        ))
+    return tuple(found)
 
 
 def parse_speed_test(text: str) -> SpeedTestResult:
