@@ -157,16 +157,8 @@ if [[ -r /proc/device-tree/model ]] && tr -d '\0' < /proc/device-tree/model | gr
   echo "Aviso: esta libreria no lee el GPIO de la Raspberry Pi 5."
 fi
 
-# El ft5x06 se anuncia como mouse. Qt entonces lee mal el arrastre y el dedo salta.
-touch_rule="/etc/udev/rules.d/99-mulita-touch.rules"
-if [[ ! -f "$touch_rule" ]] || ! grep -q ft5x06 "$touch_rule"; then
-  echo "Marcando el panel ft5x06 como pantalla tactil..."
-  as_root tee "$touch_rule" >/dev/null <<'EOF'
-ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="*ft5x06*", ENV{ID_INPUT}="1", ENV{ID_INPUT_TOUCHSCREEN}="1", ENV{ID_INPUT_MOUSE}="0"
-EOF
-  as_root udevadm control --reload-rules || true
-  as_root udevadm trigger --subsystem-match=input || true
-fi
+# La BTT-PITFT50 V1.0 usa el tactil por firmware. No necesita la regla udev
+# que antes reclasificaba ft5x06; esa regla no arreglaba los contactos fantasma.
 
 boot_dir() {
   if [[ -d /boot/firmware ]]; then
@@ -227,13 +219,18 @@ configure_boot() {
     echo "Aviso: no esta $file. No se cambio la consola del kernel."
   fi
   file="$dir/config.txt"
-  if [[ -f "$file" ]] && ! grep -q 'mulita-kiosk' "$file"; then
-    as_root tee -a "$file" >/dev/null <<'EOF'
-
-# mulita-kiosk
-disable_splash=1
-EOF
+  if [[ ! -f "$file" ]]; then
+    echo "No esta $file. No se pudo configurar la pantalla BTT-PITFT50 V1.0." >&2
+    return 1
   fi
+  local overlay
+  for overlay in vc4-kms-dsi-7inch rpi-ft5406; do
+    if [[ ! -f "$dir/overlays/$overlay.dtbo" ]]; then
+      echo "Falta $dir/overlays/$overlay.dtbo. No se modifico config.txt." >&2
+      return 1
+    fi
+  done
+  as_root python3 "$ROOT/scripts/configure_display.py" "$file"
 }
 
 configure_boot

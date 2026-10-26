@@ -22,6 +22,25 @@ La prueba observa lo que Qt recibe, no los eventos crudos del kernel. Que no apa
 
 ## Ejecutar en Raspberry Pi
 
+El instalador esta configurado para la pantalla **BTT-PITFT50 V1.0** en Raspberry Pi 4.
+En `config.txt` desactiva la deteccion automatica de pantalla, configura el video
+con `vc4-kms-dsi-7inch,disable_touch` y habilita el tactil por firmware con
+`rpi-ft5406` y `disable_touchscreen=0`. Esta es la configuracion probada en el equipo
+para evitar los contactos fantasma del acceso directo mediante `edt_ft5x06`.
+
+El script usa `/boot/firmware/config.txt` o `/boot/config.txt` segun el sistema,
+conserva la primera copia en `config.txt.mulita-bak` y permite repetir la instalacion
+sin duplicar los ajustes. Comprueba que los overlays esten instalados y conserva
+los demas ajustes de arranque. Los cambios se aplican al reiniciar.
+
+Para actualizar la configuracion de un equipo ya instalado:
+
+```bash
+git pull origin v3
+bash install-lite.sh
+sudo reboot
+```
+
 El script principal para Raspberry instala dependencias del sistema, prepara el entorno virtual y arranca la app:
 
 ```bash
