@@ -4,9 +4,9 @@ Aplicacion de diagnostico de red pensada para Raspberry Pi 4, con soporte de ent
 
 ## Copiar y pegar texto
 
-Mantener presionado un texto informativo, un resultado o una celda abre el menu
-flotante **Copiar**. Seleccionar texto con el cursor y soltar abre el mismo menu
-para esa seleccion. El clic derecho tambien permite abrirlo. El portapapeles
+Mantener presionado un texto para abrir el menu **Copiar**. Vale para un texto
+informativo, un resultado o una celda. Seleccionar texto con el cursor y soltar
+abre el mismo menu para esa seleccion. El clic derecho tambien permite abrirlo. El portapapeles
 solo se modifica al elegir **Copiar**; tocar fuera o presionar Escape cierra el
 menu sin copiar. En cuadros editables, incluso vacios, el menu tambien ofrece
 **Pegar**: inserta el portapapeles en el cursor o reemplaza la seleccion. Tocar

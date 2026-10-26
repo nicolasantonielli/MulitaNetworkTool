@@ -94,14 +94,6 @@ Item {
                         visible: scanPage.ports.length > 0
                         spacing: Math.round(ui.gap * 0.3)
 
-                        Text {
-                            Layout.fillWidth: true
-                            text: i18n.pack.tableCopyHint
-                            color: ui.textMuted
-                            font.pixelSize: ui.fontSmall
-                            wrapMode: Text.Wrap
-                        }
-
                         ScrollPage {
                             id: scanTable
                             spacing: 1
@@ -319,14 +311,6 @@ Item {
                         anchors.margins: Math.round(ui.gap * 0.6)
                         visible: discoverPage.hosts.length > 0
                         spacing: Math.round(ui.gap * 0.3)
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: i18n.pack.tableCopyHint
-                            color: ui.textMuted
-                            font.pixelSize: ui.fontSmall
-                            wrapMode: Text.Wrap
-                        }
 
                         ScrollPage {
                             id: discoverTable
