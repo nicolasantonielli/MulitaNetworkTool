@@ -217,9 +217,10 @@ class DiscoveryService(ProcessSession):
         self._commands = commands
         self._directory = Path(directory)
 
-    def start(self, on_output: Optional[OutputListener] = None,
+    def start(self, interface: str = '', on_output: Optional[OutputListener] = None,
               on_exit: Optional[ExitListener] = None) -> None:
-        self._launch(self._commands.discovery(), on_output, on_exit)
+        name = validation.interface_name(interface) if (interface or '').strip() else ''
+        self._launch(self._commands.discovery(name), on_output, on_exit)
 
     def save(self, hosts: tuple[HostSighting, ...], filename: str) -> str:
         if not hosts:

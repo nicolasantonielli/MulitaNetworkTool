@@ -223,12 +223,12 @@ class DiscoveryController(SessionController):
             'vendor': item.vendor,
         } for item in self._hosts])
 
-    @pyqtSlot(result=bool)
-    def start(self) -> bool:
+    @pyqtSlot(str, result=bool)
+    def start(self, interface: str) -> bool:
         self._hosts = []
         self._pending = ''
         self.hostsChanged.emit()
-        return self._launch(self._session.start)
+        return self._launch(lambda **callbacks: self._session.start(interface, **callbacks))
 
     @pyqtSlot()
     def clear(self) -> None:

@@ -336,6 +336,7 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('fieldDirection', 'la direccion', 'the direction'),
     ('needHost', 'Ingrese una IP o nombre de destino', 'Enter an IP address or host name'),
     ('badHost', 'Destino invalido: {value}', 'Invalid destination: {value}'),
+    ('badIface', 'Interfaz invalida: {value}', 'Invalid interface: {value}'),
     ('badMac', 'MAC invalida: {value}', 'Invalid MAC: {value}'),
     ('empty', '(vacia)', '(empty)'),
     ('badArgs', 'Argumentos invalidos: {value}', 'Invalid arguments: {value}'),

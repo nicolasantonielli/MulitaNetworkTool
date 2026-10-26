@@ -187,6 +187,45 @@ Item {
                 id: discoverPage
                 spacing: ui.gap
 
+                property string selectedInterface: ""
+
+                readonly property var discoverInterfaces: {
+                    var rows = network.interfaces
+                    var found = []
+                    for (var i = 0; i < rows.length; ++i) {
+                        var row = rows[i]
+                        var name = typeof row === "string" ? row : row.value
+                        if (name !== "lo")
+                            found.push(typeof row === "string"
+                                       ? { label: name, value: name, linked: false }
+                                       : row)
+                    }
+                    return found
+                }
+
+                function keepDiscoverSelection() {
+                    var rows = discoverInterfaces
+                    for (var i = 0; i < rows.length; ++i) {
+                        if (rows[i].value === selectedInterface && selectedInterface !== "")
+                            return
+                    }
+                    var chosen = ""
+                    for (var j = 0; j < rows.length; ++j) {
+                        if (rows[j].value === "eth0")
+                            chosen = "eth0"
+                    }
+                    if (!chosen && rows.length)
+                        chosen = rows[0].value
+                    selectedInterface = chosen
+                }
+
+                Connections {
+                    target: network
+                    function onInterfacesChanged() { discoverPage.keepDiscoverSelection() }
+                }
+
+                Component.onCompleted: keepDiscoverSelection()
+
                 readonly property var hosts: {
                     try { return JSON.parse(discovery.hostsJson) }
                     catch (e) { return [] }
@@ -201,6 +240,14 @@ Item {
                 function columnWidth(share) {
                     var bar = discoverTable.overflowing ? Math.round(ui.mm * 4) : 0
                     return Math.max(1, (discoverTable.width - bar) * share / 100)
+                }
+
+                ChoiceChips {
+                    Layout.fillWidth: true
+                    model: discoverPage.discoverInterfaces
+                    value: discoverPage.selectedInterface
+                    enabled: !discovery.running
+                    onActivated: discoverPage.selectedInterface = value
                 }
 
                 RowLayout {
@@ -223,7 +270,10 @@ Item {
                         text: discovery.running ? i18n.pack.stop : i18n.pack.discover
                         icon: discovery.running ? "stop" : "play"
                         kind: discovery.running ? "danger" : "success"
-                        onClicked: discovery.running ? discovery.stop() : discovery.start()
+                        enabled: discovery.running || discoverPage.selectedInterface !== ""
+                        onClicked: discovery.running
+                                  ? discovery.stop()
+                                  : discovery.start(discoverPage.selectedInterface)
                     }
                 }
 

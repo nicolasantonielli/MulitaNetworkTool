@@ -13,6 +13,7 @@ from mulita.core.models import (PING_COUNT, PING_INTERVAL, PING_SIZE,
 _HOST = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._:%-]*$')
 _MAC = re.compile(r'^[0-9A-Fa-f]{2}([:-])(?:[0-9A-Fa-f]{2}\1){4}[0-9A-Fa-f]{2}$')
 _FILENAME = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]*$')
+_IFACE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.:-]{0,14}$')
 CAPTURE_EXTENSION = '.pcap'
 TRACE_EXTENSION = '.csv'
 PING_TABLE_EXTENSION = '.csv'
@@ -90,6 +91,13 @@ def trace_filename(value: str) -> str:
     if not _FILENAME.match(name):
         raise ValidationError(tr('badFileName'))
     return name + TRACE_EXTENSION
+
+
+def interface_name(value: str) -> str:
+    value = require(value, tr('fieldIface'))
+    if not _IFACE.match(value):
+        raise ValidationError(tr('badIface', value=value))
+    return value
 
 
 def capture_request(interface: str, direction: str, filename: str) -> CaptureRequest:

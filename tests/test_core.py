@@ -57,6 +57,8 @@ class CommandFactoryTest(unittest.TestCase):
 
     def test_misc_commands(self):
         self.assertEqual(self.commands.discovery(), ['/sbin/netdiscover', '-f', '-P', '-d'])
+        self.assertEqual(self.commands.discovery('wlan0'),
+                         ['/sbin/netdiscover', '-f', '-P', '-d', '-i', 'wlan0'])
         self.assertEqual(self.commands.speed_test(),
                          ['/bin/speedtest', '--json', '--timeout', '25'])
         self.assertEqual(self.commands.speed_test('192.168.1.20'),
@@ -89,6 +91,14 @@ class ValidationTest(unittest.TestCase):
             with self.subTest(value=value):
                 with self.assertRaises(ValidationError):
                     validation.capture_filename(value)
+
+    def test_interface_name_accepts_linux_devices(self):
+        self.assertEqual(validation.interface_name(' wlan0 '), 'wlan0')
+        self.assertEqual(validation.interface_name('br-mulita'), 'br-mulita')
+        for value in ('', 'eth0;id', '-i', 'a b', '../eth0'):
+            with self.subTest(value=value):
+                with self.assertRaises(ValidationError):
+                    validation.interface_name(value)
 
     def test_capture_requires_interface_and_direction(self):
         with self.assertRaises(ValidationError):
