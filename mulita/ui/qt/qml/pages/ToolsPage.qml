@@ -296,7 +296,75 @@ Item {
 
             // Test de velocidad
             ColumnLayout {
+                id: speedPage
                 spacing: ui.gap
+
+                property string selectedInterface: ""
+
+                readonly property var speedInterfaces: {
+                    var rows = network.interfaces
+                    var found = []
+                    for (var i = 0; i < rows.length; ++i) {
+                        var row = rows[i]
+                        var name = typeof row === "string" ? row : row.value
+                        if (name !== "lo")
+                            found.push(typeof row === "string"
+                                       ? { label: name, value: name, linked: false, address: "" }
+                                       : row)
+                    }
+                    return found
+                }
+
+                readonly property string selectedAddress: {
+                    for (var i = 0; i < speedInterfaces.length; ++i) {
+                        if (speedInterfaces[i].value === selectedInterface)
+                            return speedInterfaces[i].address || ""
+                    }
+                    return ""
+                }
+
+                function keepSpeedSelection() {
+                    var rows = speedInterfaces
+                    for (var i = 0; i < rows.length; ++i) {
+                        if (rows[i].value === selectedInterface && selectedInterface !== "")
+                            return
+                    }
+                    var chosen = ""
+                    for (var j = 0; j < rows.length; ++j) {
+                        if (rows[j].value === "eth0")
+                            chosen = "eth0"
+                    }
+                    if (!chosen && rows.length)
+                        chosen = rows[0].value
+                    selectedInterface = chosen
+                }
+
+                Connections {
+                    target: network
+                    function onInterfacesChanged() { speedPage.keepSpeedSelection() }
+                }
+
+                Component.onCompleted: keepSpeedSelection()
+
+                ChoiceChips {
+                    Layout.fillWidth: true
+                    model: speedPage.speedInterfaces
+                    value: speedPage.selectedInterface
+                    enabled: !speedTest.busy
+                    onActivated: speedPage.selectedInterface = value
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: speedPage.speedInterfaces.length === 0
+                          ? i18n.pack.noIfaces
+                          : (speedPage.selectedAddress !== ""
+                             ? speedPage.selectedAddress
+                             : i18n.pack.speedNoIpv4)
+                    color: speedPage.selectedAddress !== "" ? ui.text : ui.textMuted
+                    font.pixelSize: ui.fontBody
+                    font.family: speedPage.selectedAddress !== "" ? ui.monoFamily : ""
+                    wrapMode: Text.Wrap
+                }
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -344,8 +412,8 @@ Item {
                         text: speedTest.busy ? i18n.pack.measuring : i18n.pack.startTest
                         icon: "gauge"
                         kind: "success"
-                        enabled: !speedTest.busy
-                        onClicked: speedTest.measure()
+                        enabled: !speedTest.busy && speedPage.selectedAddress !== ""
+                        onClicked: speedTest.measure(speedPage.selectedInterface)
                     }
                 }
             }

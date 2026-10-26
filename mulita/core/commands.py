@@ -170,8 +170,11 @@ class CommandFactory:
     def wake_on_lan(self, mac: str) -> Argv:
         return [self._bin.wakeonlan, mac]
 
-    def speed_test(self) -> Argv:
-        return [self._bin.speedtest, '--json']
+    def speed_test(self, source: str = '') -> Argv:
+        argv = [self._bin.speedtest, '--json']
+        if source:
+            argv += ['--source', source]
+        return argv
 
     def public_ip(self, url: str, timeout: int) -> Argv:
         return [self._bin.curl, '-s', '--max-time', str(timeout), url]

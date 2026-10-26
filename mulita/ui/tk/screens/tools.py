@@ -89,7 +89,8 @@ class ToolsScreen(Screen):
     def _measure(self) -> None:
         self._measuring.config(text=texts.MEASURING)
         self._speed_button.configure(state='disabled')
-        self.run_in_background(self.services.speed_test.measure, self._show_speed, self._speed_failed)
+        self.run_in_background(lambda: self.services.speed_test.measure(''),
+                               self._show_speed, self._speed_failed)
 
     def _show_speed(self, result) -> None:
         self._download.config(text=texts.download(result))

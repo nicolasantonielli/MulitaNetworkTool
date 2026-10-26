@@ -118,10 +118,11 @@ class SpeedTestController(TaskController):
     def status(self) -> str:
         return self._status
 
-    @pyqtSlot()
-    def measure(self) -> None:
+    @pyqtSlot(str)
+    def measure(self, interface: str) -> None:
         self._set_status(texts.MEASURING)
-        self._task(self._services.speed_test.measure, self._show, lambda error: self._set_status(str(error)))
+        self._task(lambda: self._services.speed_test.measure(interface),
+                   self._show, lambda error: self._set_status(str(error)))
 
     def _show(self, result: SpeedTestResult) -> None:
         self._result = result

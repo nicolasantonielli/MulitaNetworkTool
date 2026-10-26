@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import ipaddress
 import os
 import re
 import time
@@ -13,7 +14,8 @@ from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.presentation.i18n import tr
 from mulita.core.models import Calibration, ClimateReading, SpeedTestResult
-from mulita.core.parsers import parse_mac_vendor, parse_public_address, parse_speed_test
+from mulita.core.parsers import (parse_interfaces, parse_mac_vendor,
+                                parse_public_address, parse_speed_test)
 from mulita.core.ports import ClimateSensor, CommandRunner
 
 
@@ -61,11 +63,29 @@ class SpeedTestService:
         self._runner = runner
         self._commands = commands
 
-    def measure(self) -> SpeedTestResult:
-        result = self._runner.run(self._commands.speed_test())
+    def measure(self, interface: str = '') -> SpeedTestResult:
+        source = self._source_address(interface) if (interface or '').strip() else ''
+        result = self._runner.run(self._commands.speed_test(source))
         if not result.ok:
             raise CommandFailedError(f'Fallo el test de velocidad: {result.text}', result)
         return parse_speed_test(result.stdout)
+
+    def _source_address(self, interface: str) -> str:
+        name = (interface or '').strip()
+        listed = self._runner.run(self._commands.interfaces())
+        if not listed.ok:
+            raise CommandFailedError(tr('speedNoIface'), listed)
+        for item in parse_interfaces(listed.stdout):
+            if item.name != name:
+                continue
+            for address in item.addresses:
+                try:
+                    ip = ipaddress.ip_address(address)
+                except ValueError:
+                    continue
+                if ip.version == 4 and not ip.is_loopback and not ip.is_link_local:
+                    return address
+        raise ValidationError(tr('speedNoAddress', interface=name))
 
 
 class PublicIpService:

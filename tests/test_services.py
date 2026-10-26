@@ -191,6 +191,15 @@ class BlockingServicesTest(unittest.TestCase):
                              '/bin/curl': CommandResult(0, '181.1.2.3')})
         services = services_with(runner)
         self.assertEqual(services.speed_test.measure().download_mbps, 50)
+        bound = FakeRunner({
+            '/usr/bin/ip': CommandResult(0, IP_JSON),
+            '/bin/speedtest': CommandResult(0, '{"download": 10e6, "upload": 5e6}'),
+        })
+        measured = services_with(bound).speed_test.measure('wlan0')
+        self.assertEqual(measured.download_mbps, 10)
+        self.assertEqual(bound.runs[-1], ['/bin/speedtest', '--json', '--source', '192.168.0.20'])
+        with self.assertRaises(ValidationError):
+            services_with(bound).speed_test.measure('eth0')
         self.assertEqual(services.public_ip.lookup().ip, '181.1.2.3')
 
     def test_public_ip_saves_a_csv_named_with_the_moment(self):

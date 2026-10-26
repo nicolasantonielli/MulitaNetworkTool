@@ -11,6 +11,17 @@ from mulita.ui.qt.bridge.base import (BridgeContext, Console, Controller,
                                       SessionController)
 
 
+def _interface_ipv4(interface: NetworkInterface) -> str:
+    for address in interface.addresses:
+        try:
+            ip = ipaddress.ip_address(address)
+        except ValueError:
+            continue
+        if ip.version == 4 and not ip.is_loopback and not ip.is_link_local:
+            return address
+    return ''
+
+
 def primary_address(interfaces: list[NetworkInterface]) -> str:
     """Primera IPv4 util: la que el tecnico necesita ver en la barra de estado."""
     for interface in interfaces:
@@ -57,7 +68,12 @@ class NetworkController(Controller):
                                         self._loaded, self._failed)
 
     def _loaded(self, interfaces: list[NetworkInterface]) -> None:
-        rows = [{'label': item.name, 'value': item.name, 'linked': item.cable} for item in interfaces]
+        rows = [{
+            'label': item.name,
+            'value': item.name,
+            'linked': item.cable,
+            'address': _interface_ipv4(item),
+        } for item in interfaces]
         if rows != self._interfaces:
             self._interfaces = rows
             self.interfacesChanged.emit()
