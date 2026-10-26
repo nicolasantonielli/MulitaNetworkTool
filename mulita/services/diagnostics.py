@@ -8,8 +8,8 @@ from typing import Optional
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
-from mulita.core.models import PingRequest, TraceHop
-from mulita.core.parsers import parse_trace
+from mulita.core.models import PingReply, PingRequest, PingSummary, TraceHop
+from mulita.core.parsers import parse_trace, read_ping_line
 from mulita.presentation.i18n import tr
 from mulita.core.ports import CommandRunner, ExitListener, OutputListener
 from mulita.services.base import ProcessSession
@@ -68,6 +68,14 @@ class TraceService:
             raise CommandFailedError(tr('traceFolder')) from exc
 
 
+def _ping_status(reply: PingReply) -> str:
+    if reply.status == 'ok':
+        return tr('pingOk')
+    if reply.status == 'dup':
+        return tr('pingDup')
+    return reply.detail or tr('pingFail')
+
+
 def _trace_error(text: str) -> str:
     line = next((part.strip() for part in (text or '').splitlines() if part.strip()), '')
     if line.lower().startswith('mtr:'):
@@ -75,11 +83,73 @@ def _trace_error(text: str) -> str:
     return line[:180]
 
 
+def ping_note(summary: PingSummary) -> str:
+    rows = []
+    if summary.target:
+        rows.append(tr('pingNoteTitle', target=summary.target))
+    pairs = (
+        ('pingSentLabel', summary.transmitted),
+        ('pingReceivedLabel', summary.received),
+        ('pingLossLabel', summary.loss),
+        ('pingElapsedLabel', summary.elapsed),
+        ('pingMinLabel', summary.minimum and f'{summary.minimum} ms'),
+        ('pingAvgLabel', summary.average and f'{summary.average} ms'),
+        ('pingMaxLabel', summary.maximum and f'{summary.maximum} ms'),
+        ('pingDevLabel', summary.deviation and f'{summary.deviation} ms'),
+    )
+    rows.extend(f'{tr(key)}: {value}' for key, value in pairs if value)
+    if not rows:
+        rows.append(tr('pingNoStats'))
+    return '\n'.join(rows) + '\n'
+
+
 class PingService(ProcessSession):
 
-    def __init__(self, runner: CommandRunner, commands: CommandFactory):
+    def __init__(self, runner: CommandRunner, commands: CommandFactory,
+                 directory: PurePosixPath | Path = PurePosixPath('/root/capturas/ping')):
         super().__init__(runner, 'El ping')
         self._commands = commands
+        self._directory = Path(directory)
+
+    def save(self, replies: tuple[PingReply, ...], summary: PingSummary | None, filename: str) -> str:
+        if not replies and not (summary and summary.ready):
+            raise ValidationError(tr('noPing'))
+        stem = validation.ping_basename(filename)
+        base = stem + validation.PING_TABLE_EXTENSION
+        note = stem + validation.PING_NOTE_EXTENSION
+        self._ensure_directory()
+        folder = self._directory
+        table_path = folder / base
+        note_path = folder / note
+        for path in (table_path, note_path):
+            if path.parent.resolve() != folder.resolve():
+                raise ValidationError(tr('badStoredName'))
+            if path.exists():
+                raise ValidationError(tr('nameExists'))
+        try:
+            with table_path.open('w', encoding='utf-8', newline='') as handle:
+                writer = csv.writer(handle, lineterminator='\n')
+                writer.writerow([
+                    tr('pingSeq'), tr('pingFrom'), tr('pingTtl'), tr('pingTime'), tr('pingState'),
+                ])
+                for reply in replies:
+                    writer.writerow([
+                        reply.seq, reply.source, reply.ttl, reply.time, _ping_status(reply),
+                    ])
+            note_path.write_text(ping_note(summary or PingSummary()), encoding='utf-8')
+        except OSError as exc:
+            raise CommandFailedError(tr('savePingFailed')) from exc
+        if hasattr(os, 'sync'):
+            os.sync()
+        return base
+
+    def _ensure_directory(self) -> None:
+        if os.name != 'posix':
+            return
+        try:
+            self._directory.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise CommandFailedError(tr('pingFolder')) from exc
 
     def start(self, target: str, count: float, interval: float, size: float,
               on_output: Optional[OutputListener] = None,

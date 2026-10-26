@@ -22,9 +22,10 @@ _MOUNT_ROOT = Path('/mnt/mulita-usb')
 _SYSTEM_MOUNTS = {'/', '/boot', '/boot/firmware'}
 
 _PLACES = {
-    'captura': ('Captura', '.pcap'),
-    'tap': ('TAP', '.pcap'),
-    'traza': ('Traza', '.csv'),
+    'captura': ('Captura', ('.pcap',)),
+    'tap': ('TAP', ('.pcap',)),
+    'traza': ('Traza', ('.csv',)),
+    'ping': ('Ping', ('.csv', '.txt')),
 }
 
 
@@ -65,8 +66,9 @@ class CaptureFilesService:
             folder = self._folder(place)
             if not folder.is_dir():
                 continue
+            allowed = suffix if isinstance(suffix, tuple) else (suffix,)
             for child in folder.iterdir():
-                if not child.is_file() or child.suffix.lower() != suffix:
+                if not child.is_file() or child.suffix.lower() not in allowed:
                     continue
                 stat = child.stat()
                 found.append((stat.st_mtime, StoredCapture(
@@ -82,7 +84,7 @@ class CaptureFilesService:
     def rename(self, place: str, name: str, new_name: str) -> str:
         self._guard(place)
         source = self._existing(place, name)
-        target = self._destination(place, new_name)
+        target = self._destination(place, new_name, source.suffix.lower())
         if source == target:
             return source.name
         if target.exists():
@@ -93,7 +95,7 @@ class CaptureFilesService:
     def copy(self, place: str, name: str, new_name: str) -> str:
         self._guard(place)
         source = self._existing(place, name)
-        target = self._destination(place, new_name)
+        target = self._destination(place, new_name, source.suffix.lower())
         if target.exists():
             raise ValidationError(tr('nameExists'))
         shutil.copyfile(source, target)
@@ -141,11 +143,19 @@ class CaptureFilesService:
             return self._root / 'tap'
         if place == 'traza':
             return self._root / 'trazas'
+        if place == 'ping':
+            return self._root / 'ping'
         raise ValidationError(tr('badFolder'))
 
-    def _named(self, place: str, name: str) -> Path:
+    def _named(self, place: str, name: str, suffix: str = '') -> Path:
         folder = self._folder(place)
-        filename = validation.trace_filename(name) if place == 'traza' else validation.capture_filename(name)
+        if place == 'ping':
+            chosen = suffix if suffix in ('.csv', '.txt') else _ping_suffix(name)
+            filename = validation.named_file(validation.ping_basename(name), chosen)
+        elif place == 'traza':
+            filename = validation.trace_filename(name)
+        else:
+            filename = validation.capture_filename(name)
         path = folder / filename
         if path.parent.resolve() != folder.resolve():
             raise ValidationError(tr('badStoredName'))
@@ -157,8 +167,8 @@ class CaptureFilesService:
             raise ValidationError(tr('fileMissing'))
         return path
 
-    def _destination(self, place: str, name: str) -> Path:
-        return self._named(place, name)
+    def _destination(self, place: str, name: str, suffix: str = '') -> Path:
+        return self._named(place, name, suffix)
 
     def _found_drives(self) -> tuple[UsbDrive, ...]:
         if self._drives is not None:
@@ -196,6 +206,12 @@ class CaptureFilesService:
         if not result.ok:
             raise CommandFailedError('No se pudo preparar el pendrive', result)
         return target
+
+
+def _ping_suffix(name: str) -> str:
+    if (name or '').lower().endswith('.txt'):
+        return '.txt'
+    return '.csv'
 
 
 def parse_usb_drives(text: str) -> tuple[UsbDrive, ...]:

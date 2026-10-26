@@ -66,6 +66,7 @@ class AppConfig:
     capture_dir: PurePosixPath = PurePosixPath('/root/capturas')
     default_capture_name: str = 'prueba'
     trace_dir: PurePosixPath = PurePosixPath('/root/capturas/trazas')
+    ping_dir: PurePosixPath = PurePosixPath('/root/capturas/ping')
     trace_cycles: int = 6
     public_ip_url: str = 'ifconfig.me'
     public_ip_timeout: int = 10

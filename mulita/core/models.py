@@ -180,6 +180,33 @@ ICMP_HEADER_BYTES = 8
 
 
 @dataclass(frozen=True)
+class PingReply:
+    seq: int
+    source: str
+    ttl: str
+    time: str
+    status: str
+    detail: str = ''
+
+
+@dataclass(frozen=True)
+class PingSummary:
+    target: str = ''
+    transmitted: str = ''
+    received: str = ''
+    loss: str = ''
+    elapsed: str = ''
+    minimum: str = ''
+    average: str = ''
+    maximum: str = ''
+    deviation: str = ''
+
+    @property
+    def ready(self) -> bool:
+        return bool(self.transmitted)
+
+
+@dataclass(frozen=True)
 class PingRequest:
     target: str
     count: int

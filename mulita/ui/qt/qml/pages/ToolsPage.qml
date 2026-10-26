@@ -329,7 +329,7 @@ Item {
                 }
 
                 function baseName(name) {
-                    return name.replace(/\.(pcap|csv)$/i, "")
+                    return name.replace(/\.(pcap|csv|txt)$/i, "")
                 }
 
                 function begin(kind) {
@@ -398,6 +398,7 @@ Item {
                                 text: (modelData.place === "captura" ? i18n.pack.placeCapture
                                       : modelData.place === "tap" ? i18n.pack.placeTap
                                       : modelData.place === "traza" ? i18n.pack.placeTrace
+                                      : modelData.place === "ping" ? i18n.pack.placePing
                                       : modelData.placeLabel) + "   " + modelData.name
                                       + "   " + modelData.size + "   " + modelData.modified
                                 color: selected ? ui.onAccent : ui.text

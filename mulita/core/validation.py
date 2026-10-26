@@ -15,6 +15,8 @@ _MAC = re.compile(r'^[0-9A-Fa-f]{2}([:-])(?:[0-9A-Fa-f]{2}\1){4}[0-9A-Fa-f]{2}$'
 _FILENAME = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]*$')
 CAPTURE_EXTENSION = '.pcap'
 TRACE_EXTENSION = '.csv'
+PING_TABLE_EXTENSION = '.csv'
+PING_NOTE_EXTENSION = '.txt'
 
 
 def require(value: str, field: str) -> str:
@@ -58,6 +60,26 @@ def capture_filename(value: str) -> str:
     if not _FILENAME.match(name):
         raise ValidationError(tr('badFileName'))
     return name + CAPTURE_EXTENSION
+
+
+def ping_basename(value: str) -> str:
+    name = (value or '').strip()
+    for suffix in (PING_TABLE_EXTENSION, PING_NOTE_EXTENSION):
+        if name.lower().endswith(suffix):
+            name = name[:-len(suffix)]
+            break
+    if not _FILENAME.match(name):
+        raise ValidationError(tr('badFileName'))
+    return name
+
+
+def named_file(value: str, suffix: str) -> str:
+    name = (value or '').strip()
+    if name.lower().endswith(suffix):
+        name = name[:-len(suffix)]
+    if not _FILENAME.match(name):
+        raise ValidationError(tr('badFileName'))
+    return name + suffix
 
 
 def trace_filename(value: str) -> str:

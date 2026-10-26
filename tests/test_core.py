@@ -10,8 +10,9 @@ from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.models import (Calibration, CaptureDirection, ClimateReading,
                                 CommandResult)
+from mulita.core.models import PingSummary
 from mulita.core.parsers import (cable_connected, parse_interfaces, parse_speed_test,
-                                parse_trace)
+                                parse_trace, read_ping_line)
 
 IP_JSON = '''[
  {"ifindex":1,"ifname":"lo","address":"00:00:00:00:00:00",
@@ -181,6 +182,28 @@ class TraceParseTest(unittest.TestCase):
         self.assertEqual(hops[1].address, '???')
         self.assertEqual(hops[1].loss, '100.0%')
         self.assertEqual(parse_trace('HOST: x\n'), ())
+
+    def test_ping_lines_become_replies_and_a_final_note(self):
+        text = """64 bytes from 8.8.8.8: icmp_seq=1 ttl=117 time=20.1 ms
+From 10.0.0.1 icmp_seq=2 Destination Host Unreachable
+--- 8.8.8.8 ping statistics ---
+2 packets transmitted, 1 received, 50% packet loss, time 1001ms
+rtt min/avg/max/mdev = 19.400/20.100/20.100/0.200 ms
+"""
+        summary = PingSummary()
+        replies = []
+        for line in text.splitlines():
+            reply, summary = read_ping_line(line, summary)
+            if reply:
+                replies.append(reply)
+        self.assertEqual([(item.seq, item.source, item.status) for item in replies],
+                         [(1, '8.8.8.8', 'ok'), (2, '10.0.0.1', 'fail')])
+        self.assertEqual(summary.target, '8.8.8.8')
+        self.assertEqual(summary.transmitted, '2')
+        self.assertEqual(summary.received, '1')
+        self.assertEqual(summary.loss, '50%')
+        self.assertEqual(summary.minimum, '19.400')
+        self.assertEqual(summary.deviation, '0.200')
 
 
 class HomeEnvironmentTest(unittest.TestCase):

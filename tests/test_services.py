@@ -135,6 +135,28 @@ class BlockingServicesTest(unittest.TestCase):
             with self.assertRaises(ValidationError):
                 services.trace.save((), 'otra')
 
+    def test_ping_save_writes_the_table_and_the_note(self):
+        import tempfile
+        from pathlib import Path
+
+        from mulita.core.models import PingReply, PingSummary
+        summary = PingSummary(
+            target='8.8.8.8', transmitted='2', received='2', loss='0%',
+            elapsed='1001 ms', minimum='19.4', average='20.1', maximum='21.0', deviation='0.2')
+        replies = (PingReply(1, '8.8.8.8', '117', '20.1', 'ok'),)
+        with tempfile.TemporaryDirectory() as folder:
+            services = services_with(FakeRunner())
+            services.ping._directory = Path(folder)
+            self.assertEqual(services.ping.save(replies, summary, 'prueba'), 'prueba.csv')
+            note = (Path(folder) / 'prueba.txt').read_text(encoding='utf-8')
+            self.assertIn('Ping a 8.8.8.8', note)
+            self.assertIn('Enviados: 2', note)
+            self.assertIn('Mínimo: 19.4 ms', note)
+            table = (Path(folder) / 'prueba.csv').read_text(encoding='utf-8')
+            self.assertIn('1,8.8.8.8,117,20.1,Respuesta', table)
+            with self.assertRaises(ValidationError):
+                services.ping.save(replies, summary, 'prueba')
+
     def test_trace_failure_does_not_invent_hops(self):
         runner = FakeRunner({'/bin/mtr': CommandResult(1, '', 'mtr: Failed to resolve host\n')})
         with self.assertRaises(CommandFailedError) as caught:
