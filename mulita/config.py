@@ -67,10 +67,11 @@ class AppConfig:
     default_capture_name: str = 'prueba'
     trace_dir: PurePosixPath = PurePosixPath('/root/capturas/trazas')
     ping_dir: PurePosixPath = PurePosixPath('/root/capturas/ping')
+    wifi_dir: PurePosixPath = PurePosixPath('/root/capturas/wifi')
     trace_cycles: int = 6
     public_ip_url: str = 'https://ipwho.is/'
     public_ip_timeout: int = 10
-    public_ip_dir: PurePosixPath = PurePosixPath('/root/capturas/publicip')
+    public_ip_dir: PurePosixPath = PurePosixPath('/root/capturas/internet')
     mac_vendor_url: str = 'https://api.macvendors.com'
     mac_vendor_timeout: int = 10
     repository_dir: str = '/root/repositorio/MulitaNetworkTool'

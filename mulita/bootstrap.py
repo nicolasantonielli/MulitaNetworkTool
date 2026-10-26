@@ -48,7 +48,7 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
     return Services(
         interfaces=InterfaceService(runner, commands),
         ethernet=EthernetService(runner, commands, config.internal_interface, config.internal_connection),
-        wifi=WifiService(runner, commands),
+        wifi=WifiService(runner, commands, config.wifi_dir),
         capture=capture,
         tap=tap,
         trace=TraceService(runner, commands, config.trace_cycles, config.trace_dir),

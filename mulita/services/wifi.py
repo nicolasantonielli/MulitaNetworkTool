@@ -1,19 +1,27 @@
 from __future__ import annotations
 
+import csv
+import os
+from datetime import datetime
+from pathlib import Path, PurePosixPath
+
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
-from mulita.core.errors import CommandFailedError
+from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.models import WifiLink, WifiNetwork
 from mulita.core.parsers import build_wifi_link, parse_wifi_device, parse_wifi_list
 from mulita.core.ports import CommandRunner
+from mulita.presentation.i18n import tr
 
 
 class WifiService:
     """Busca redes y se conecta con NetworkManager."""
 
-    def __init__(self, runner: CommandRunner, commands: CommandFactory):
+    def __init__(self, runner: CommandRunner, commands: CommandFactory,
+                 directory: PurePosixPath | Path = PurePosixPath('/root/capturas/wifi')):
         self._runner = runner
         self._commands = commands
+        self._directory = Path(directory)
 
     def interface(self) -> str | None:
         result = self._checked(self._commands.wifi_devices(), 'No se pudo leer el Wi-Fi')
@@ -26,6 +34,37 @@ class WifiService:
         self._runner.run(self._commands.wifi_rescan(device))
         listed = self._checked(self._commands.wifi_list(device), 'No se pudieron buscar redes')
         return device, tuple(parse_wifi_list(listed.stdout))
+
+    def save(self, link: WifiLink, moment: datetime | None = None) -> str:
+        facts = link.facts()
+        if not facts:
+            raise ValidationError(tr('noWifiSave'))
+        when = moment or datetime.now()
+        name = f"wifi-info-{when.strftime('%Y%m%d-%H%M%S')}.csv"
+        self._ensure_directory()
+        path = self._directory / name
+        if path.parent.resolve() != self._directory.resolve():
+            raise ValidationError(tr('badStoredName'))
+        if path.exists():
+            raise ValidationError(tr('nameExists'))
+        try:
+            with path.open('w', encoding='utf-8', newline='') as handle:
+                writer = csv.writer(handle, lineterminator='\n')
+                writer.writerow([label for label, _value in facts])
+                writer.writerow([value for _label, value in facts])
+        except OSError as exc:
+            raise CommandFailedError(tr('saveWifiFailed')) from exc
+        if hasattr(os, 'sync'):
+            os.sync()
+        return name
+
+    def _ensure_directory(self) -> None:
+        if os.name != 'posix':
+            return
+        try:
+            self._directory.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise CommandFailedError(tr('wifiFolder')) from exc
 
     def status(self) -> WifiLink:
         """Dirección y radio del enlace, sin disparar un escaneo de redes."""

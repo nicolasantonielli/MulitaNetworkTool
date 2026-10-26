@@ -209,6 +209,22 @@ class BlockingServicesTest(unittest.TestCase):
             self.assertIn('Dirección,Versión,ASN,Organización\n', saved)
             self.assertIn('181.1.2.3,IPv4,AS7303,Telecom\n', saved)
 
+    def test_wifi_info_saves_a_csv_named_with_the_moment(self):
+        import tempfile
+        from datetime import datetime
+        from pathlib import Path
+
+        from mulita.core.models import WifiLink
+        link = WifiLink(interface='wlan0', ssid='Oficina', address='192.168.1.20')
+        with tempfile.TemporaryDirectory() as folder:
+            services = services_with(FakeRunner())
+            services.wifi._directory = Path(folder)
+            name = services.wifi.save(link, datetime(2026, 10, 26, 0, 10, 30))
+            self.assertEqual(name, 'wifi-info-20261026-001030.csv')
+            saved = (Path(folder) / name).read_text(encoding='utf-8')
+            self.assertIn('Oficina', saved)
+            self.assertIn('192.168.1.20', saved)
+
     def test_public_ip_without_answer_fails(self):
         runner = FakeRunner({'/bin/curl': CommandResult(28, '', '')})
         with self.assertRaises(CommandFailedError):

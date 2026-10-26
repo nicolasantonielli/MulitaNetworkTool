@@ -4,6 +4,7 @@ import json
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
+from mulita.core.errors import MulitaError
 from mulita.core.models import WifiLink, WifiNetwork
 from mulita.presentation.i18n import tr
 from mulita.ui.qt.bridge.base import TaskController
@@ -57,6 +58,17 @@ class WifiController(TaskController):
     @pyqtSlot()
     def loadLink(self) -> None:
         self._task(self._services.wifi.status, self._show_link)
+
+    @pyqtSlot()
+    def saveLink(self) -> None:
+        if self._busy or not self._link.facts():
+            return
+        try:
+            name = self._services.wifi.save(self._link)
+        except MulitaError as exc:
+            self._fail(exc)
+            return
+        self._ctx.notifier.success(tr('wifiInfo'), name)
 
     @pyqtSlot(str, str, bool)
     def connectTo(self, ssid: str, password: str, secure: bool) -> None:

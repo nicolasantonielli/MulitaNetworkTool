@@ -463,6 +463,13 @@ Item {
                         elide: Text.ElideRight
                     }
                     TouchButton {
+                        text: i18n.pack.save
+                        icon: "file"
+                        kind: "success"
+                        enabled: !wifi.busy && wifiInfo.linkFacts.length > 0
+                        onClicked: wifi.saveLink()
+                    }
+                    TouchButton {
                         text: wifi.busy ? i18n.pack.reading : i18n.pack.refresh
                         icon: "refresh"
                         kind: "neutral"
@@ -706,6 +713,7 @@ Item {
                                       : modelData.place === "traza" ? i18n.pack.placeTrace
                                       : modelData.place === "ping" ? i18n.pack.placePing
                                       : modelData.place === "publica" ? i18n.pack.placePublic
+                                      : modelData.place === "wifi" ? i18n.pack.placeWifi
                                       : modelData.placeLabel) + "   " + modelData.name
                                       + "   " + modelData.size + "   " + modelData.modified
                                 color: picked ? ui.onAccent : ui.text
