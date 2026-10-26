@@ -99,6 +99,35 @@ def parse_nmcli_device_ipv4(text: str) -> EthernetConfig:
     return EthernetConfig(AddressMode.DHCP, address, prefix, gateway, ', '.join(dns))
 
 
+def interface_network(text: str, name: str) -> str:
+    """Red IPv4 de una interfaz en `ip -j addr`, como 192.168.0.0/24."""
+    try:
+        data = json.loads(text or '[]')
+    except json.JSONDecodeError as exc:
+        raise CommandFailedError(f'Respuesta de ip invalida: {exc}') from exc
+    for item in data:
+        if item.get('ifname') != name:
+            continue
+        for info in item.get('addr_info', []):
+            if info.get('family') != 'inet':
+                continue
+            local = str(info.get('local') or '')
+            try:
+                address = ipaddress.IPv4Address(local)
+            except ValueError:
+                continue
+            if address.is_loopback or address.is_link_local or address.is_unspecified:
+                continue
+            try:
+                prefix = int(info.get('prefixlen', 24))
+            except (TypeError, ValueError):
+                prefix = 24
+            if not 0 <= prefix <= 32:
+                prefix = 24
+            return str(ipaddress.IPv4Network(f'{address}/{prefix}', strict=False))
+    return ''
+
+
 def parse_interface_ipv4(text: str) -> tuple[str, int]:
     """Primera IPv4 global de `ip -j addr show dev <if>`."""
     try:

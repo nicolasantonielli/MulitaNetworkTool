@@ -203,6 +203,14 @@ Item {
                     return found
                 }
 
+                readonly property string selectedAddress: {
+                    for (var i = 0; i < discoverInterfaces.length; ++i) {
+                        if (discoverInterfaces[i].value === selectedInterface)
+                            return discoverInterfaces[i].address || ""
+                    }
+                    return ""
+                }
+
                 function keepDiscoverSelection() {
                     var rows = discoverInterfaces
                     for (var i = 0; i < rows.length; ++i) {
@@ -255,7 +263,9 @@ Item {
 
                     Text {
                         Layout.fillWidth: true
-                        text: i18n.pack.discoverHint
+                        text: discoverPage.selectedInterface !== "" && discoverPage.selectedAddress === ""
+                              ? i18n.pack.discoverNoAddress.replace("{interface}", discoverPage.selectedInterface)
+                              : i18n.pack.discoverHint
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
                         elide: Text.ElideRight
@@ -270,7 +280,9 @@ Item {
                         text: discovery.running ? i18n.pack.stop : i18n.pack.discover
                         icon: discovery.running ? "stop" : "play"
                         kind: discovery.running ? "danger" : "success"
-                        enabled: discovery.running || discoverPage.selectedInterface !== ""
+                        enabled: discovery.running
+                                 || (discoverPage.selectedInterface !== ""
+                                     && discoverPage.selectedAddress !== "")
                         onClicked: discovery.running
                                   ? discovery.stop()
                                   : discovery.start(discoverPage.selectedInterface)
@@ -324,10 +336,10 @@ Item {
                             }
 
                             Repeater {
-                                model: discoverPage.hosts
+                                model: discoverPage.hosts.length
                                 delegate: Rectangle {
                                     id: hostRow
-                                    readonly property var host: modelData
+                                    readonly property var host: discoverPage.hosts[index] || ({})
                                     Layout.fillWidth: true
                                     implicitHeight: Math.round(ui.fontSmall * 2.15)
                                     color: index % 2 === 0 ? "transparent" : ui.surfaceAlt

@@ -11,9 +11,9 @@ from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.models import (Calibration, CaptureDirection, ClimateReading,
                                 CommandResult)
 from mulita.core.models import PingSummary
-from mulita.core.parsers import (cable_connected, parse_discovery_line, parse_interfaces,
-                                parse_port_scan, parse_public_address, parse_speed_test,
-                                parse_trace, read_ping_line)
+from mulita.core.parsers import (cable_connected, interface_network, parse_discovery_line,
+                                parse_interfaces, parse_port_scan, parse_public_address,
+                                parse_speed_test, parse_trace, read_ping_line)
 
 IP_JSON = '''[
  {"ifindex":1,"ifname":"lo","address":"00:00:00:00:00:00",
@@ -56,9 +56,9 @@ class CommandFactoryTest(unittest.TestCase):
                          ['/bin/nmap', '-p', '22,80', '192.168.0.0/24'])
 
     def test_misc_commands(self):
-        self.assertEqual(self.commands.discovery(), ['/sbin/netdiscover', '-f', '-P', '-d'])
-        self.assertEqual(self.commands.discovery('wlan0'),
-                         ['/sbin/netdiscover', '-f', '-P', '-d', '-i', 'wlan0'])
+        self.assertEqual(self.commands.discovery(), ['/sbin/netdiscover', '-L', '-N', '-d'])
+        self.assertEqual(self.commands.discovery('wlan0', '192.168.0.0/24'),
+                         ['/sbin/netdiscover', '-L', '-N', '-d', '-i', 'wlan0', '-r', '192.168.0.0/24'])
         self.assertEqual(self.commands.speed_test(),
                          ['/bin/speedtest', '--json', '--timeout', '25'])
         self.assertEqual(self.commands.speed_test('192.168.1.20'),
@@ -269,6 +269,8 @@ Nmap done: 2 IP addresses (2 hosts up) scanned in 1.20 seconds
         self.assertEqual((found.ip, found.mac, found.count, found.vendor),
                          ('192.168.0.1', 'AA:BB:CC:DD:EE:FF', '3', 'Cisco Systems'))
         self.assertIsNone(parse_discovery_line('Currently scanning: 192.168.0.0/24'))
+        self.assertEqual(interface_network(IP_JSON, 'wlan0'), '192.168.0.0/24')
+        self.assertEqual(interface_network(IP_JSON, 'eth0'), '')
 
 
 class HomeEnvironmentTest(unittest.TestCase):

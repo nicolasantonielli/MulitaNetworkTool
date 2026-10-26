@@ -68,6 +68,16 @@ class SessionServicesTest(unittest.TestCase):
         services.ping.start('8.8.8.8', 4, 1, 64)
         self.assertTrue(services.ping.is_running)
 
+    def test_discovery_scans_the_interface_network(self):
+        runner = FakeRunner({'/usr/bin/ip': CommandResult(0, IP_JSON)})
+        services = services_with(runner)
+        services.discovery.start('wlan0')
+        self.assertEqual(runner.starts[-1], [
+            '/sbin/netdiscover', '-L', '-N', '-d', '-i', 'wlan0', '-r', '192.168.0.0/24'])
+        with self.assertRaises(ValidationError):
+            services.discovery.start('eth0')
+        services.discovery.stop()
+
     def test_shutdown_stops_everything(self):
         runner = FakeRunner()
         services = services_with(runner)

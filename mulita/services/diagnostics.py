@@ -10,7 +10,7 @@ from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.models import (HostSighting, PingReply, PingRequest, PingSummary,
                                 PortFinding, TraceHop)
-from mulita.core.parsers import parse_port_scan, parse_trace
+from mulita.core.parsers import interface_network, parse_port_scan, parse_trace
 from mulita.presentation.i18n import tr
 from mulita.core.ports import CommandRunner, ExitListener, OutputListener
 from mulita.services.base import ProcessSession
@@ -220,7 +220,17 @@ class DiscoveryService(ProcessSession):
     def start(self, interface: str = '', on_output: Optional[OutputListener] = None,
               on_exit: Optional[ExitListener] = None) -> None:
         name = validation.interface_name(interface) if (interface or '').strip() else ''
-        self._launch(self._commands.discovery(name), on_output, on_exit)
+        network = self._network(name) if name else ''
+        self._launch(self._commands.discovery(name, network), on_output, on_exit)
+
+    def _network(self, interface: str) -> str:
+        listed = self._runner.run(self._commands.interfaces())
+        if not listed.ok:
+            raise CommandFailedError(tr('speedNoIface'))
+        network = interface_network(listed.stdout, interface)
+        if not network:
+            raise ValidationError(tr('discoverNoAddress', interface=interface))
+        return network
 
     def save(self, hosts: tuple[HostSighting, ...], filename: str) -> str:
         if not hosts:

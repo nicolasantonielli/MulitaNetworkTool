@@ -162,12 +162,14 @@ class CommandFactory:
     def port_scan(self, arguments: list[str]) -> Argv:
         return [self._bin.nmap, *arguments]
 
-    def discovery(self, interface: str = '') -> Argv:
-        # -d no lee ~/.netdiscover. El servicio no trae $HOME y sin esto
-        # netdiscover se niega a escanear. -i elige la boca.
-        argv = [self._bin.netdiscover, '-f', '-P', '-d']
+    def discovery(self, interface: str = '', network: str = '') -> Argv:
+        # -d no lee ~/.netdiscover. -L deja la salida parseable y sigue
+        # escuchando. Sin -f recorre toda la red, no solo .1 .100 y .254.
+        argv = [self._bin.netdiscover, '-L', '-N', '-d']
         if interface:
             argv += ['-i', interface]
+        if network:
+            argv += ['-r', network]
         return argv
 
     def wake_on_lan(self, mac: str) -> Argv:

@@ -28,7 +28,7 @@ Item {
         flickableDirection: Flickable.VerticalFlick
         boundsBehavior: Flickable.StopAtBounds
         contentWidth: width
-        contentHeight: column.implicitHeight
+        contentHeight: Math.max(column.implicitHeight, column.childrenRect.height)
 
         ColumnLayout {
             id: column
