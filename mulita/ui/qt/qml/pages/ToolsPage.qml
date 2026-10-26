@@ -370,6 +370,13 @@ Item {
                         elide: Text.ElideRight
                     }
                     TouchButton {
+                        text: i18n.pack.save
+                        icon: "file"
+                        kind: "success"
+                        enabled: !publicIp.busy && publicPage.facts.length > 0
+                        onClicked: publicIp.save()
+                    }
+                    TouchButton {
                         text: publicIp.busy ? i18n.pack.lookingUp : i18n.pack.lookup
                         icon: "refresh"
                         kind: "neutral"
@@ -698,6 +705,7 @@ Item {
                                       : modelData.place === "tap" ? i18n.pack.placeTap
                                       : modelData.place === "traza" ? i18n.pack.placeTrace
                                       : modelData.place === "ping" ? i18n.pack.placePing
+                                      : modelData.place === "publica" ? i18n.pack.placePublic
                                       : modelData.placeLabel) + "   " + modelData.name
                                       + "   " + modelData.size + "   " + modelData.modified
                                 color: picked ? ui.onAccent : ui.text

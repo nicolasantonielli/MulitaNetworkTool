@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import csv
+import os
 import re
 import time
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path, PurePosixPath
 
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
-from mulita.core.errors import CommandFailedError
+from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.presentation.i18n import tr
 from mulita.core.models import Calibration, ClimateReading, SpeedTestResult
 from mulita.core.parsers import parse_mac_vendor, parse_public_address, parse_speed_test
@@ -66,17 +70,50 @@ class SpeedTestService:
 
 class PublicIpService:
 
-    def __init__(self, runner: CommandRunner, commands: CommandFactory, url: str, timeout: int):
+    def __init__(self, runner: CommandRunner, commands: CommandFactory, url: str, timeout: int,
+                 directory: PurePosixPath | Path = PurePosixPath('/root/capturas/publicip')):
         self._runner = runner
         self._commands = commands
         self._url = url
         self._timeout = timeout
+        self._directory = Path(directory)
 
     def lookup(self) -> PublicAddress:
         result = self._runner.run(self._commands.public_ip(self._url, self._timeout))
         if not result.ok or not (result.stdout or '').strip():
             raise CommandFailedError(tr('pubFail'), result)
         return parse_public_address(result.stdout)
+
+    def save(self, info: PublicAddress, moment: datetime | None = None) -> str:
+        if not info.ip:
+            raise ValidationError(tr('noPublic'))
+        when = moment or datetime.now()
+        name = f"publicIP-{when.strftime('%Y%m%d-%H%M%S')}.csv"
+        self._ensure_directory()
+        path = self._directory / name
+        if path.parent.resolve() != self._directory.resolve():
+            raise ValidationError(tr('badStoredName'))
+        if path.exists():
+            raise ValidationError(tr('nameExists'))
+        facts = info.facts()
+        try:
+            with path.open('w', encoding='utf-8', newline='') as handle:
+                writer = csv.writer(handle, lineterminator='\n')
+                writer.writerow([label for label, _value in facts])
+                writer.writerow([value for _label, value in facts])
+        except OSError as exc:
+            raise CommandFailedError(tr('savePublicFailed')) from exc
+        if hasattr(os, 'sync'):
+            os.sync()
+        return name
+
+    def _ensure_directory(self) -> None:
+        if os.name != 'posix':
+            return
+        try:
+            self._directory.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise CommandFailedError(tr('publicFolder')) from exc
 
 
 class MacVendorService:

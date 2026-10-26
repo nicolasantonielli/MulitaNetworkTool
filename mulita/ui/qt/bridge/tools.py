@@ -5,7 +5,7 @@ import json
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.models import ClimateReading, SpeedTestResult
-from mulita.core.errors import ValidationError
+from mulita.core.errors import MulitaError, ValidationError
 from mulita.presentation import texts
 from mulita.presentation.i18n import tr
 from mulita.ui.qt.bridge.base import BridgeContext, TaskController
@@ -160,6 +160,18 @@ class PublicIpController(TaskController):
     @pyqtSlot()
     def lookup(self) -> None:
         self._task(self._services.public_ip.lookup, self._show, self._failed)
+
+    @pyqtSlot()
+    def save(self) -> None:
+        info = self._info
+        if info is None or self._busy:
+            return
+        try:
+            name = self._services.public_ip.save(info)
+        except MulitaError as exc:
+            self._fail(exc)
+            return
+        self._ctx.notifier.success(tr('pubTitle'), name)
 
     def _show(self, info) -> None:
         self._info, self._status = info, ''

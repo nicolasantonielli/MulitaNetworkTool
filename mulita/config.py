@@ -70,6 +70,7 @@ class AppConfig:
     trace_cycles: int = 6
     public_ip_url: str = 'https://ipwho.is/'
     public_ip_timeout: int = 10
+    public_ip_dir: PurePosixPath = PurePosixPath('/root/capturas/publicip')
     mac_vendor_url: str = 'https://api.macvendors.com'
     mac_vendor_timeout: int = 10
     repository_dir: str = '/root/repositorio/MulitaNetworkTool'

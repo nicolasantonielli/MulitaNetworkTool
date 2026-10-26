@@ -193,6 +193,22 @@ class BlockingServicesTest(unittest.TestCase):
         self.assertEqual(services.speed_test.measure().download_mbps, 50)
         self.assertEqual(services.public_ip.lookup().ip, '181.1.2.3')
 
+    def test_public_ip_saves_a_csv_named_with_the_moment(self):
+        import tempfile
+        from datetime import datetime
+        from pathlib import Path
+
+        from mulita.core.models import PublicAddress
+        info = PublicAddress(ip='181.1.2.3', version='IPv4', asn='AS7303', organization='Telecom')
+        with tempfile.TemporaryDirectory() as folder:
+            services = services_with(FakeRunner())
+            services.public_ip._directory = Path(folder)
+            name = services.public_ip.save(info, datetime(2026, 10, 26, 0, 6, 30))
+            self.assertEqual(name, 'publicIP-20261026-000630.csv')
+            saved = (Path(folder) / name).read_text(encoding='utf-8')
+            self.assertIn('Dirección,Versión,ASN,Organización\n', saved)
+            self.assertIn('181.1.2.3,IPv4,AS7303,Telecom\n', saved)
+
     def test_public_ip_without_answer_fails(self):
         runner = FakeRunner({'/bin/curl': CommandResult(28, '', '')})
         with self.assertRaises(CommandFailedError):

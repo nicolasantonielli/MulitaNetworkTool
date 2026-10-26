@@ -58,7 +58,8 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
         wake_on_lan=WakeOnLanService(runner, commands),
         climate=climate or _climate(config),
         speed_test=SpeedTestService(runner, commands),
-        public_ip=PublicIpService(runner, commands, config.public_ip_url, config.public_ip_timeout),
+        public_ip=PublicIpService(
+            runner, commands, config.public_ip_url, config.public_ip_timeout, config.public_ip_dir),
         mac_vendor=MacVendorService(runner, commands, config.mac_vendor_url, config.mac_vendor_timeout),
         files=CaptureFilesService(
             config.capture_dir, lambda: capture.is_running, lambda: tap.is_running, runner, commands),
