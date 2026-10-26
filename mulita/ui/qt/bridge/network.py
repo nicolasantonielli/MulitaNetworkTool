@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
+import json
 import time
 from collections import deque
 
@@ -162,19 +163,21 @@ class CaptureController(SessionController):
 class TapController(Controller):
     runningChanged = pyqtSignal()
     activeFileChanged = pyqtSignal()
+    linesChanged = pyqtSignal()
 
     def __init__(self, ctx: BridgeContext):
         super().__init__(ctx)
-        self._console = Console()
         self._active_file = ''
+        self._lines: list[str] = []
+        self._pending = ''
 
     @pyqtProperty(bool, notify=runningChanged)
     def running(self) -> bool:
         return self._services.tap.is_running
 
-    @pyqtProperty(QObject, constant=True)
-    def console(self) -> Console:
-        return self._console
+    @pyqtProperty(str, notify=linesChanged)
+    def linesJson(self) -> str:
+        return json.dumps(self._lines)
 
     @pyqtProperty(str, constant=True)
     def defaultFilename(self) -> str:
@@ -196,6 +199,9 @@ class TapController(Controller):
         except MulitaError as exc:
             self._fail(exc)
             return
+        self._lines = []
+        self._pending = ''
+        self.linesChanged.emit()
         self._active_file = name
         self.activeFileChanged.emit()
         self.runningChanged.emit()
@@ -209,9 +215,23 @@ class TapController(Controller):
 
     def _output(self, text: str) -> None:
         folder = str(self._ctx.config.capture_dir / 'tap')
-        self._console.append(text.replace(folder + '/', '').replace(folder, ''))
+        cleaned = text.replace(folder + '/', '').replace(folder, '').replace('\r', '')
+        self._pending += cleaned
+        while '\n' in self._pending:
+            line, self._pending = self._pending.split('\n', 1)
+            self._take(line)
+        self.linesChanged.emit()
+
+    def _take(self, line: str) -> None:
+        text = line.strip()
+        if text:
+            self._lines.append(text)
 
     def _capture_stopped(self, code: int) -> None:
+        if self._pending.strip():
+            self._take(self._pending)
+            self._pending = ''
+            self.linesChanged.emit()
         if code != 0 and self._services.tap.is_running:
             from mulita.presentation.i18n import tr
             self._ctx.notifier.error(tr('tapStopped'), title='TAP')

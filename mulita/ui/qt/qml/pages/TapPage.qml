@@ -149,9 +149,64 @@ Item {
                 }
             }
 
-            ConsoleView {
-                source: tap.console
-                placeholder: i18n.pack.tapQuiet
+            ColumnLayout {
+                id: tapOut
+                spacing: ui.gap
+
+                readonly property var lines: {
+                    try { return JSON.parse(tap.linesJson) }
+                    catch (e) { return [] }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    radius: ui.radius
+                    color: ui.surface
+                    border.width: 1
+                    border.color: ui.border
+
+                    Text {
+                        anchors.centerIn: parent
+                        width: parent.width - ui.padding * 2
+                        visible: tapOut.lines.length === 0
+                        text: i18n.pack.tapQuiet
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.Wrap
+                    }
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: Math.round(ui.gap * 0.6)
+                        visible: tapOut.lines.length > 0
+                        spacing: Math.round(ui.gap * 0.3)
+
+                        ScrollPage {
+                            id: tapTable
+                            spacing: 1
+
+                            Repeater {
+                                model: tapOut.lines
+                                delegate: Rectangle {
+                                    Layout.fillWidth: true
+                                    implicitHeight: Math.round(ui.fontSmall * 2.15)
+                                    color: index % 2 === 0 ? "transparent" : ui.surfaceAlt
+                                    CopyableCell {
+                                        anchors.fill: parent
+                                        text: modelData === undefined ? "" : String(modelData)
+                                        color: ui.text
+                                        font.pixelSize: ui.fontSmall
+                                        font.family: ui.monoFamily
+                                        verticalAlignment: Text.AlignVCenter
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
