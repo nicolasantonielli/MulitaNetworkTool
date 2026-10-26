@@ -464,8 +464,8 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         text: filesPage.drives.length === 0
-                              ? "No hay un pendrive conectado"
-                              : "Elegí el pendrive"
+                              ? "No aparece un pendrive en el USB"
+                              : "Elegí el pendrive. Se monta solo al exportar"
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
                         wrapMode: Text.Wrap

@@ -26,6 +26,7 @@ class Binaries:
     ip: str = '/usr/bin/ip'
     tc: str = '/usr/sbin/tc'
     mount: str = '/usr/bin/mount'
+    lsblk: str = '/usr/bin/lsblk'
     git: str = '/usr/bin/git'
     bash: str = '/bin/bash'
     nmcli: str = '/usr/bin/nmcli'

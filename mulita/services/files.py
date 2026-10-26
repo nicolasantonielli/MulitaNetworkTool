@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -13,7 +14,11 @@ from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.ports import CommandRunner
 
 _DEVICE = re.compile(r'^[A-Za-z0-9]+$')
+_USB_BUS = re.compile(r'usb\d+')
+_PARTITION = re.compile(r'p\d+$')
+_TRAILING_INDEX = re.compile(r'\d+$')
 _MOUNT_ROOT = Path('/mnt/mulita-usb')
+_SYSTEM_MOUNTS = {'/', '/boot', '/boot/firmware'}
 
 _PLACES = {
     'captura': 'Captura',
@@ -50,7 +55,7 @@ class CaptureFilesService:
         self._tap_active = tap_active or (lambda: False)
         self._runner = runner
         self._commands = commands
-        self._drives = drives or list_usb_drives
+        self._drives = drives
 
     def list_files(self) -> tuple[StoredCapture, ...]:
         found: list[tuple[float, StoredCapture]] = []
@@ -97,7 +102,7 @@ class CaptureFilesService:
         self._existing(place, name).unlink()
 
     def list_drives(self) -> tuple[UsbDrive, ...]:
-        found = list(self._drives())
+        found = list(self._found_drives())
         labels: dict[str, int] = {}
         named: list[UsbDrive] = []
         for drive in found:
@@ -151,13 +156,31 @@ class CaptureFilesService:
     def _destination(self, place: str, name: str) -> Path:
         return self._named(place, name)
 
+    def _found_drives(self) -> tuple[UsbDrive, ...]:
+        if self._drives is not None:
+            return tuple(self._drives())
+        listed = self._from_lsblk()
+        if listed:
+            return listed
+        sysfs = list_usb_drives()
+        return sysfs or listed or ()
+
+    def _from_lsblk(self) -> tuple[UsbDrive, ...] | None:
+        if self._runner is None or self._commands is None:
+            return None
+        result = self._runner.run(self._commands.usb_block_devices())
+        if not result.ok:
+            return None
+        return parse_usb_drives(result.text)
+
     def _drive_folder(self, drive_id: str) -> Path:
-        drives = {item.device: item for item in self._drives()}
+        drives = {item.device: item for item in self._found_drives()}
         drive = drives.get(drive_id)
         if drive is None:
             raise ValidationError('No se encontro el pendrive')
-        if drive.mountpoint:
-            folder = Path(drive.mountpoint)
+        mounted = drive.mountpoint or _mount_points().get(f'/dev/{drive_id}', '')
+        if mounted:
+            folder = Path(mounted)
             if not folder.is_dir():
                 raise ValidationError('No se pudo usar el pendrive')
             return folder
@@ -171,15 +194,34 @@ class CaptureFilesService:
         return target
 
 
-def list_usb_drives() -> tuple[UsbDrive, ...]:
-    """Particiones USB extraibles. En la PC de desarrollo no hay /sys/block."""
-    block = Path('/sys/block')
+def parse_usb_drives(text: str) -> tuple[UsbDrive, ...]:
+    """Discos con transporte usb. No exige que esten montados."""
+    try:
+        payload = json.loads(text or '')
+    except json.JSONDecodeError:
+        return ()
+    found: list[UsbDrive] = []
+    for disk in payload.get('blockdevices') or []:
+        if not isinstance(disk, dict) or disk.get('tran') != 'usb' or _holds_system(disk):
+            continue
+        for node in _filesystem_nodes(disk):
+            name = str(node.get('name') or '')
+            if not _DEVICE.fullmatch(name):
+                continue
+            found.append(UsbDrive(name, _node_label(node), _node_mount(node)))
+    return tuple(found)
+
+
+def list_usb_drives(block: Path | None = None, mounts_file: Path | None = None) -> tuple[UsbDrive, ...]:
+    """Particiones USB. En la PC de desarrollo no hay /sys/block."""
+    block = block or Path('/sys/block')
     if not block.is_dir():
         return ()
-    mounts = _mount_points()
+    mounts = _mount_points(mounts_file)
+    system = _system_disks(mounts)
     found: list[UsbDrive] = []
     for device in block.iterdir():
-        if not _usb_disk(device):
+        if device.name in system or not _usb_disk(device):
             continue
         parts = [child for child in device.iterdir()
                  if child.is_dir() and child.name.startswith(device.name) and _DEVICE.fullmatch(child.name)]
@@ -190,19 +232,75 @@ def list_usb_drives() -> tuple[UsbDrive, ...]:
     return tuple(found)
 
 
+def _filesystem_nodes(disk: dict) -> list[dict]:
+    children = [child for child in disk.get('children') or [] if isinstance(child, dict)]
+    if not children:
+        return [disk]
+    nodes: list[dict] = []
+    for child in children:
+        nodes.extend(_filesystem_nodes(child))
+    return nodes
+
+
+def _holds_system(node: dict) -> bool:
+    if _node_mount(node) in _SYSTEM_MOUNTS:
+        return True
+    return any(_holds_system(child) for child in node.get('children') or [] if isinstance(child, dict))
+
+
+def _node_label(node: dict) -> str:
+    label = node.get('label')
+    if isinstance(label, str) and label.strip():
+        return label.strip()
+    return 'Pendrive'
+
+
+def _node_mount(node: dict) -> str:
+    point = node.get('mountpoint')
+    if isinstance(point, str) and point:
+        return point
+    points = node.get('mountpoints') or []
+    if isinstance(points, list):
+        for item in points:
+            if isinstance(item, str) and item:
+                return item
+    return ''
+
+
 def _usb_disk(device: Path) -> bool:
-    removable = device / 'removable'
-    subsystem = device / 'device' / 'subsystem'
+    """El pendrive entra como disco SCSI. El bus usb queda en la ruta real, no en subsystem."""
+    link = device / 'device'
     try:
-        if not removable.is_file() or removable.read_text(encoding='utf-8').strip() != '1':
-            return False
-        return subsystem.resolve().name == 'usb'
+        resolved = link.resolve().as_posix()
     except OSError:
         return False
+    return any(_USB_BUS.fullmatch(part) for part in PurePosixPath(resolved).parts)
 
 
-def _mount_points() -> dict[str, str]:
-    mounts = Path('/proc/mounts')
+def _system_disks(mounts: dict[str, str]) -> set[str]:
+    disks: set[str] = set()
+    for device, point in mounts.items():
+        if point in _SYSTEM_MOUNTS:
+            name = _disk_name(device)
+            if name:
+                disks.add(name)
+    return disks
+
+
+def _disk_name(device: str) -> str:
+    name = PurePosixPath(device).name
+    if name == 'root':
+        try:
+            name = Path('/dev/root').resolve().name
+        except OSError:
+            return ''
+    if _PARTITION.search(name):
+        return _PARTITION.sub('', name)
+    return _TRAILING_INDEX.sub('', name) or name
+
+
+def _mount_points(mounts_file: Path | None = None) -> dict[str, str]:
+    mounts = mounts_file or Path('/proc/mounts')
     if not mounts.is_file():
         return {}
     found = {}

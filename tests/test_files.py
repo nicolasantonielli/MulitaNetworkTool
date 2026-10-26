@@ -1,9 +1,15 @@
+import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
+from mulita.config import Binaries
+from mulita.core.commands import CommandFactory
 from mulita.core.errors import ValidationError
-from mulita.services.files import CaptureFilesService, UsbDrive
+from mulita.core.models import CommandResult
+from mulita.services.files import CaptureFilesService, UsbDrive, list_usb_drives, parse_usb_drives
+from tests.fakes import FakeRunner
 
 
 class CaptureFilesTest(unittest.TestCase):
@@ -64,3 +70,48 @@ class CaptureFilesTest(unittest.TestCase):
                 service.export('captura', 'uno.pcap', 'sda1')
             with self.assertRaises(ValidationError):
                 CaptureFilesService(root, drives=lambda: ()).export('captura', 'uno.pcap', 'sda1')
+
+    def test_unmounted_usb_stick_is_listed_and_the_sd_card_is_not(self):
+        listed = parse_usb_drives(json.dumps({'blockdevices': [
+            {'name': 'mmcblk0', 'tran': 'mmc', 'type': 'disk', 'children': [
+                {'name': 'mmcblk0p2', 'mountpoint': '/', 'type': 'part'},
+            ]},
+            {'name': 'sda', 'tran': 'usb', 'type': 'disk', 'children': [
+                {'name': 'sda1', 'label': 'KINGSTON', 'mountpoint': None, 'type': 'part'},
+            ]},
+            {'name': 'sdb', 'tran': 'usb', 'type': 'disk', 'mountpoint': '/', 'label': 'root'},
+        ]}))
+        self.assertEqual([(item.device, item.label, item.mountpoint) for item in listed],
+                         [('sda1', 'KINGSTON', '')])
+        runner = FakeRunner({'/usr/bin/lsblk': CommandResult(0, json.dumps({'blockdevices': [
+            {'name': 'sda', 'tran': 'usb', 'type': 'disk', 'children': [
+                {'name': 'sda1', 'label': None, 'mountpoint': None, 'type': 'part'},
+            ]},
+        ]}))})
+        service = CaptureFilesService(Path('.'), runner=runner, commands=CommandFactory(Binaries()))
+        self.assertEqual(service.list_drives(), (UsbDrive('sda1', 'Pendrive', ''),))
+
+    def test_sysfs_accepts_a_scsi_disk_hanging_off_usb(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            scsi = root / 'devices' / 'usb1' / '1-1' / '1-1.1.0' / 'host0' / 'target0.0.0' / '0.0.0.0'
+            stick = scsi / 'block' / 'sda'
+            (stick / 'sda1').mkdir(parents=True)
+            (stick / 'removable').write_text('0', encoding='utf-8')
+            card = root / 'devices' / 'mmc' / 'mmc0' / 'block' / 'mmcblk0'
+            (card / 'mmcblk0p1').mkdir(parents=True)
+            block = root / 'block'
+            block.mkdir()
+            _link_dir(stick / 'device', scsi)
+            _link_dir(card / 'device', card.parent)
+            _link_dir(block / 'sda', stick)
+            _link_dir(block / 'mmcblk0', card)
+            mounts = root / 'mounts'
+            mounts.write_text('/dev/mmcblk0p1 / ext4 rw 0 0\n', encoding='utf-8')
+            found = list_usb_drives(block, mounts)
+            self.assertEqual([item.device for item in found], ['sda1'])
+
+
+def _link_dir(link: Path, target: Path) -> None:
+    subprocess.run(['cmd', '/c', 'mklink', '/J', str(link), str(target)],
+                   check=True, capture_output=True)
