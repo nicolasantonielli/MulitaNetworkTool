@@ -77,6 +77,30 @@ Item {
                         wrapMode: Text.Wrap
                     }
                 }
+                Card {
+                    Layout.fillWidth: true
+                    title: i18n.pack.brightness
+                    titleIcon: "display"
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: settings.brightnessReady ? i18n.pack.brightnessHint : i18n.pack.noBacklight
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        wrapMode: Text.Wrap
+                    }
+                    LabeledSlider {
+                        Layout.fillWidth: true
+                        enabled: settings.brightnessReady
+                        label: i18n.pack.brightness
+                        from: 1
+                        to: 100
+                        stepSize: 1
+                        initial: settings.brightness
+                        valueText: Math.round(value) + " %"
+                        onValueChanged: settings.setBrightness(value)
+                    }
+                }
             }
 
             // Pantalla

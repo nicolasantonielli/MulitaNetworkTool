@@ -5,9 +5,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from mulita.adapters.backlight import SysfsBacklight
 from mulita.adapters.settings_store import JsonSettingsStore, MemorySettingsStore
 from mulita.core import settings as rules
-from mulita.core.errors import ValidationError
+from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.settings import DisplaySettings, Language, Settings, Theme
 from mulita.presentation.theme import Metrics
 from mulita.services.settings import SettingsService
@@ -49,6 +50,13 @@ class DisplayRulesTest(unittest.TestCase):
     def test_scale_outside_the_slider_is_clamped(self):
         self.assertEqual(rules.settings_from_dict({'scale': 4}).display.ui_scale, 1.25)
         self.assertEqual(rules.settings_from_dict({'scale': 0.1}).display.ui_scale, 0.5)
+
+    def test_brightness_stays_between_one_and_one_hundred(self):
+        self.assertEqual(rules.settings_from_dict({}).brightness, 100)
+        self.assertEqual(rules.settings_from_dict({'brightness': 0}).brightness, 1)
+        self.assertEqual(rules.settings_from_dict({'brightness': 40.4}).brightness, 40)
+        self.assertEqual(rules.settings_from_dict({'brightness': 250}).brightness, 100)
+        self.assertEqual(rules.settings_from_dict({'brightness': 'alto'}).brightness, 100)
 
     def test_scale_changes_every_metric(self):
         normal = Metrics.for_display(DisplaySettings())
@@ -97,11 +105,25 @@ class JsonSettingsStoreTest(unittest.TestCase):
         self.assertEqual(self.store.load(), Settings())
 
 
+class _MemoryBacklight:
+
+    def __init__(self, ready: bool = True):
+        self.ready = ready
+        self.levels: list[int] = []
+
+    def available(self) -> bool:
+        return self.ready
+
+    def apply(self, percent: int) -> None:
+        self.levels.append(percent)
+
+
 class SettingsServiceTest(unittest.TestCase):
 
     def setUp(self):
         self.store = MemorySettingsStore()
-        self.service = SettingsService(self.store)
+        self.light = _MemoryBacklight()
+        self.service = SettingsService(self.store, self.light)
         self.notified: list[Settings] = []
         self.service.subscribe(self.notified.append)
 
@@ -127,6 +149,58 @@ class SettingsServiceTest(unittest.TestCase):
     def test_same_scale_does_not_notify(self):
         self.service.set_scale(1)
         self.assertEqual(self.notified, [])
+
+    def test_brightness_is_saved_and_applied(self):
+        self.assertEqual(self.light.levels, [100])
+        updated = self.service.set_brightness(35)
+        self.assertEqual(updated.brightness, 35)
+        self.assertEqual(self.store.load().brightness, 35)
+        self.assertEqual(self.light.levels, [100, 35])
+
+    def test_missing_backlight_keeps_the_saved_level(self):
+        self.light.ready = False
+        updated = self.service.set_brightness(20)
+        self.assertEqual(updated.brightness, 20)
+        self.assertFalse(self.service.backlight_ready())
+
+
+class SysfsBacklightTest(unittest.TestCase):
+
+    def test_percent_maps_onto_the_panel_scale(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            panel = root / 'panel'
+            panel.mkdir()
+            (panel / 'max_brightness').write_text('255\n', encoding='ascii')
+            (panel / 'brightness').write_text('255\n', encoding='ascii')
+            (root / 'kbd_backlight').mkdir()
+            (root / 'kbd_backlight' / 'brightness').write_text('1\n', encoding='ascii')
+            light = SysfsBacklight(root)
+            self.assertTrue(light.available())
+            light.apply(50)
+            self.assertEqual((panel / 'brightness').read_text(encoding='ascii').strip(), '128')
+            light.apply(1)
+            self.assertEqual((panel / 'brightness').read_text(encoding='ascii').strip(), '3')
+
+    def test_missing_device_does_nothing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            light = SysfsBacklight(Path(directory))
+            self.assertFalse(light.available())
+            light.apply(40)
+
+    def test_write_error_is_reported(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            panel = root / 'panel'
+            panel.mkdir()
+            (panel / 'brightness').write_text('10\n', encoding='ascii')
+            light = SysfsBacklight(root)
+            (panel / 'brightness').chmod(0)
+            try:
+                with self.assertRaises(CommandFailedError):
+                    light.apply(20)
+            finally:
+                (panel / 'brightness').chmod(0o644)
 
 
 if __name__ == '__main__':

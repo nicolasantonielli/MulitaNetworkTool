@@ -1,4 +1,4 @@
-"""Preferencias del equipo. El panel es fijo; del archivo se leen el tema y la escala."""
+"""Preferencias del equipo. El panel es fijo; del archivo se leen tema, escala, idioma y brillo."""
 from __future__ import annotations
 
 import math
@@ -18,6 +18,8 @@ PANEL_DIAGONAL_INCHES = 5.0
 UI_SCALE_MIN = 0.5
 UI_SCALE_MAX = 1.25
 UI_SCALE_STEP = 0.05
+BRIGHTNESS_MIN = 1
+BRIGHTNESS_MAX = 100
 
 
 class Theme(Enum):
@@ -65,12 +67,14 @@ class Settings:
     display: DisplaySettings = field(default_factory=DisplaySettings)
     theme: Theme = Theme.OSCURO
     language: Language = Language.ES
+    brightness: int = BRIGHTNESS_MAX
 
     def to_dict(self) -> dict[str, Any]:
         return {
             'theme': self.theme.value,
             'scale': self.display.ui_scale,
             'language': self.language.value,
+            'brightness': self.brightness,
         }
 
 
@@ -88,6 +92,14 @@ def theme(value: Any) -> Theme:
         raise ValidationError(tr('badTheme', value=value)) from exc
 
 
+def brightness(value: Any) -> int:
+    try:
+        number = int(round(float(value)))
+    except (TypeError, ValueError) as exc:
+        raise ValidationError(tr('badBrightness', value=value)) from exc
+    return min(BRIGHTNESS_MAX, max(BRIGHTNESS_MIN, number))
+
+
 def ui_scale(value: Any) -> float:
     try:
         number = float(value)
@@ -99,7 +111,7 @@ def ui_scale(value: Any) -> float:
 
 
 def settings_from_dict(data: Mapping[str, Any]) -> Settings:
-    """El tamaño del panel no se configura. Del archivo se leen el tema y la escala."""
+    """El tamaño del panel no se configura. Del archivo se leen tema, escala, idioma y brillo."""
     defaults = Settings()
     try:
         chosen_theme = theme(data.get('theme', defaults.theme.value))
@@ -109,9 +121,13 @@ def settings_from_dict(data: Mapping[str, Any]) -> Settings:
         scale = ui_scale(data.get('scale', defaults.display.ui_scale))
     except ValidationError:
         scale = defaults.display.ui_scale
+    try:
+        level = brightness(data.get('brightness', defaults.brightness))
+    except ValidationError:
+        level = defaults.brightness
     chosen_language = _stored_language(data.get('language', defaults.language.value))
     return Settings(display=replace(defaults.display, ui_scale=scale), theme=chosen_theme,
-                    language=chosen_language)
+                    language=chosen_language, brightness=level)
 
 
 def _stored_language(value: Any) -> Language:
@@ -132,3 +148,7 @@ def with_language(settings: Settings, chosen: Language) -> Settings:
 
 def with_scale(settings: Settings, scale: float) -> Settings:
     return replace(settings, display=replace(settings.display, ui_scale=ui_scale(scale)))
+
+
+def with_brightness(settings: Settings, level: float) -> Settings:
+    return replace(settings, brightness=brightness(level))

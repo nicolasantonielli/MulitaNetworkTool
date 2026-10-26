@@ -44,11 +44,12 @@ class SystemController(TaskController):
 
 
 class SettingsController(Controller):
-    """Tema, escala e idioma. El panel queda fijo en el codigo."""
+    """Tema, escala, idioma y brillo. El panel queda fijo en el codigo."""
     changed = pyqtSignal()
 
     def __init__(self, ctx: BridgeContext):
         super().__init__(ctx)
+        self._brightness_error = ''
         ctx.services.settings.subscribe(lambda _settings: self.changed.emit())
 
     @property
@@ -69,6 +70,14 @@ class SettingsController(Controller):
     @pyqtProperty(float, notify=changed)
     def uiScale(self) -> float:
         return self._current.display.ui_scale
+
+    @pyqtProperty(int, notify=changed)
+    def brightness(self) -> int:
+        return self._current.brightness
+
+    @pyqtProperty(bool, constant=True)
+    def brightnessReady(self) -> bool:
+        return self._services.settings.backlight_ready()
 
     @pyqtProperty(str, notify=changed)
     def language(self) -> str:
@@ -98,6 +107,18 @@ class SettingsController(Controller):
             self._services.settings.set_scale(value)
         except MulitaError as exc:
             self._fail(exc)
+
+    @pyqtSlot(float)
+    def setBrightness(self, value: float) -> None:
+        try:
+            self._services.settings.set_brightness(value)
+        except MulitaError as exc:
+            message = str(exc)
+            if message != self._brightness_error:
+                self._brightness_error = message
+                self._fail(exc)
+            return
+        self._brightness_error = ''
 
 
 class I18nController(Controller):
