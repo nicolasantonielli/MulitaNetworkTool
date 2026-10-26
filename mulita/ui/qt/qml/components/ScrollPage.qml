@@ -14,6 +14,7 @@ Item {
     clip: true
 
     readonly property bool overflowing: flick.contentHeight > flick.height + 1
+    readonly property real viewportWidth: flick.width
 
     Flickable {
         id: flick
@@ -22,6 +23,7 @@ Item {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.right: bar.left
+        anchors.rightMargin: root.overflowing ? ui.gap : 0
         clip: true
         // El dedo tiene que llegar al campo. El desplazamiento va por la barra.
         interactive: false

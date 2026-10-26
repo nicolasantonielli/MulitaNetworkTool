@@ -304,7 +304,7 @@ Item {
                     RowLayout {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        spacing: Math.round(ui.gap * 0.5)
+                        spacing: ui.gap
 
                         ListView {
                             id: wifiList

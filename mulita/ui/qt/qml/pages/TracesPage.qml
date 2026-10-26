@@ -22,8 +22,7 @@ Item {
     ]
 
     function columnWidth(share) {
-        var bar = traceTable.overflowing ? Math.round(ui.mm * 4) : 0
-        return Math.max(1, (traceTable.width - bar) * share / 100)
+        return Math.max(1, traceTable.viewportWidth * share / 100)
     }
 
     function cellColor(hop, key) {
@@ -227,8 +226,7 @@ Item {
                 ]
 
                 function columnWidth(share) {
-                    var bar = pingTable.overflowing ? Math.round(ui.mm * 4) : 0
-                    return Math.max(1, (pingTable.width - bar) * share / 100)
+                    return Math.max(1, pingTable.viewportWidth * share / 100)
                 }
 
                 function statusText(reply) {

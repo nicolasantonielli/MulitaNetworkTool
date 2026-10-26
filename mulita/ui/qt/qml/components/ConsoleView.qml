@@ -7,6 +7,8 @@ Rectangle {
 
     property QtObject source: null
     property string placeholder: ""
+    readonly property bool verticalOverflow: flick.contentHeight > flick.height + 1
+    readonly property bool horizontalOverflow: flick.contentWidth > flick.width + 1
 
     color: ui.consoleBackground
     radius: ui.radius
@@ -22,6 +24,8 @@ Rectangle {
         id: flick
         anchors.fill: parent
         anchors.margins: 1
+        anchors.rightMargin: 1 + (root.verticalOverflow ? verticalBar.width + ui.gap : 0)
+        anchors.bottomMargin: 1 + (root.horizontalOverflow ? horizontalBar.height + ui.gap : 0)
         boundsBehavior: Flickable.StopAtBounds
 
         TextArea.flickable: TextArea {
@@ -41,8 +45,20 @@ Rectangle {
             background: null
         }
 
-        ScrollBar.vertical: ScrollBar { }
-        ScrollBar.horizontal: ScrollBar { }
+        ScrollBar.vertical: ScrollBar {
+            id: verticalBar
+            parent: root
+            x: root.width - width - 1
+            y: 1
+            height: flick.height
+        }
+        ScrollBar.horizontal: ScrollBar {
+            id: horizontalBar
+            parent: root
+            x: 1
+            y: root.height - height - 1
+            width: flick.width
+        }
     }
 
     Connections {

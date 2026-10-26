@@ -39,8 +39,7 @@ Item {
                 ]
 
                 function columnWidth(share) {
-                    var bar = scanTable.overflowing ? Math.round(ui.mm * 4) : 0
-                    return Math.max(1, (scanTable.width - bar) * share / 100)
+                    return Math.max(1, scanTable.viewportWidth * share / 100)
                 }
 
                 function stateColor(state) {
@@ -246,8 +245,7 @@ Item {
                 ]
 
                 function columnWidth(share) {
-                    var bar = discoverTable.overflowing ? Math.round(ui.mm * 4) : 0
-                    return Math.max(1, (discoverTable.width - bar) * share / 100)
+                    return Math.max(1, discoverTable.viewportWidth * share / 100)
                 }
 
                 ChoiceChips {
