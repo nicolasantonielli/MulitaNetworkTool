@@ -30,7 +30,6 @@ Item {
                 { label: i18n.pack.navDisplay, icon: "display" },
                 { label: i18n.pack.navWifi, icon: "wifi" },
                 { label: i18n.pack.navEthIn, icon: "ethernet" },
-                { label: i18n.pack.navEthOut, icon: "ethernet" },
                 { label: i18n.pack.navMaint, icon: "wrench" }
             ]
         }
@@ -468,9 +467,6 @@ Item {
                     }
                 }
             }
-
-            // Ethernet externa
-            PendingSection { title: i18n.pack.ethExternal; icon: "ethernet"; onGoHome: root.goHome() }
 
             // Mantenimiento
             ScrollPage {
