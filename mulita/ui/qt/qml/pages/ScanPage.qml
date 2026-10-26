@@ -184,7 +184,24 @@ Item {
 
             // Descubrimiento IP (netdiscover)
             ColumnLayout {
+                id: discoverPage
                 spacing: ui.gap
+
+                readonly property var hosts: {
+                    try { return JSON.parse(discovery.hostsJson) }
+                    catch (e) { return [] }
+                }
+                readonly property var columns: [
+                    { title: i18n.pack.discoverIp, key: "ip", share: 24 },
+                    { title: i18n.pack.discoverMac, key: "mac", share: 28 },
+                    { title: i18n.pack.discoverCount, key: "count", share: 16 },
+                    { title: i18n.pack.discoverVendor, key: "vendor", share: 32 }
+                ]
+
+                function columnWidth(share) {
+                    var bar = discoverTable.overflowing ? Math.round(ui.mm * 4) : 0
+                    return Math.max(1, (discoverTable.width - bar) * share / 100)
+                }
 
                 RowLayout {
                     spacing: ui.gap
@@ -210,11 +227,113 @@ Item {
                     }
                 }
 
-                ConsoleView {
+                Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    source: discovery.console
-                    placeholder: i18n.pack.discoverEmpty
+                    radius: ui.radius
+                    color: ui.surface
+                    border.width: 1
+                    border.color: ui.border
+
+                    Text {
+                        anchors.centerIn: parent
+                        width: parent.width - ui.padding * 2
+                        visible: discoverPage.hosts.length === 0
+                        text: discovery.running ? i18n.pack.listening : i18n.pack.discoverEmpty
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.Wrap
+                    }
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: Math.round(ui.gap * 0.6)
+                        visible: discoverPage.hosts.length > 0
+                        spacing: Math.round(ui.gap * 0.3)
+
+                        ScrollPage {
+                            id: discoverTable
+                            spacing: 1
+
+                            Row {
+                                Layout.fillWidth: true
+                                Repeater {
+                                    model: discoverPage.columns
+                                    delegate: Text {
+                                        width: discoverPage.columnWidth(modelData.share)
+                                        text: modelData.title
+                                        color: ui.textMuted
+                                        font.pixelSize: ui.fontSmall
+                                        font.weight: Font.DemiBold
+                                        elide: Text.ElideRight
+                                        horizontalAlignment: modelData.key === "vendor"
+                                                              ? Text.AlignLeft : Text.AlignHCenter
+                                    }
+                                }
+                            }
+
+                            Repeater {
+                                model: discoverPage.hosts
+                                delegate: Rectangle {
+                                    id: hostRow
+                                    readonly property var host: modelData
+                                    Layout.fillWidth: true
+                                    implicitHeight: Math.round(ui.fontSmall * 2.15)
+                                    color: index % 2 === 0 ? "transparent" : ui.surfaceAlt
+                                    Row {
+                                        anchors.fill: parent
+                                        Repeater {
+                                            model: discoverPage.columns
+                                            delegate: Text {
+                                                width: discoverPage.columnWidth(modelData.share)
+                                                height: hostRow.height
+                                                text: hostRow.host[modelData.key] === undefined
+                                                      ? "" : String(hostRow.host[modelData.key])
+                                                color: ui.text
+                                                font.pixelSize: ui.fontSmall
+                                                font.family: ui.monoFamily
+                                                verticalAlignment: Text.AlignVCenter
+                                                elide: Text.ElideRight
+                                                horizontalAlignment: modelData.key === "vendor"
+                                                                      ? Text.AlignLeft : Text.AlignHCenter
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                RowLayout {
+                    spacing: ui.gap
+
+                    Field {
+                        id: discoverFile
+                        Layout.fillWidth: true
+                        text: "descubrimiento"
+                        placeholderText: i18n.pack.fileName
+                        enabled: !discovery.running
+                    }
+                    Text {
+                        text: ".csv"
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                    }
+                    TouchButton {
+                        text: i18n.pack.clear
+                        kind: "neutral"
+                        enabled: !discovery.running && discoverPage.hosts.length > 0
+                        onClicked: discovery.clear()
+                    }
+                    TouchButton {
+                        text: i18n.pack.save
+                        icon: "file"
+                        kind: "success"
+                        enabled: !discovery.running && discoverPage.hosts.length > 0
+                        onClicked: discovery.save(discoverFile.text)
+                    }
                 }
             }
         }

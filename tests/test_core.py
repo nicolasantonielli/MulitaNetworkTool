@@ -11,9 +11,9 @@ from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.models import (Calibration, CaptureDirection, ClimateReading,
                                 CommandResult)
 from mulita.core.models import PingSummary
-from mulita.core.parsers import (cable_connected, parse_interfaces, parse_port_scan,
-                                parse_public_address, parse_speed_test, parse_trace,
-                                read_ping_line)
+from mulita.core.parsers import (cable_connected, parse_discovery_line, parse_interfaces,
+                                parse_port_scan, parse_public_address, parse_speed_test,
+                                parse_trace, read_ping_line)
 
 IP_JSON = '''[
  {"ifindex":1,"ifname":"lo","address":"00:00:00:00:00:00",
@@ -253,6 +253,12 @@ Nmap done: 2 IP addresses (2 hosts up) scanned in 1.20 seconds
                 ('router.lan (192.168.0.1)', '80', 'tcp', 'open', 'http'),
                 ('192.168.0.20', '53', 'udp', 'filtered', 'domain'),
             ])
+
+    def test_discovery_line_keeps_ip_mac_and_vendor(self):
+        found = parse_discovery_line('192.168.0.1\taa:bb:cc:dd:ee:ff\t3\t060\tCisco Systems\n')
+        self.assertEqual((found.ip, found.mac, found.count, found.vendor),
+                         ('192.168.0.1', 'AA:BB:CC:DD:EE:FF', '3', 'Cisco Systems'))
+        self.assertIsNone(parse_discovery_line('Currently scanning: 192.168.0.0/24'))
 
 
 class HomeEnvironmentTest(unittest.TestCase):

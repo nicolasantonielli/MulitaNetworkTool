@@ -6,7 +6,7 @@ from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.errors import MulitaError
 from mulita.core.models import PING_COUNT, PING_INTERVAL, PING_SIZE, PingSummary, Range
-from mulita.core.parsers import read_ping_line
+from mulita.core.parsers import parse_discovery_line, read_ping_line
 from mulita.presentation import texts
 from mulita.presentation.i18n import tr
 from mulita.ui.qt.bridge.base import (BridgeContext, SessionController,
@@ -207,11 +207,71 @@ class PortScanController(TaskController):
 
 
 class DiscoveryController(SessionController):
+    hostsChanged = pyqtSignal()
 
     def __init__(self, ctx: BridgeContext):
         super().__init__(ctx, ctx.services.discovery)
+        self._hosts: list = []
+        self._pending = ''
+
+    @pyqtProperty(str, notify=hostsChanged)
+    def hostsJson(self) -> str:
+        return json.dumps([{
+            'ip': item.ip,
+            'mac': item.mac,
+            'count': item.count,
+            'vendor': item.vendor,
+        } for item in self._hosts])
 
     @pyqtSlot(result=bool)
     def start(self) -> bool:
-        self._console.clear()
+        self._hosts = []
+        self._pending = ''
+        self.hostsChanged.emit()
         return self._launch(self._session.start)
+
+    @pyqtSlot()
+    def clear(self) -> None:
+        if self._running:
+            return
+        self._hosts = []
+        self._pending = ''
+        self.hostsChanged.emit()
+
+    @pyqtSlot(str)
+    def save(self, filename: str) -> None:
+        if self._running:
+            return
+        found = tuple(self._hosts)
+        try:
+            name = self._services.discovery.save(found, filename)
+        except MulitaError as exc:
+            self._fail(exc)
+            return
+        self._ctx.notifier.success(tr('discoverTitle'), name)
+
+    def _output(self, text: str) -> None:
+        self._pending += text.replace('\r', '')
+        while '\n' in self._pending:
+            line, self._pending = self._pending.split('\n', 1)
+            self._take(line)
+        self.hostsChanged.emit()
+
+    def _finished(self, _code: int) -> None:
+        if self._pending.strip():
+            self._take(self._pending)
+            self._pending = ''
+            self.hostsChanged.emit()
+
+    def _take(self, line: str) -> None:
+        found = parse_discovery_line(line)
+        if found is None:
+            return
+        for index, item in enumerate(self._hosts):
+            if item.ip == found.ip:
+                self._hosts[index] = found
+                return
+        self._hosts.append(found)
+
+    def _rejected(self, error: MulitaError) -> None:
+        self._fail(error)

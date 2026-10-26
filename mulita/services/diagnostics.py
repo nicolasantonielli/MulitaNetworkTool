@@ -8,8 +8,9 @@ from typing import Optional
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
-from mulita.core.models import PingReply, PingRequest, PingSummary, PortFinding, TraceHop
-from mulita.core.parsers import parse_port_scan, parse_trace, read_ping_line
+from mulita.core.models import (HostSighting, PingReply, PingRequest, PingSummary,
+                                PortFinding, TraceHop)
+from mulita.core.parsers import parse_port_scan, parse_trace
 from mulita.presentation.i18n import tr
 from mulita.core.ports import CommandRunner, ExitListener, OutputListener
 from mulita.services.base import ProcessSession
@@ -210,10 +211,44 @@ class PortScanService:
 
 class DiscoveryService(ProcessSession):
 
-    def __init__(self, runner: CommandRunner, commands: CommandFactory):
+    def __init__(self, runner: CommandRunner, commands: CommandFactory,
+                 directory: PurePosixPath | Path = PurePosixPath('/root/capturas/descubrimiento')):
         super().__init__(runner, 'El descubrimiento')
         self._commands = commands
+        self._directory = Path(directory)
 
     def start(self, on_output: Optional[OutputListener] = None,
               on_exit: Optional[ExitListener] = None) -> None:
         self._launch(self._commands.discovery(), on_output, on_exit)
+
+    def save(self, hosts: tuple[HostSighting, ...], filename: str) -> str:
+        if not hosts:
+            raise ValidationError(tr('noHosts'))
+        name = validation.trace_filename(filename)
+        self._ensure_directory()
+        path = self._directory / name
+        if path.parent.resolve() != self._directory.resolve():
+            raise ValidationError(tr('badStoredName'))
+        if path.exists():
+            raise ValidationError(tr('nameExists'))
+        try:
+            with path.open('w', encoding='utf-8', newline='') as handle:
+                writer = csv.writer(handle, lineterminator='\n')
+                writer.writerow([
+                    tr('discoverIp'), tr('discoverMac'), tr('discoverCount'), tr('discoverVendor'),
+                ])
+                for item in hosts:
+                    writer.writerow([item.ip, item.mac, item.count, item.vendor])
+        except OSError as exc:
+            raise CommandFailedError(tr('saveDiscoverFailed')) from exc
+        if hasattr(os, 'sync'):
+            os.sync()
+        return name
+
+    def _ensure_directory(self) -> None:
+        if os.name != 'posix':
+            return
+        try:
+            self._directory.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise CommandFailedError(tr('discoverFolder')) from exc

@@ -783,6 +783,7 @@ Item {
                                       : modelData.place === "publica" ? i18n.pack.placePublic
                                       : modelData.place === "wifi" ? i18n.pack.placeWifi
                                       : modelData.place === "escaneo" ? i18n.pack.placeScan
+                                      : modelData.place === "descubrimiento" ? i18n.pack.placeDiscover
                                       : modelData.placeLabel) + "   " + modelData.name
                                       + "   " + modelData.size + "   " + modelData.modified
                                 color: picked ? ui.onAccent : ui.text

@@ -69,6 +69,7 @@ class AppConfig:
     ping_dir: PurePosixPath = PurePosixPath('/root/capturas/ping')
     wifi_dir: PurePosixPath = PurePosixPath('/root/capturas/wifi')
     scan_dir: PurePosixPath = PurePosixPath('/root/capturas/escaneo')
+    discovery_dir: PurePosixPath = PurePosixPath('/root/capturas/descubrimiento')
     trace_cycles: int = 6
     public_ip_url: str = 'https://ipwho.is/'
     public_ip_timeout: int = 10

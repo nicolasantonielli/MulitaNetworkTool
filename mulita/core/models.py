@@ -247,6 +247,14 @@ class Calibration:
 
 
 @dataclass(frozen=True)
+class HostSighting:
+    ip: str
+    mac: str
+    count: str
+    vendor: str
+
+
+@dataclass(frozen=True)
 class PortFinding:
     host: str
     port: str
