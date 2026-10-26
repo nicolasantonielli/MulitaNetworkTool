@@ -52,7 +52,64 @@ Item {
                         id: mac
                         Layout.fillWidth: true
                         placeholderText: i18n.pack.macDest
+                        font.family: ui.monoFamily
                         onAccepted: if (!wakeOnLan.busy) wakeOnLan.wake(text)
+
+                        property bool formatting: false
+                        property string lastMac: ""
+
+                        function isHex(ch) {
+                            return (ch >= "0" && ch <= "9") || (ch >= "A" && ch <= "F")
+                        }
+
+                        function groupedMac(raw) {
+                            var hex = raw.toUpperCase().replace(/[^0-9A-F]/g, "").substring(0, 12)
+                            var out = ""
+                            for (var i = 0; i < hex.length; ++i) {
+                                if (i > 0 && i % 2 === 0)
+                                    out += ":"
+                                out += hex.charAt(i)
+                            }
+                            return out
+                        }
+
+                        onTextChanged: {
+                            if (formatting)
+                                return
+                            var source = text
+                            var digits = 0
+                            var end = Math.min(cursorPosition, text.length)
+                            var removedColon = lastMac.length === text.length + 1
+                                    && cursorPosition < lastMac.length
+                                    && lastMac.charAt(cursorPosition) === ":"
+                            if (removedColon) {
+                                var before = 0
+                                for (var j = 0; j < cursorPosition; ++j) {
+                                    if (isHex(lastMac.charAt(j).toUpperCase()))
+                                        before++
+                                }
+                                var oldHex = lastMac.toUpperCase().replace(/[^0-9A-F]/g, "")
+                                if (before > 0)
+                                    source = oldHex.substring(0, before - 1) + oldHex.substring(before)
+                                digits = Math.max(0, before - 1)
+                            } else {
+                                for (var i = 0; i < end; ++i) {
+                                    if (isHex(text.charAt(i).toUpperCase()))
+                                        digits++
+                                }
+                            }
+                            var next = groupedMac(source)
+                            if (next === text) {
+                                lastMac = text
+                                return
+                            }
+                            var colons = digits > 0 ? Math.floor((digits - 1) / 2) : 0
+                            formatting = true
+                            text = next
+                            cursorPosition = Math.min(next.length, digits + colons)
+                            lastMac = next
+                            formatting = false
+                        }
                     }
                     TouchButton {
                         text: i18n.pack.wake

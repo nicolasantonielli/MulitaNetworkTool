@@ -90,7 +90,7 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('toolWifi', 'Info Wi-Fi', 'Wi-Fi info'),
     ('toolMac', 'MAC vendors', 'MAC vendors'),
     ('toolFiles', 'Archivos', 'Files'),
-    ('macDest', 'MAC destino (AA:BB:CC:DD:EE:FF)', 'Target MAC (AA:BB:CC:DD:EE:FF)'),
+    ('macDest', 'MAC seguida, letras y números', 'MAC in a row, letters and numbers'),
     ('wake', 'Despertar', 'Wake'),
     ('wolEmpty', 'Listo para despertar un equipo', 'Ready to wake a device'),
     ('wolSending', 'Enviando el paquete mágico…', 'Sending the magic packet…'),
