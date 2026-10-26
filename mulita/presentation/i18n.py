@@ -32,7 +32,7 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('trafficDir', 'Dirección del tráfico', 'Traffic direction'),
     ('dirIn', 'Entrante', 'Inbound'),
     ('dirOut', 'Saliente', 'Outbound'),
-    ('dirBoth', 'Entrante y Saliente', 'Inbound and outbound'),
+    ('dirBoth', 'Ambos', 'Both'),
     ('captureFile', 'Archivo de captura', 'Capture file'),
     ('fileName', 'Nombre del archivo', 'File name'),
     ('status', 'Estado', 'Status'),

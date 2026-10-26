@@ -40,7 +40,7 @@ class CaptureDirection(Enum):
 _DIRECTION_LABELS = {
     CaptureDirection.ENTRANTE: 'Entrante',
     CaptureDirection.SALIENTE: 'Saliente',
-    CaptureDirection.AMBAS: 'Entrante y Saliente',
+    CaptureDirection.AMBAS: 'Ambos',
 }
 
 
