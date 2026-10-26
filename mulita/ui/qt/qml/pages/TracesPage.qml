@@ -188,6 +188,12 @@ Item {
                         font.pixelSize: ui.fontBody
                     }
                     TouchButton {
+                        text: "Limpiar"
+                        kind: "neutral"
+                        enabled: !trace.busy && root.hops.length > 0
+                        onClicked: trace.clear()
+                    }
+                    TouchButton {
                         text: "Guardar"
                         icon: "file"
                         kind: "success"

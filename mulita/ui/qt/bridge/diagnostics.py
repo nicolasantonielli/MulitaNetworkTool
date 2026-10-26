@@ -39,6 +39,13 @@ class TraceController(TaskController):
     def trace(self, target: str) -> None:
         self._task(lambda: self._services.trace.trace(target), self._show)
 
+    @pyqtSlot()
+    def clear(self) -> None:
+        if self._busy:
+            return
+        self._hops = ()
+        self.hopsChanged.emit()
+
     @pyqtSlot(str)
     def save(self, filename: str) -> None:
         hops = self._hops
