@@ -55,7 +55,6 @@ Card {
             height: contentHeight
             Layout.fillWidth: true
             Layout.maximumWidth: Math.max(40, root.width - ui.padding * 2)
-            onSelectedTextChanged: if (selectedText.length > 0) copy()
         }
         Text {
             visible: root.unit !== ""

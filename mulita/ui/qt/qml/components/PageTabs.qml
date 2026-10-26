@@ -4,6 +4,8 @@ import QtQuick.Controls 2.15
 TabBar {
     id: root
 
+    readonly property bool allowsTextCopy: false
+
     property var tabs: []
 
     implicitHeight: ui.touch

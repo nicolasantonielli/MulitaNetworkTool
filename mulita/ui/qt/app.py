@@ -55,6 +55,7 @@ class QtApplication:
         from mulita.ui.qt.icons import IconProvider
         from mulita.ui.qt.touch_debug import TouchDebug, log_input_devices
         from mulita.ui.qt.touch_test import TouchTest
+        from mulita.ui.qt.text_copy import TextCopyController
 
         self._services = services
         self.app = QGuiApplication(sys.argv)
@@ -76,10 +77,13 @@ class QtApplication:
         self._touch_test = TouchTest()
         self._touch_debug = TouchDebug(self._touch_test)
         self.app.installEventFilter(self._touch_debug)
+        self._text_copy = TextCopyController()
+        self.app.installEventFilter(self._text_copy)
 
         notifier = Notifier()
         ctx = BridgeContext(config=config, services=services, dispatcher=QtDispatcher(), notifier=notifier)
         self._controllers = {
+            'textCopy': self._text_copy,
             'touchTest': self._touch_test,
             'ui': Appearance(ctx),
             'i18n': I18nController(ctx),

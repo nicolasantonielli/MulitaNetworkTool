@@ -6,6 +6,8 @@ import QtQuick.Layouts 1.15
 Flow {
     id: root
 
+    readonly property bool allowsTextCopy: false
+
     property var model: []
     property string value: ""
     property bool clearable: false

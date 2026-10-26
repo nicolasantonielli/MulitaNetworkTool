@@ -34,7 +34,6 @@ Rectangle {
             selectByMouse: true
             persistentSelection: true
             activeFocusOnPress: false
-            onSelectedTextChanged: if (selectedText.length > 0) copy()
             wrapMode: TextEdit.NoWrap
             color: ui.consoleText
             font.family: ui.monoFamily

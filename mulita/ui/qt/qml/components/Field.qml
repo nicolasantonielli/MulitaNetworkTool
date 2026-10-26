@@ -29,8 +29,7 @@ TextField {
     persistentSelection: true
     inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
 
-    // Al soltar una seleccion el texto ya queda en el portapapeles.
-    onSelectedTextChanged: if (selectedText.length > 0) copy()
+    // El menu compartido ofrece copiar al terminar una seleccion.
 
     TapHandler {
         // Un arrastre selecciona. Solo un toque quieto enfoca el campo.

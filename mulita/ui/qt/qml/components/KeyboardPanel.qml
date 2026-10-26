@@ -8,6 +8,8 @@ import QtQuick.Window 2.15
 Rectangle {
     id: root
 
+    readonly property bool allowsTextCopy: false
+
     property Item field: null
     property bool caps: false
     property bool symbols: false
@@ -166,12 +168,7 @@ Rectangle {
         var item = field
         if (!item || !item.copy || !item.text)
             return
-        var hadSelection = item.selectedText && item.selectedText.length > 0
-        if (!hadSelection && item.selectAll)
-            item.selectAll()
-        item.copy()
-        if (!hadSelection && item.deselect)
-            item.deselect()
+        textCopy.showForItem(item)
     }
 
     function backspace() {

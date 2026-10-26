@@ -1,7 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
 
-// Texto de solo lectura que se puede marcar con el cursor. La seleccion se copia sola.
+// Texto de solo lectura seleccionable; la copia se confirma en el menu compartido.
 Item {
     id: root
 
@@ -27,6 +27,5 @@ Item {
         selectionColor: ui.primary
         selectedTextColor: ui.onAccent
         font.pixelSize: ui.fontBody
-        onSelectedTextChanged: if (selectedText.length > 0) copy()
     }
 }

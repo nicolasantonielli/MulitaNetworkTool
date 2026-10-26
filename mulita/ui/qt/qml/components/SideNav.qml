@@ -5,6 +5,8 @@ import QtQuick.Layouts 1.15
 ColumnLayout {
     id: root
 
+    readonly property bool allowsTextCopy: false
+
     property var items: []        // [{label, icon}]
     property int currentIndex: 0
 

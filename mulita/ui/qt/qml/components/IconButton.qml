@@ -3,6 +3,8 @@ import QtQuick 2.15
 Rectangle {
     id: root
 
+    readonly property bool allowsTextCopy: false
+
     property string icon: ""
     property color iconColor: ui.text
     signal clicked()

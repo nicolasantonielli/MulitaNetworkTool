@@ -104,6 +104,7 @@ ApplicationWindow {
     }
 
     Toast { }
+    CopyMenu { }
 
     Timer {
         interval: 15000

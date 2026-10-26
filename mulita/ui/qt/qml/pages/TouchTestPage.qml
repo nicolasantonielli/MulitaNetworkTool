@@ -76,6 +76,7 @@ ColumnLayout {
     Rectangle {
         id: surface
         objectName: "touchTestSurface"
+        readonly property bool allowsTextCopy: false
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.minimumHeight: ui.touch

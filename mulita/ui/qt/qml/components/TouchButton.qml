@@ -4,6 +4,8 @@ import QtQuick 2.15
 Rectangle {
     id: root
 
+    readonly property bool allowsTextCopy: false
+
     property string text: ""
     property string icon: ""
     property string kind: "primary"   // primary | success | danger | warning | neutral | ghost

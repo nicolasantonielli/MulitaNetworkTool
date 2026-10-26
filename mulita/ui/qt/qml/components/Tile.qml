@@ -4,6 +4,8 @@ import QtQuick.Layouts 1.15
 Rectangle {
     id: root
 
+    readonly property bool allowsTextCopy: false
+
     property string icon: ""
     property string title: ""
     property string subtitle: ""
