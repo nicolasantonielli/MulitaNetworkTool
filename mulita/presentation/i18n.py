@@ -218,7 +218,7 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('language', 'Idioma', 'Language'),
     ('languageHint', 'Elegí el idioma de la interfaz.', 'Choose the interface language.'),
     ('brightness', 'Brillo', 'Brightness'),
-    ('brightnessHint', 'Ajustá la luz del panel. Se guarda para el próximo arranque.', 'Adjust the panel light. It is kept for the next start.'),
+    ('brightnessHint', 'Cambia al mover el control y queda guardado.', 'It changes as you move the control and stays saved.'),
     ('noBacklight', 'Esta pantalla no deja cambiar el brillo.', 'This screen cannot change the brightness.'),
     ('brightnessFailed', 'No se pudo cambiar el brillo', 'The brightness could not be changed'),
     ('badBrightness', 'Brillo invalido: {value}', 'Invalid brightness: {value}'),

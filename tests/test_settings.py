@@ -4,8 +4,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from mulita.adapters.backlight import SysfsBacklight
+from mulita.adapters.backlight import MailboxBacklight, PanelBacklight, SysfsBacklight
 from mulita.adapters.settings_store import JsonSettingsStore, MemorySettingsStore
 from mulita.core import settings as rules
 from mulita.core.errors import CommandFailedError, ValidationError
@@ -201,6 +202,49 @@ class SysfsBacklightTest(unittest.TestCase):
                     light.apply(20)
             finally:
                 (panel / 'brightness').chmod(0o644)
+
+
+class MailboxBacklightTest(unittest.TestCase):
+
+    def test_firmware_call_uses_the_backlight_tag(self):
+        seen = {}
+
+        def ioctl(_fd, code, words, mutate):
+            seen['code'] = code
+            seen['tag'] = words[2]
+            seen['level'] = words[5]
+            seen['mutate'] = mutate
+            words[1] = 0x80000000
+
+        with patch('mulita.adapters.backlight.os.path.exists', return_value=True), \
+                patch('mulita.adapters.backlight.os.open', return_value=7), \
+                patch('mulita.adapters.backlight.os.close'):
+            light = MailboxBacklight('/dev/vcio', ioctl)
+            self.assertTrue(light.available())
+            light.apply(50)
+        self.assertEqual(seen['tag'], 0x0004800F)
+        self.assertEqual(seen['level'], 128)
+        self.assertTrue(seen['mutate'])
+        self.assertEqual(seen['code'] & 0xFFFF, 0x6400)
+
+    def test_firmware_rejection_is_reported(self):
+        def ioctl(_fd, _code, words, _mutate):
+            words[1] = 0x80000000
+            words[5] = 0xFFFFFFFF
+
+        with patch('mulita.adapters.backlight.os.open', return_value=7), \
+                patch('mulita.adapters.backlight.os.close'):
+            with self.assertRaises(CommandFailedError):
+                MailboxBacklight('/dev/vcio', ioctl).apply(40)
+
+    def test_panel_uses_the_firmware_when_sysfs_is_missing(self):
+        mailbox = _MemoryBacklight()
+        sysfs = _MemoryBacklight(ready=False)
+        light = PanelBacklight(sysfs, mailbox)
+        self.assertTrue(light.available())
+        light.apply(25)
+        self.assertEqual(mailbox.levels, [25])
+        self.assertEqual(sysfs.levels, [])
 
 
 if __name__ == '__main__':

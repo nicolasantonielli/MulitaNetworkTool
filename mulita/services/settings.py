@@ -7,7 +7,7 @@ from mulita.core import settings as rules
 from mulita.core.errors import MulitaError
 from mulita.core.ports import SettingsStore
 from mulita.core.settings import Settings
-from mulita.adapters.backlight import SysfsBacklight
+from mulita.adapters.backlight import PanelBacklight
 from mulita.presentation import i18n
 
 log = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ class SettingsService:
 
     def __init__(self, store: SettingsStore, backlight: Optional[Backlight] = None):
         self._store = store
-        self._backlight = backlight or SysfsBacklight()
+        self._backlight = backlight or PanelBacklight()
         self._current = store.load()
         i18n.use(self._current.language.value)
         self._listeners: list[SettingsListener] = []
