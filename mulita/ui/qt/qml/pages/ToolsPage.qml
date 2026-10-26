@@ -465,7 +465,7 @@ Item {
                         Layout.fillWidth: true
                         text: filesPage.drives.length === 0
                               ? "No aparece un pendrive en el USB"
-                              : "Elegí el pendrive. Se monta solo al exportar"
+                              : "Elegí el pendrive"
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
                         wrapMode: Text.Wrap
