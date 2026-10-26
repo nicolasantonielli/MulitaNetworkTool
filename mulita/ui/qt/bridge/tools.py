@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.models import ClimateReading, SpeedTestResult
@@ -138,3 +140,45 @@ class MacVendorController(TaskController):
     def _failed(self, error: Exception) -> None:
         self._vendor, self._status = '', str(error)
         self.vendorChanged.emit()
+
+
+class FilesController(TaskController):
+    filesChanged = pyqtSignal()
+
+    def __init__(self, ctx: BridgeContext):
+        super().__init__(ctx)
+        self._files: tuple = ()
+
+    @pyqtProperty(str, notify=filesChanged)
+    def filesJson(self) -> str:
+        return json.dumps([{
+            'place': item.place,
+            'placeLabel': item.place_label,
+            'name': item.name,
+            'size': item.size,
+            'modified': item.modified,
+        } for item in self._files])
+
+    @pyqtSlot()
+    def refresh(self) -> None:
+        self._task(self._services.files.list_files, self._show)
+
+    @pyqtSlot(str, str, str)
+    def rename(self, place: str, name: str, new_name: str) -> None:
+        self._task(lambda: self._services.files.rename(place, name, new_name), self._done)
+
+    @pyqtSlot(str, str, str)
+    def copyFile(self, place: str, name: str, new_name: str) -> None:
+        self._task(lambda: self._services.files.copy(place, name, new_name), self._done)
+
+    @pyqtSlot(str, str)
+    def remove(self, place: str, name: str) -> None:
+        self._task(lambda: self._services.files.delete(place, name), self._done)
+
+    def _show(self, found: tuple) -> None:
+        self._files = found
+        self.filesChanged.emit()
+
+    def _done(self, _name) -> None:
+        self._ctx.notifier.success('Archivos', 'Listo')
+        self.refresh()

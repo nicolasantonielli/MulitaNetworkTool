@@ -18,6 +18,7 @@ from mulita.services.settings import SettingsService
 from mulita.services.diagnostics import (DiscoveryService, PingService,
                                          PortScanService, TraceService)
 from mulita.services.ethernet import EthernetService
+from mulita.services.files import CaptureFilesService
 from mulita.services.network import (CaptureService, InterfaceService,
                                      TapService)
 from mulita.services.system import (KeyboardService, MaintenanceService,
@@ -42,12 +43,14 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
                    settings_store: SettingsStore | None = None) -> Services:
     runner = runner or SubprocessCommandRunner()
     commands = CommandFactory(config.binaries)
+    capture = CaptureService(runner, commands, config.capture_dir)
+    tap = TapService(runner, commands, CaptureService(runner, commands, config.capture_dir / 'tap'))
     return Services(
         interfaces=InterfaceService(runner, commands),
         ethernet=EthernetService(runner, commands, config.internal_interface, config.internal_connection),
         wifi=WifiService(runner, commands),
-        capture=CaptureService(runner, commands, config.capture_dir),
-        tap=TapService(runner, commands, CaptureService(runner, commands, config.capture_dir / 'tap')),
+        capture=capture,
+        tap=tap,
         trace=TraceService(runner, commands, config.trace_cycles),
         ping=PingService(runner, commands),
         port_scan=PortScanService(runner, commands),
@@ -57,6 +60,7 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
         speed_test=SpeedTestService(runner, commands),
         public_ip=PublicIpService(runner, commands, config.public_ip_url, config.public_ip_timeout),
         mac_vendor=MacVendorService(runner, commands, config.mac_vendor_url, config.mac_vendor_timeout),
+        files=CaptureFilesService(config.capture_dir, lambda: capture.is_running, lambda: tap.is_running),
         maintenance=MaintenanceService(runner, commands, config.repository_dir, config.service_name,
                                    config.update_remote, config.update_branch),
         keyboard=KeyboardService(runner, commands),

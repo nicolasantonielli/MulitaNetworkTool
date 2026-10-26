@@ -6,6 +6,8 @@ import "../components"
 Item {
     id: root
 
+    ConfirmDialog { id: dialog }
+
     Component.onCompleted: climate.refresh()
 
     RowLayout {
@@ -17,14 +19,20 @@ Item {
             id: nav
             Layout.preferredWidth: Math.round(root.width * 0.27)
             Layout.fillHeight: true
-            onCurrentIndexChanged: if (currentIndex === 4 && !wifi.busy) wifi.loadLink()
+            onCurrentIndexChanged: {
+                if (currentIndex === 4 && !wifi.busy)
+                    wifi.loadLink()
+                if (currentIndex === 6 && !files.busy)
+                    files.refresh()
+            }
             items: [
                 { label: "Wake on LAN", icon: "wake" },
                 { label: "Temperatura", icon: "thermometer" },
                 { label: "Velocidad", icon: "gauge" },
                 { label: "IP pública", icon: "globe" },
                 { label: "Info Wi-Fi", icon: "wifi" },
-                { label: "MAC vendors", icon: "info" }
+                { label: "MAC vendors", icon: "info" },
+                { label: "Archivos", icon: "file" }
             ]
         }
 
@@ -296,6 +304,157 @@ Item {
                         kind: "neutral"
                         enabled: !macVendor.busy
                         onClicked: macVendor.lookup(vendorMac.text)
+                    }
+                }
+            }
+
+            // Gestión de archivos
+            ColumnLayout {
+                id: filesPage
+                spacing: ui.gap
+
+                property string chosenPlace: ""
+                property string chosenName: ""
+                property string action: ""
+
+                readonly property var rows: {
+                    try { return JSON.parse(files.filesJson) }
+                    catch (e) { return [] }
+                }
+
+                function baseName(name) {
+                    return name.replace(/\.pcap$/i, "")
+                }
+
+                function begin(kind) {
+                    if (chosenName === "")
+                        return
+                    action = kind
+                    newName.text = kind === "copy" ? baseName(chosenName) + "-copia" : baseName(chosenName)
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Gestión de archivos"
+                        color: ui.text
+                        font.pixelSize: ui.fontBody
+                        font.weight: Font.DemiBold
+                        elide: Text.ElideRight
+                    }
+                    TouchButton {
+                        text: files.busy ? "Leyendo…" : "Actualizar"
+                        icon: "refresh"
+                        kind: "neutral"
+                        enabled: !files.busy
+                        onClicked: files.refresh()
+                    }
+                }
+
+                ScrollPage {
+                    Text {
+                        Layout.fillWidth: true
+                        visible: filesPage.rows.length === 0
+                        text: "No hay capturas"
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                    }
+                    Repeater {
+                        model: filesPage.rows
+
+                        delegate: Rectangle {
+                            readonly property bool selected: filesPage.chosenPlace === modelData.place
+                                                             && filesPage.chosenName === modelData.name
+
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: ui.touch
+                            radius: ui.radius
+                            color: selected ? ui.primary : (area.pressed ? ui.surfaceHigh : ui.surfaceAlt)
+                            border.width: 1
+                            border.color: selected ? ui.primary : ui.border
+
+                            Text {
+                                anchors.fill: parent
+                                anchors.leftMargin: ui.padding
+                                anchors.rightMargin: ui.padding
+                                verticalAlignment: Text.AlignVCenter
+                                text: modelData.placeLabel + "   " + modelData.name
+                                      + "   " + modelData.size + "   " + modelData.modified
+                                color: selected ? ui.onAccent : ui.text
+                                font.pixelSize: ui.fontSmall
+                                elide: Text.ElideRight
+                            }
+                            TouchArea {
+                                id: area
+                                onTapped: {
+                                    filesPage.chosenPlace = modelData.place
+                                    filesPage.chosenName = modelData.name
+                                    filesPage.action = ""
+                                }
+                            }
+                        }
+                    }
+                }
+
+                RowLayout {
+                    spacing: ui.gap
+                    enabled: filesPage.chosenName !== "" && !files.busy
+
+                    TouchButton {
+                        Layout.fillWidth: true
+                        text: "Renombrar"
+                        kind: "neutral"
+                        enabled: parent.enabled
+                        onClicked: filesPage.begin("rename")
+                    }
+                    TouchButton {
+                        Layout.fillWidth: true
+                        text: "Copiar"
+                        kind: "neutral"
+                        enabled: parent.enabled
+                        onClicked: filesPage.begin("copy")
+                    }
+                    TouchButton {
+                        Layout.fillWidth: true
+                        text: "Borrar"
+                        kind: "danger"
+                        enabled: parent.enabled
+                        onClicked: dialog.ask({
+                            title: "Borrar",
+                            kind: "danger",
+                            message: "Se elimina " + filesPage.chosenName + ".",
+                            confirmText: "Borrar",
+                            confirmAction: function() {
+                                files.remove(filesPage.chosenPlace, filesPage.chosenName)
+                                filesPage.chosenName = ""
+                                filesPage.action = ""
+                            }
+                        })
+                    }
+                }
+
+                RowLayout {
+                    visible: filesPage.action !== ""
+                    spacing: ui.gap
+
+                    Field {
+                        id: newName
+                        Layout.fillWidth: true
+                        placeholderText: "Nuevo nombre"
+                        enabled: !files.busy
+                    }
+                    TouchButton {
+                        text: "Aplicar"
+                        icon: "check"
+                        kind: "success"
+                        enabled: !files.busy
+                        onClicked: {
+                            if (filesPage.action === "rename")
+                                files.rename(filesPage.chosenPlace, filesPage.chosenName, newName.text)
+                            else
+                                files.copyFile(filesPage.chosenPlace, filesPage.chosenName, newName.text)
+                        }
                     }
                 }
             }

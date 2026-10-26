@@ -46,6 +46,7 @@ class QtApplication:
                                                 SystemController)
         from mulita.ui.qt.bridge.wifi import WifiController
         from mulita.ui.qt.bridge.tools import (ClimateController,
+                                               FilesController,
                                                MacVendorController,
                                                PublicIpController,
                                                SpeedTestController,
@@ -95,6 +96,7 @@ class QtApplication:
             'speedTest': SpeedTestController(ctx),
             'publicIp': PublicIpController(ctx),
             'macVendor': MacVendorController(ctx),
+            'files': FilesController(ctx),
         }
 
         self.engine = QQmlApplicationEngine()

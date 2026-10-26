@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from mulita.services.diagnostics import (DiscoveryService, PingService,
                                          PortScanService, TraceService)
 from mulita.services.ethernet import EthernetService
+from mulita.services.files import CaptureFilesService
 from mulita.services.network import (CaptureService, InterfaceService,
                                      TapService)
 from mulita.services.settings import SettingsService
@@ -31,6 +32,7 @@ class Services:
     speed_test: SpeedTestService
     public_ip: PublicIpService
     mac_vendor: MacVendorService
+    files: CaptureFilesService
     maintenance: MaintenanceService
     keyboard: KeyboardService
     share: ShareService
