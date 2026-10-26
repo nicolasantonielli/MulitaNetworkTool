@@ -315,7 +315,13 @@ Item {
 
                 property string chosenPlace: ""
                 property string chosenName: ""
+                property string chosenDrive: ""
                 property string action: ""
+
+                readonly property var drives: {
+                    try { return JSON.parse(files.drivesJson) }
+                    catch (e) { return [] }
+                }
 
                 readonly property var rows: {
                     try { return JSON.parse(files.filesJson) }
@@ -330,7 +336,17 @@ Item {
                     if (chosenName === "")
                         return
                     action = kind
+                    chosenDrive = ""
+                    if (kind === "export") {
+                        files.refreshDrives()
+                        return
+                    }
                     newName.text = kind === "copy" ? baseName(chosenName) + "-copia" : baseName(chosenName)
+                }
+
+                function cancel() {
+                    action = ""
+                    chosenDrive = ""
                 }
 
                 RowLayout {
@@ -417,6 +433,13 @@ Item {
                     }
                     TouchButton {
                         Layout.fillWidth: true
+                        text: "Exportar"
+                        kind: "neutral"
+                        enabled: parent.enabled
+                        onClicked: filesPage.begin("export")
+                    }
+                    TouchButton {
+                        Layout.fillWidth: true
                         text: "Borrar"
                         kind: "danger"
                         enabled: parent.enabled
@@ -434,26 +457,67 @@ Item {
                     }
                 }
 
+                ColumnLayout {
+                    visible: filesPage.action === "export"
+                    spacing: ui.gap
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: filesPage.drives.length === 0
+                              ? "No hay un pendrive conectado"
+                              : "Elegí el pendrive"
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        wrapMode: Text.Wrap
+                    }
+                    ChoiceChips {
+                        Layout.fillWidth: true
+                        visible: filesPage.drives.length > 0
+                        model: filesPage.drives
+                        value: filesPage.chosenDrive
+                        enabled: !files.busy
+                        onActivated: filesPage.chosenDrive = value
+                    }
+                    TouchButton {
+                        text: files.busy ? "Buscando…" : "Buscar pendrive"
+                        icon: "refresh"
+                        kind: "neutral"
+                        enabled: !files.busy
+                        onClicked: files.refreshDrives()
+                    }
+                }
+
                 RowLayout {
-                    visible: filesPage.action !== ""
+                    visible: filesPage.action === "rename" || filesPage.action === "copy"
+                             || filesPage.action === "export"
                     spacing: ui.gap
 
                     Field {
                         id: newName
                         Layout.fillWidth: true
+                        visible: filesPage.action !== "export"
                         placeholderText: "Nuevo nombre"
                         enabled: !files.busy
+                    }
+                    TouchButton {
+                        text: "Cancelar"
+                        kind: "neutral"
+                        enabled: !files.busy
+                        onClicked: filesPage.cancel()
                     }
                     TouchButton {
                         text: "Aplicar"
                         icon: "check"
                         kind: "success"
-                        enabled: !files.busy
+                        enabled: !files.busy && (filesPage.action === "export"
+                                 ? filesPage.chosenDrive !== "" : true)
                         onClicked: {
                             if (filesPage.action === "rename")
                                 files.rename(filesPage.chosenPlace, filesPage.chosenName, newName.text)
-                            else
+                            else if (filesPage.action === "copy")
                                 files.copyFile(filesPage.chosenPlace, filesPage.chosenName, newName.text)
+                            else
+                                files.exportFile(filesPage.chosenPlace, filesPage.chosenName, filesPage.chosenDrive)
                         }
                     }
                 }

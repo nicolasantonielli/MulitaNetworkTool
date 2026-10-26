@@ -144,10 +144,12 @@ class MacVendorController(TaskController):
 
 class FilesController(TaskController):
     filesChanged = pyqtSignal()
+    drivesChanged = pyqtSignal()
 
     def __init__(self, ctx: BridgeContext):
         super().__init__(ctx)
         self._files: tuple = ()
+        self._drives: tuple = ()
 
     @pyqtProperty(str, notify=filesChanged)
     def filesJson(self) -> str:
@@ -159,9 +161,19 @@ class FilesController(TaskController):
             'modified': item.modified,
         } for item in self._files])
 
+    @pyqtProperty(str, notify=drivesChanged)
+    def drivesJson(self) -> str:
+        return json.dumps([
+            {'label': item.label, 'value': item.device} for item in self._drives
+        ])
+
     @pyqtSlot()
     def refresh(self) -> None:
         self._task(self._services.files.list_files, self._show)
+
+    @pyqtSlot()
+    def refreshDrives(self) -> None:
+        self._task(self._services.files.list_drives, self._show_drives)
 
     @pyqtSlot(str, str, str)
     def rename(self, place: str, name: str, new_name: str) -> None:
@@ -175,9 +187,17 @@ class FilesController(TaskController):
     def remove(self, place: str, name: str) -> None:
         self._task(lambda: self._services.files.delete(place, name), self._done)
 
+    @pyqtSlot(str, str, str)
+    def exportFile(self, place: str, name: str, drive: str) -> None:
+        self._task(lambda: self._services.files.export(place, name, drive), self._done)
+
     def _show(self, found: tuple) -> None:
         self._files = found
         self.filesChanged.emit()
+
+    def _show_drives(self, found: tuple) -> None:
+        self._drives = found
+        self.drivesChanged.emit()
 
     def _done(self, _name) -> None:
         self._ctx.notifier.success('Archivos', 'Listo')

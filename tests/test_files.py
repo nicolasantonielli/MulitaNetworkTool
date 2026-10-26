@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from mulita.core.errors import ValidationError
-from mulita.services.files import CaptureFilesService
+from mulita.services.files import CaptureFilesService, UsbDrive
 
 
 class CaptureFilesTest(unittest.TestCase):
@@ -49,3 +49,18 @@ class CaptureFilesTest(unittest.TestCase):
             with self.assertRaises(ValidationError):
                 service.delete('captura', 'uno.pcap')
             self.assertEqual(service.rename('tap', 'dos', 'dos2'), 'dos2.pcap')
+
+    def test_export_copies_the_capture_onto_the_pendrive(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'uno.pcap').write_bytes(b'abc')
+            stick = root / 'stick'
+            stick.mkdir()
+            service = CaptureFilesService(
+                root, drives=lambda: (UsbDrive('sda1', 'KINGSTON', str(stick)),))
+            self.assertEqual(service.export('captura', 'uno.pcap', 'sda1'), 'uno.pcap')
+            self.assertEqual((stick / 'uno.pcap').read_bytes(), b'abc')
+            with self.assertRaises(ValidationError):
+                service.export('captura', 'uno.pcap', 'sda1')
+            with self.assertRaises(ValidationError):
+                CaptureFilesService(root, drives=lambda: ()).export('captura', 'uno.pcap', 'sda1')

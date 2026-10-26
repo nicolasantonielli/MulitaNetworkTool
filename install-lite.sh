@@ -95,7 +95,7 @@ ensure_path() {
 missing=0
 for path in \
   /bin/tcpdump /bin/mtr /bin/ping /bin/nmap /sbin/netdiscover /usr/sbin/iw \
-  /bin/wakeonlan /bin/speedtest /bin/curl /usr/bin/ip /usr/sbin/tc /usr/bin/git /bin/bash
+  /bin/wakeonlan /bin/speedtest /bin/curl /usr/bin/ip /usr/sbin/tc /usr/bin/mount /usr/bin/git /bin/bash
 do
   ensure_path "$path" || missing=1
 done

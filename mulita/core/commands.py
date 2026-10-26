@@ -123,6 +123,9 @@ class CommandFactory:
     def link_promisc(self, interface: str, enabled: bool) -> Argv:
         return [self._bin.ip, 'link', 'set', 'dev', interface, 'promisc', 'on' if enabled else 'off']
 
+    def mount_partition(self, device: str, target: str) -> Argv:
+        return [self._bin.mount, f'/dev/{device}', target]
+
     def link_delete(self, name: str) -> Argv:
         return [self._bin.ip, 'link', 'del', 'dev', name]
 
