@@ -241,14 +241,14 @@ Rectangle {
             TouchButton {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.round(root.keyHeight * 0.72)
-                text: "Copiar"
+                text: i18n.pack.kbCopy
                 kind: "neutral"
                 onClicked: root.copySelection()
             }
             TouchButton {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.round(root.keyHeight * 0.72)
-                text: "Pegar"
+                text: i18n.pack.kbPaste
                 kind: "neutral"
                 onClicked: if (root.field && root.field.paste) root.field.paste()
             }
@@ -308,7 +308,7 @@ Rectangle {
             TouchButton {
                 Layout.preferredWidth: ui.touch * 1.7
                 Layout.preferredHeight: root.keyHeight
-                text: "Mayús"
+                text: i18n.pack.kbShift
                 kind: root.caps ? "success" : "neutral"
                 onClicked: {
                     if (Date.now() - root.typedAt < 500)
@@ -320,7 +320,7 @@ Rectangle {
                 visible: root.symbolField
                 Layout.preferredWidth: ui.touch * 2
                 Layout.preferredHeight: root.keyHeight
-                text: root.symbols ? "Letras" : "Signos"
+                text: root.symbols ? i18n.pack.kbLetters : i18n.pack.kbSymbols
                 kind: root.symbols ? "success" : "neutral"
                 onClicked: {
                     if (Date.now() - root.typedAt < 500)
@@ -339,7 +339,7 @@ Rectangle {
             TouchButton {
                 Layout.fillWidth: true
                 Layout.preferredHeight: root.keyHeight
-                text: "espacio"
+                text: i18n.pack.kbSpace
                 kind: "neutral"
                 onClicked: root.type(" ")
             }

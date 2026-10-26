@@ -6,6 +6,7 @@ from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.models import ClimateReading, SpeedTestResult
 from mulita.presentation import texts
+from mulita.presentation.i18n import tr
 from mulita.ui.qt.bridge.base import BridgeContext, TaskController
 
 
@@ -200,5 +201,5 @@ class FilesController(TaskController):
         self.drivesChanged.emit()
 
     def _done(self, _name) -> None:
-        self._ctx.notifier.success('Archivos', 'Listo')
+        self._ctx.notifier.success(tr('filesTitle'), tr('filesReady'))
         self.refresh()

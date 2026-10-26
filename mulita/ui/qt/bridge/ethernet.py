@@ -6,6 +6,7 @@ from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.errors import ValidationError
 from mulita.core.models import AddressMode, EthernetConfig
+from mulita.presentation.i18n import tr
 from mulita.ui.qt.bridge.base import TaskController
 
 
@@ -22,6 +23,7 @@ class InternalEthernetController(TaskController):
     def __init__(self, ctx):
         super().__init__(ctx)
         self._config = EthernetConfig()
+        ctx.services.settings.subscribe(lambda _settings: self.loaded.emit())
 
     @pyqtProperty(str, notify=loaded)
     def interfaceName(self) -> str:
@@ -50,10 +52,10 @@ class InternalEthernetController(TaskController):
     @pyqtProperty(str, notify=loaded)
     def summary(self) -> str:
         if self._config.mode is AddressMode.ESTATICA and self._config.address:
-            return f'En uso: {self._config.address}/{self._config.prefix}'
+            return tr('inUseStatic', address=self._config.address, prefix=self._config.prefix)
         if self._config.address:
-            return f'En uso: DHCP · {self._config.address}'
-        return 'En uso: DHCP'
+            return tr('inUseDhcpAddr', address=self._config.address)
+        return tr('inUseDhcp')
 
     @pyqtProperty('QVariantList', constant=True)
     def modes(self) -> list[dict]:
@@ -67,17 +69,17 @@ class InternalEthernetController(TaskController):
     def apply(self, mode: str, address: str, netmask: str, gateway: str, dns: str) -> None:
         if mode == AddressMode.DHCP.value:
             task = self._services.ethernet.apply_dhcp
-            done = 'DHCP activo'
+            done = tr('dhcpOn')
         elif mode == AddressMode.ESTATICA.value:
             task = lambda: self._services.ethernet.apply_static(address, netmask, gateway, dns)
-            done = 'Direccion estatica aplicada'
+            done = tr('staticApplied')
         else:
-            self._fail(ValidationError(f'Modo invalido: {mode}'))
+            self._fail(ValidationError(tr('invalidMode', mode=mode)))
             return
 
         def ok(config: EthernetConfig) -> None:
             self._show(config)
-            self._ctx.notifier.success('Ethernet interna', done)
+            self._ctx.notifier.success(tr('ethInternal'), done)
 
         self._task(task, ok)
 

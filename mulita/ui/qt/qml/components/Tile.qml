@@ -43,7 +43,7 @@ Rectangle {
             Item { Layout.fillWidth: true }
             StatusPill {
                 visible: root.active
-                text: "En curso"
+                text: i18n.pack.running
                 tone: ui.success
                 pulsing: root.active
             }

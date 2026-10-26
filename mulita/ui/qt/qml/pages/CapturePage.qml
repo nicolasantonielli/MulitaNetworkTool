@@ -81,7 +81,7 @@ Item {
 
             Card {
                 Layout.fillWidth: true
-                title: "Interfaz"
+                title: i18n.pack.iface
                 titleIcon: "ethernet"
 
                 ChoiceChips {
@@ -94,7 +94,7 @@ Item {
                 Text {
                     Layout.fillWidth: true
                     text: root.captureInterfaces.length === 0
-                          ? "No se detectaron interfaces de red"
+                          ? i18n.pack.noIfaces
                           : root.interfaceList()
                     color: ui.text
                     font.pixelSize: ui.fontBody
@@ -102,7 +102,7 @@ Item {
                 }
                 TouchButton {
                     Layout.fillWidth: true
-                    text: network.refreshing ? "Leyendo…" : "Recargar interfaces"
+                    text: network.refreshing ? i18n.pack.reading : i18n.pack.reloadIfaces
                     icon: "refresh"
                     kind: network.refreshing ? "success" : "neutral"
                     enabled: !capture.running && !network.refreshing
@@ -112,12 +112,16 @@ Item {
 
             Card {
                 Layout.fillWidth: true
-                title: "Dirección del tráfico"
+                title: i18n.pack.trafficDir
                 titleIcon: "capture"
 
                 ChoiceChips {
                     Layout.fillWidth: true
-                    model: capture.directions
+                    model: [
+                        { label: i18n.pack.dirIn, value: "in" },
+                        { label: i18n.pack.dirOut, value: "out" },
+                        { label: i18n.pack.dirBoth, value: "inout" }
+                    ]
                     value: root.selectedDirection
                     enabled: !capture.running
                     onActivated: root.selectedDirection = value
@@ -126,7 +130,7 @@ Item {
 
             Card {
                 Layout.fillWidth: true
-                title: "Archivo de captura"
+                title: i18n.pack.captureFile
                 titleIcon: "file"
 
                 RowLayout {
@@ -137,7 +141,7 @@ Item {
                         Layout.fillWidth: true
                         text: capture.defaultFilename
                         enabled: !capture.running
-                        placeholderText: "Nombre del archivo"
+                        placeholderText: i18n.pack.fileName
                     }
                     Text {
                         text: ".pcap"
@@ -151,11 +155,11 @@ Item {
         Card {
             Layout.preferredWidth: Math.round(root.width * 0.34)
             Layout.fillHeight: true
-            title: "Estado"
+            title: i18n.pack.status
             titleIcon: "info"
 
             StatusPill {
-                text: capture.running ? "Capturando" : "Detenida"
+                text: capture.running ? i18n.pack.capturing : i18n.pack.stopped
                 tone: capture.running ? ui.success : ui.textMuted
                 pulsing: capture.running
             }
@@ -181,7 +185,7 @@ Item {
             TouchButton {
                 Layout.fillWidth: true
                 implicitHeight: Math.round(ui.touch * 1.2)
-                text: capture.running ? "Detener" : "Iniciar"
+                text: capture.running ? i18n.pack.stop : i18n.pack.start
                 icon: capture.running ? "stop" : "play"
                 kind: capture.running ? "danger" : "success"
                 onClicked: capture.running ? capture.stop()

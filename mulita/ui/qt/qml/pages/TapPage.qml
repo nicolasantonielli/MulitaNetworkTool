@@ -30,7 +30,7 @@ Item {
         PageTabs {
             id: tabs
             Layout.fillWidth: true
-            tabs: ["Configuración", "Pantalla"]
+            tabs: [i18n.pack.tapConfig, i18n.pack.tapScreen]
         }
 
         StackLayout {
@@ -49,9 +49,9 @@ Item {
                     Repeater {
                         id: groups
                         model: [
-                            { title: "Entrante", icon: "download" },
-                            { title: "Mirror", icon: "tap" },
-                            { title: "Saliente", icon: "upload" }
+                            { id: "in", icon: "download" },
+                            { id: "mirror", icon: "tap" },
+                            { id: "out", icon: "upload" }
                         ]
 
                         Card {
@@ -62,12 +62,13 @@ Item {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             Layout.preferredWidth: 1
-                            title: modelData.title
+                            title: modelData.id === "in" ? i18n.pack.tapIn
+                                   : modelData.id === "out" ? i18n.pack.tapOut : "Mirror"
                             titleIcon: modelData.icon
 
                             ChoiceChips {
                                 Layout.fillWidth: true
-                                clearable: modelData.title === "Mirror"
+                                clearable: modelData.id === "mirror"
                                 model: root.tapInterfaces
                                 value: group.value
                                 enabled: !tap.running
@@ -91,7 +92,7 @@ Item {
 
                 Card {
                     Layout.fillWidth: true
-                    title: "Archivo de captura"
+                    title: i18n.pack.captureFile
                     titleIcon: "file"
 
                     RowLayout {
@@ -102,7 +103,7 @@ Item {
                             Layout.fillWidth: true
                             text: tap.defaultFilename
                             enabled: !tap.running
-                            placeholderText: "Nombre del archivo"
+                            placeholderText: i18n.pack.fileName
                         }
                         Text {
                             text: ".pcap"
@@ -124,7 +125,7 @@ Item {
                     spacing: ui.gap
 
                     TouchButton {
-                        text: network.refreshing ? "Leyendo…" : "Actualizar interfaces"
+                        text: network.refreshing ? i18n.pack.reading : i18n.pack.updateIfaces
                         icon: "refresh"
                         kind: network.refreshing ? "success" : "neutral"
                         enabled: !tap.running && !network.refreshing
@@ -132,13 +133,13 @@ Item {
                     }
                     Item { Layout.fillWidth: true }
                     StatusPill {
-                        text: tap.running ? "Activo" : "Inactivo"
+                        text: tap.running ? i18n.pack.active : i18n.pack.inactive
                         tone: tap.running ? ui.success : ui.textMuted
                         pulsing: tap.running
                     }
                     TouchButton {
                         Layout.preferredWidth: ui.mm * 34
-                        text: tap.running ? "Detener" : "Iniciar"
+                        text: tap.running ? i18n.pack.stop : i18n.pack.start
                         icon: tap.running ? "stop" : "play"
                         kind: tap.running ? "danger" : "success"
                         onClicked: tap.running ? tap.stop()
@@ -150,7 +151,7 @@ Item {
 
             ConsoleView {
                 source: tap.console
-                placeholder: "El TAP todavía no genera salida"
+                placeholder: i18n.pack.tapQuiet
             }
         }
     }

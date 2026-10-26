@@ -5,6 +5,7 @@ import json
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.models import WifiLink, WifiNetwork
+from mulita.presentation.i18n import tr
 from mulita.ui.qt.bridge.base import TaskController
 
 
@@ -17,6 +18,7 @@ class WifiController(TaskController):
         self._device = ''
         self._networks: tuple[WifiNetwork, ...] = ()
         self._link = WifiLink()
+        ctx.services.settings.subscribe(lambda _settings: self.networksChanged.emit())
 
     @pyqtProperty(str, notify=networksChanged)
     def deviceName(self) -> str:
@@ -33,7 +35,7 @@ class WifiController(TaskController):
         return [{
             'ssid': network.ssid,
             'signal': network.signal,
-            'security': network.security or 'Abierta',
+            'security': network.security or tr('wifiOpen'),
             'secure': network.secure,
             'active': network.active,
         } for network in self._networks]
@@ -59,7 +61,7 @@ class WifiController(TaskController):
     @pyqtSlot(str, str, bool)
     def connectTo(self, ssid: str, password: str, secure: bool) -> None:
         def connected(name: str) -> None:
-            self._ctx.notifier.success('Wi-Fi', f'Conectado a {name}')
+            self._ctx.notifier.success('Wi-Fi', tr('wifiConnected', name=name))
             self.refresh()
 
         self._task(lambda: self._services.wifi.connect(ssid, password, secure), connected)

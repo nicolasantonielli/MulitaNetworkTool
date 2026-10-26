@@ -12,6 +12,7 @@ from mulita.core.errors import AlreadyRunningError, CommandFailedError, Validati
 from mulita.core.models import CaptureRequest, NetworkInterface, TapConfig
 from mulita.core.parsers import parse_interfaces
 from mulita.core.ports import CommandRunner, ExitListener, OutputListener
+from mulita.presentation.i18n import tr
 from mulita.services.base import ProcessSession
 
 log = logging.getLogger(__name__)
@@ -146,13 +147,13 @@ class TapService:
         saliente = (config.saliente or '').strip()
         mirror = (config.mirror or '').strip()
         if not entrante:
-            raise ValidationError('Elegí la interfaz entrante')
+            raise ValidationError(tr('needTapIn'))
         if not saliente:
-            raise ValidationError('Elegí la interfaz saliente')
+            raise ValidationError(tr('needTapOut'))
         if entrante == saliente or entrante == 'lo' or saliente == 'lo' or mirror == 'lo':
-            raise ValidationError('Esas interfaces no se pueden usar juntas')
+            raise ValidationError(tr('tapSame'))
         if mirror and mirror in (entrante, saliente):
-            raise ValidationError('La interfaz mirror tiene que ser distinta')
+            raise ValidationError(tr('tapMirror'))
         return _TapLinks(entrante, saliente, mirror)
 
     def _connect(self, links: _TapLinks) -> None:

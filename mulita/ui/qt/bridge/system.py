@@ -8,7 +8,7 @@ from PyQt5.QtGui import QColor
 
 from mulita.core.errors import MulitaError
 from mulita.core.settings import Language, Settings, Theme
-from mulita.presentation import texts
+from mulita.presentation import i18n
 from mulita.presentation.theme import Metrics, palette_for
 from mulita.ui.qt.bridge.base import BridgeContext, Controller, TaskController
 from mulita.version import __version__
@@ -23,7 +23,7 @@ class SystemController(TaskController):
     @pyqtSlot()
     def update(self) -> None:
         self._task(self._services.maintenance.update,
-                   lambda _result: self._ctx.notifier.success('Actualizacion', texts.UPDATE_DONE))
+                   lambda _result: self._ctx.notifier.success(i18n.tr('updateWord'), i18n.tr('updateDone')))
 
     @pyqtSlot()
     def reset(self) -> None:
@@ -40,7 +40,7 @@ class SystemController(TaskController):
     @pyqtSlot(str)
     def share(self, source: str) -> None:
         self._services.share.share(source)
-        self._ctx.notifier.info('Compartir', 'La funcion compartir todavia no esta disponible')
+        self._ctx.notifier.info(i18n.tr('share'), i18n.tr('shareSoon'))
 
 
 class SettingsController(Controller):
@@ -59,9 +59,12 @@ class SettingsController(Controller):
     def theme(self) -> str:
         return self._current.theme.value
 
-    @pyqtProperty('QVariantList', constant=True)
+    @pyqtProperty('QVariantList', notify=changed)
     def themes(self) -> list[dict]:
-        return [{'label': theme.label, 'value': theme.value} for theme in Theme]
+        return [
+            {'label': i18n.tr('themeDark'), 'value': Theme.OSCURO.value},
+            {'label': i18n.tr('themeLight'), 'value': Theme.CLARO.value},
+        ]
 
     @pyqtProperty(float, notify=changed)
     def uiScale(self) -> float:
@@ -95,6 +98,33 @@ class SettingsController(Controller):
             self._services.settings.set_scale(value)
         except MulitaError as exc:
             self._fail(exc)
+
+
+class I18nController(Controller):
+    """Catalogo de textos. QML lo lee como `i18n.pack` y se actualiza con el idioma."""
+    changed = pyqtSignal()
+
+    def __init__(self, ctx: BridgeContext):
+        super().__init__(ctx)
+        self._language = ctx.services.settings.current.language.value
+        i18n.use(self._language)
+        ctx.services.settings.subscribe(self._apply)
+
+    def _apply(self, settings: Settings) -> None:
+        chosen = settings.language.value
+        i18n.use(chosen)
+        if chosen == self._language:
+            return
+        self._language = chosen
+        self.changed.emit()
+
+    @pyqtProperty(str, notify=changed)
+    def language(self) -> str:
+        return self._language
+
+    @pyqtProperty('QVariantMap', notify=changed)
+    def pack(self) -> dict[str, str]:
+        return i18n.pack(self._language)
 
 
 class Appearance(Controller):

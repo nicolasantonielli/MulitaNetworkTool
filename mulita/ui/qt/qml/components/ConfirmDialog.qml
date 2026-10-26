@@ -68,7 +68,7 @@ Popup {
         }
         Text {
             Layout.fillWidth: true
-            text: root.countdown > 0 ? root.message + "\n\nSe revierte en " + root.remaining + " s." : root.message
+            text: root.countdown > 0 ? root.message + "\n\n" + i18n.pack.revertsIn + " " + root.remaining + " s." : root.message
             color: ui.textMuted
             font.pixelSize: ui.fontBody
             wrapMode: Text.Wrap

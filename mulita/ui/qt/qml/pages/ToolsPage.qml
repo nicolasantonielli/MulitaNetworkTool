@@ -26,13 +26,13 @@ Item {
                     files.refresh()
             }
             items: [
-                { label: "Wake on LAN", icon: "wake" },
-                { label: "Temperatura", icon: "thermometer" },
-                { label: "Velocidad", icon: "gauge" },
-                { label: "IP pública", icon: "globe" },
-                { label: "Info Wi-Fi", icon: "wifi" },
-                { label: "MAC vendors", icon: "info" },
-                { label: "Archivos", icon: "file" }
+                { label: i18n.pack.toolWol, icon: "wake" },
+                { label: i18n.pack.toolClimate, icon: "thermometer" },
+                { label: i18n.pack.toolSpeed, icon: "gauge" },
+                { label: i18n.pack.toolPublicIp, icon: "globe" },
+                { label: i18n.pack.toolWifi, icon: "wifi" },
+                { label: i18n.pack.toolMac, icon: "info" },
+                { label: i18n.pack.toolFiles, icon: "file" }
             ]
         }
 
@@ -51,11 +51,11 @@ Item {
                     Field {
                         id: mac
                         Layout.fillWidth: true
-                        placeholderText: "MAC destino (AA:BB:CC:DD:EE:FF)"
+                        placeholderText: i18n.pack.macDest
                         onAccepted: if (!wakeOnLan.busy) wakeOnLan.wake(text)
                     }
                     TouchButton {
-                        text: "Despertar"
+                        text: i18n.pack.wake
                         icon: "power"
                         enabled: !wakeOnLan.busy
                         onClicked: wakeOnLan.wake(mac.text)
@@ -65,7 +65,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     source: wakeOnLan.console
-                    placeholder: "Envía el paquete mágico para encender un equipo"
+                    placeholder: i18n.pack.wolEmpty
                 }
             }
 
@@ -82,7 +82,7 @@ Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         Layout.preferredWidth: 1
-                        label: "Temperatura"
+                        label: i18n.pack.temperature
                         icon: "thermometer"
                         tone: ui.warning
                         value: climate.temperature
@@ -91,7 +91,7 @@ Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         Layout.preferredWidth: 1
-                        label: "Humedad"
+                        label: i18n.pack.humidity
                         icon: "droplet"
                         tone: ui.primary
                         value: climate.humidity
@@ -106,7 +106,7 @@ Item {
                         wrapMode: Text.Wrap
                     }
                     TouchButton {
-                        text: climate.busy ? "Leyendo…" : "Actualizar"
+                        text: climate.busy ? i18n.pack.reading : i18n.pack.refresh
                         icon: "refresh"
                         kind: "neutral"
                         enabled: !climate.busy
@@ -128,7 +128,7 @@ Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         Layout.preferredWidth: 1
-                        label: "Descarga"
+                        label: i18n.pack.download
                         icon: "download"
                         tone: ui.success
                         value: speedTest.download
@@ -138,7 +138,7 @@ Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         Layout.preferredWidth: 1
-                        label: "Subida"
+                        label: i18n.pack.upload
                         icon: "upload"
                         tone: ui.primary
                         value: speedTest.upload
@@ -162,7 +162,7 @@ Item {
                         wrapMode: Text.Wrap
                     }
                     TouchButton {
-                        text: speedTest.busy ? "Midiendo…" : "Iniciar test"
+                        text: speedTest.busy ? i18n.pack.measuring : i18n.pack.startTest
                         icon: "gauge"
                         kind: "success"
                         enabled: !speedTest.busy
@@ -178,7 +178,7 @@ Item {
                 StatCard {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    label: "IP pública"
+                    label: i18n.pack.publicIp
                     icon: "globe"
                     value: publicIp.address
                 }
@@ -191,7 +191,7 @@ Item {
                         wrapMode: Text.Wrap
                     }
                     TouchButton {
-                        text: publicIp.busy ? "Consultando…" : "Consultar"
+                        text: publicIp.busy ? i18n.pack.lookingUp : i18n.pack.lookup
                         icon: "refresh"
                         kind: "neutral"
                         enabled: !publicIp.busy
@@ -214,14 +214,14 @@ Item {
                     Layout.fillWidth: true
                     Text {
                         Layout.fillWidth: true
-                        text: wifi.busy ? "Leyendo el enlace…"
-                              : (wifi.deviceName === "" ? "No hay Wi-Fi" : wifi.deviceName)
+                        text: wifi.busy ? i18n.pack.readingLink
+                              : (wifi.deviceName === "" ? i18n.pack.noWifi : wifi.deviceName)
                         color: ui.text
                         font.pixelSize: ui.fontBody
                         elide: Text.ElideRight
                     }
                     TouchButton {
-                        text: wifi.busy ? "Leyendo…" : "Actualizar"
+                        text: wifi.busy ? i18n.pack.reading : i18n.pack.refresh
                         icon: "refresh"
                         kind: "neutral"
                         enabled: !wifi.busy
@@ -232,12 +232,12 @@ Item {
                 ScrollPage {
                     Card {
                         Layout.fillWidth: true
-                        title: "Info Wi-Fi"
+                        title: i18n.pack.wifiInfo
                         titleIcon: "wifi"
 
                         Text {
                             visible: wifiInfo.linkFacts.length === 0
-                            text: wifi.deviceName === "" ? "No hay interfaz Wi-Fi." : "Sin enlace."
+                            text: wifi.deviceName === "" ? i18n.pack.noWifiIface : i18n.pack.noLink
                             color: ui.textMuted
                             font.pixelSize: ui.fontBody
                             wrapMode: Text.Wrap
@@ -275,13 +275,13 @@ Item {
                 Field {
                     id: vendorMac
                     Layout.fillWidth: true
-                    placeholderText: "MAC (AA:BB:CC:DD:EE:FF)"
+                    placeholderText: i18n.pack.macField
                     onAccepted: if (!macVendor.busy) macVendor.lookup(text)
                 }
                 Card {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    title: "Fabricante"
+                    title: i18n.pack.vendor
                     titleIcon: "info"
 
                     SelectableText {
@@ -299,7 +299,7 @@ Item {
                         wrapMode: Text.Wrap
                     }
                     TouchButton {
-                        text: macVendor.busy ? "Consultando…" : "Consultar"
+                        text: macVendor.busy ? i18n.pack.lookingUp : i18n.pack.lookup
                         icon: "refresh"
                         kind: "neutral"
                         enabled: !macVendor.busy
@@ -341,7 +341,7 @@ Item {
                         files.refreshDrives()
                         return
                     }
-                    newName.text = kind === "copy" ? baseName(chosenName) + "-copia" : baseName(chosenName)
+                    newName.text = kind === "copy" ? baseName(chosenName) + i18n.pack.copySuffix : baseName(chosenName)
                 }
 
                 function cancel() {
@@ -353,14 +353,14 @@ Item {
                     Layout.fillWidth: true
                     Text {
                         Layout.fillWidth: true
-                        text: "Gestión de archivos"
+                        text: i18n.pack.fileManager
                         color: ui.text
                         font.pixelSize: ui.fontBody
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
                     }
                     TouchButton {
-                        text: files.busy ? "Leyendo…" : "Actualizar"
+                        text: files.busy ? i18n.pack.reading : i18n.pack.refresh
                         icon: "refresh"
                         kind: "neutral"
                         enabled: !files.busy
@@ -372,7 +372,7 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         visible: filesPage.rows.length === 0
-                        text: "No hay archivos"
+                        text: i18n.pack.noFiles
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
                     }
@@ -395,7 +395,10 @@ Item {
                                 anchors.leftMargin: ui.padding
                                 anchors.rightMargin: ui.padding
                                 verticalAlignment: Text.AlignVCenter
-                                text: modelData.placeLabel + "   " + modelData.name
+                                text: (modelData.place === "captura" ? i18n.pack.placeCapture
+                                      : modelData.place === "tap" ? i18n.pack.placeTap
+                                      : modelData.place === "traza" ? i18n.pack.placeTrace
+                                      : modelData.placeLabel) + "   " + modelData.name
                                       + "   " + modelData.size + "   " + modelData.modified
                                 color: selected ? ui.onAccent : ui.text
                                 font.pixelSize: ui.fontSmall
@@ -419,35 +422,35 @@ Item {
 
                     TouchButton {
                         Layout.fillWidth: true
-                        text: "Renombrar"
+                        text: i18n.pack.rename
                         kind: "neutral"
                         enabled: parent.enabled
                         onClicked: filesPage.begin("rename")
                     }
                     TouchButton {
                         Layout.fillWidth: true
-                        text: "Copiar"
+                        text: i18n.pack.copy
                         kind: "neutral"
                         enabled: parent.enabled
                         onClicked: filesPage.begin("copy")
                     }
                     TouchButton {
                         Layout.fillWidth: true
-                        text: "Exportar"
+                        text: i18n.pack.export
                         kind: "neutral"
                         enabled: parent.enabled
                         onClicked: filesPage.begin("export")
                     }
                     TouchButton {
                         Layout.fillWidth: true
-                        text: "Borrar"
+                        text: i18n.pack.delete
                         kind: "danger"
                         enabled: parent.enabled
                         onClicked: dialog.ask({
-                            title: "Borrar",
+                            title: i18n.pack.deleteTitle,
                             kind: "danger",
-                            message: "Se elimina " + filesPage.chosenName + ".",
-                            confirmText: "Borrar",
+                            message: i18n.pack.deleteBody.replace("{name}", filesPage.chosenName),
+                            confirmText: i18n.pack.delete,
                             confirmAction: function() {
                                 files.remove(filesPage.chosenPlace, filesPage.chosenName)
                                 filesPage.chosenName = ""
@@ -464,8 +467,8 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         text: filesPage.drives.length === 0
-                              ? "No aparece un pendrive en el USB"
-                              : "Elegí el pendrive"
+                              ? i18n.pack.noUsb
+                              : i18n.pack.pickUsb
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
                         wrapMode: Text.Wrap
@@ -479,7 +482,7 @@ Item {
                         onActivated: filesPage.chosenDrive = value
                     }
                     TouchButton {
-                        text: files.busy ? "Buscando…" : "Buscar pendrive"
+                        text: files.busy ? i18n.pack.searching : i18n.pack.findUsb
                         icon: "refresh"
                         kind: "neutral"
                         enabled: !files.busy
@@ -496,17 +499,17 @@ Item {
                         id: newName
                         Layout.fillWidth: true
                         visible: filesPage.action !== "export"
-                        placeholderText: "Nuevo nombre"
+                        placeholderText: i18n.pack.newName
                         enabled: !files.busy
                     }
                     TouchButton {
-                        text: "Cancelar"
+                        text: i18n.pack.cancel
                         kind: "neutral"
                         enabled: !files.busy
                         onClicked: filesPage.cancel()
                     }
                     TouchButton {
-                        text: "Aplicar"
+                        text: i18n.pack.apply
                         icon: "check"
                         kind: "success"
                         enabled: !files.busy && (filesPage.action === "export"

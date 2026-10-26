@@ -136,10 +136,11 @@ class CaptureController(SessionController):
 
     def _finished(self, code: int) -> None:
         if code != 0 and not self._stopping:
-            detail = ''.join(self._last_output).strip() or f'tcpdump termino con codigo {code}'
+            from mulita.presentation.i18n import tr
+            detail = ''.join(self._last_output).strip() or tr('captureEnded', code=code)
             folder = str(self._ctx.config.capture_dir)
-            detail = detail.replace(folder + '/', '').replace(folder, 'la carpeta de capturas')
-            self._ctx.notifier.error(detail, title='Captura')
+            detail = detail.replace(folder + '/', '').replace(folder, tr('captureFolder'))
+            self._ctx.notifier.error(detail, title=tr('captureTitle'))
 
 
 class TapController(Controller):
@@ -196,4 +197,5 @@ class TapController(Controller):
 
     def _capture_stopped(self, code: int) -> None:
         if code != 0 and self._services.tap.is_running:
-            self._ctx.notifier.error('La captura del TAP se detuvo', title='TAP')
+            from mulita.presentation.i18n import tr
+            self._ctx.notifier.error(tr('tapStopped'), title='TAP')

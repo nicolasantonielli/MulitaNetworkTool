@@ -26,12 +26,12 @@ Item {
                     interna.refresh()
             }
             items: [
-                { label: "General", icon: "info" },
-                { label: "Pantalla", icon: "display" },
-                { label: "Wi-Fi", icon: "wifi" },
-                { label: "Ethernet interna", icon: "ethernet" },
-                { label: "Ethernet externa", icon: "ethernet" },
-                { label: "Mantenimiento", icon: "wrench" }
+                { label: i18n.pack.navGeneral, icon: "info" },
+                { label: i18n.pack.navDisplay, icon: "display" },
+                { label: i18n.pack.navWifi, icon: "wifi" },
+                { label: i18n.pack.navEthIn, icon: "ethernet" },
+                { label: i18n.pack.navEthOut, icon: "ethernet" },
+                { label: i18n.pack.navMaint, icon: "wrench" }
             ]
         }
 
@@ -44,7 +44,7 @@ Item {
             ScrollPage {
                 Card {
                     Layout.fillWidth: true
-                    title: "Acerca de"
+                    title: i18n.pack.about
                     titleIcon: "info"
 
                     Text {
@@ -54,14 +54,14 @@ Item {
                         font.weight: Font.DemiBold
                     }
                     Text {
-                        text: "Versión " + system.version
+                        text: i18n.pack.version + " " + system.version
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
                     }
                 }
                 Card {
                     Layout.fillWidth: true
-                    title: "Idioma"
+                    title: i18n.pack.language
                     titleIcon: "globe"
 
                     ChoiceChips {
@@ -72,7 +72,7 @@ Item {
                     }
                     Text {
                         Layout.fillWidth: true
-                        text: "Por ahora la interfaz está en español."
+                        text: i18n.pack.languageHint
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
                         wrapMode: Text.Wrap
@@ -84,19 +84,19 @@ Item {
             ScrollPage {
                 Card {
                     Layout.fillWidth: true
-                    title: "Tamaño"
+                    title: i18n.pack.displaySize
                     titleIcon: "display"
 
                     Text {
                         Layout.fillWidth: true
-                        text: "Agrandá o achicá letras e íconos juntos. La resolución del panel no cambia."
+                        text: i18n.pack.scaleHint
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
                         wrapMode: Text.Wrap
                     }
                     LabeledSlider {
                         Layout.fillWidth: true
-                        label: "Escala"
+                        label: i18n.pack.scale
                         from: 0.5
                         to: 1.25
                         stepSize: 0.05
@@ -107,7 +107,7 @@ Item {
                 }
                 Card {
                     Layout.fillWidth: true
-                    title: "Tema"
+                    title: i18n.pack.theme
                     titleIcon: "theme"
 
                     ChoiceChips {
@@ -136,9 +136,9 @@ Item {
                     dialog.ask({
                         title: ssid,
                         kind: "success",
-                        message: "Conectar a esta red.",
-                        confirmText: "Conectar",
-                        cancelText: "Cancelar",
+                        message: i18n.pack.connectTitle,
+                        confirmText: i18n.pack.connect,
+                        cancelText: i18n.pack.cancel,
                         confirmAction: function() { wifiPage.afterConfirm(ssid, secure) }
                     })
                 }
@@ -180,7 +180,7 @@ Item {
 
                         Text {
                             Layout.fillWidth: true
-                            text: "Clave de " + wifiKey.ssid
+                            text: i18n.pack.wifiKeyOf + " " + wifiKey.ssid
                             color: ui.text
                             font.pixelSize: ui.fontTitle
                             font.weight: Font.Bold
@@ -194,7 +194,7 @@ Item {
                             symbolKeys: true
                             Layout.fillWidth: true
                             echoMode: revealed ? TextInput.Normal : TextInput.Password
-                            placeholderText: "Clave"
+                            placeholderText: i18n.pack.password
                             accessoryWidth: ui.touch
                             // Los puntos no deben destaparse al tocar Mayus.
                             Component.onCompleted: contentItem.passwordMaskDelay = 0
@@ -213,13 +213,13 @@ Item {
 
                             TouchButton {
                                 Layout.fillWidth: true
-                                text: "Cancelar"
+                                text: i18n.pack.cancel
                                 kind: "neutral"
                                 onClicked: wifiKey.close()
                             }
                             TouchButton {
                                 Layout.fillWidth: true
-                                text: "Aceptar"
+                                text: i18n.pack.accept
                                 kind: "success"
                                 enabled: !wifi.busy
                                 onClicked: {
@@ -248,14 +248,14 @@ Item {
                         Layout.fillWidth: true
                         Text {
                             Layout.fillWidth: true
-                            text: wifi.deviceName === "" ? "No hay Wi-Fi"
-                                  : (wifi.activeName === "" ? "Sin conexión" : "Conectada: " + wifi.activeName)
+                            text: wifi.deviceName === "" ? i18n.pack.noWifi
+                                  : (wifi.activeName === "" ? i18n.pack.noConnection : i18n.pack.connected + " " + wifi.activeName)
                             color: ui.text
                             font.pixelSize: ui.fontBody
                             elide: Text.ElideRight
                         }
                         TouchButton {
-                            text: wifi.busy ? "Buscando…" : "Buscar"
+                            text: wifi.busy ? i18n.pack.searchingWifi : i18n.pack.search
                             icon: "refresh"
                             kind: "neutral"
                             enabled: !wifi.busy
@@ -365,7 +365,7 @@ Item {
 
                 Card {
                     Layout.fillWidth: true
-                    title: "Modo"
+                    title: i18n.pack.mode
                     titleIcon: "ethernet"
 
                     Text {
@@ -379,7 +379,10 @@ Item {
                         id: modeChips
                         Layout.fillWidth: true
                         enabled: !interna.busy
-                        model: interna.modes
+                        model: [
+                            { label: i18n.pack.modeDhcp, value: "dhcp" },
+                            { label: i18n.pack.modeStatic, value: "static" }
+                        ]
                         value: interna.mode
                         onActivated: {
                             modeChips.value = value
@@ -390,8 +393,8 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         text: modeChips.value === "static"
-                              ? "La dirección queda fija en el puerto."
-                              : "El puerto pide la dirección por DHCP."
+                              ? i18n.pack.modeStaticHint
+                              : i18n.pack.modeDhcpHint
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
                         wrapMode: Text.Wrap
@@ -401,32 +404,32 @@ Item {
                 Card {
                     Layout.fillWidth: true
                     visible: modeChips.value !== "static"
-                    title: "Dirección obtenida"
+                    title: i18n.pack.gotAddress
                     titleIcon: "info"
 
-                    Text { text: "Dirección IP"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
-                    SelectableText { text: interna.address || "Sin dirección" }
-                    Text { text: "Máscara"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
-                    SelectableText { text: interna.netmask || "Sin máscara" }
-                    Text { text: "Puerta de enlace"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
-                    SelectableText { text: interna.gateway || "Sin puerta de enlace" }
-                    Text { text: "DNS"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
-                    SelectableText { text: interna.dns || "Sin DNS" }
+                    Text { text: i18n.pack.ipAddress; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    SelectableText { text: interna.address || i18n.pack.noAddress }
+                    Text { text: i18n.pack.netmask; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    SelectableText { text: interna.netmask || i18n.pack.noNetmask }
+                    Text { text: i18n.pack.gateway; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    SelectableText { text: interna.gateway || i18n.pack.noGateway }
+                    Text { text: i18n.pack.dns; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    SelectableText { text: interna.dns || i18n.pack.noDns }
                 }
 
                 Card {
                     Layout.fillWidth: true
                     visible: modeChips.value === "static"
-                    title: "Dirección estática"
+                    title: i18n.pack.staticAddress
                     titleIcon: "settings"
 
-                    Text { text: "Dirección IP"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Text { text: i18n.pack.ipAddress; color: ui.textMuted; font.pixelSize: ui.fontSmall }
                     Field { id: ip; Layout.fillWidth: true; Component.onCompleted: text = "192.168.1.10" }
-                    Text { text: "Máscara"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Text { text: i18n.pack.netmask; color: ui.textMuted; font.pixelSize: ui.fontSmall }
                     Field { id: mask; Layout.fillWidth: true; Component.onCompleted: text = "255.255.255.0" }
-                    Text { text: "Puerta de enlace"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Text { text: i18n.pack.gateway; color: ui.textMuted; font.pixelSize: ui.fontSmall }
                     Field { id: gateway; Layout.fillWidth: true; Component.onCompleted: text = "192.168.1.1" }
-                    Text { text: "DNS"; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Text { text: i18n.pack.dns; color: ui.textMuted; font.pixelSize: ui.fontSmall }
                     Field { id: dns; Layout.fillWidth: true; Component.onCompleted: text = "8.8.8.8" }
                 }
 
@@ -439,17 +442,17 @@ Item {
                     }
                     TouchButton {
                         Layout.fillWidth: true
-                        text: "Aplicar"
+                        text: i18n.pack.apply
                         icon: "check"
                         kind: "success"
                         enabled: !interna.busy
                         onClicked: dialog.ask({
-                            title: "Ethernet interna",
+                            title: i18n.pack.ethInternal,
                             kind: "warning",
                             message: modeChips.value === "static"
-                                     ? "Se asigna " + ip.text + " a " + interna.interfaceName + "."
-                                     : interna.interfaceName + " pedirá una dirección por DHCP.",
-                            confirmText: "Aplicar",
+                                     ? i18n.pack.assignStatic.replace("{ip}", ip.text).replace("{iface}", interna.interfaceName)
+                                     : i18n.pack.assignDhcp.replace("{iface}", interna.interfaceName),
+                            confirmText: i18n.pack.apply,
                             confirmAction: internaPage.apply
                         })
                     }
@@ -467,19 +470,19 @@ Item {
             }
 
             // Ethernet externa
-            PendingSection { title: "Ethernet externa"; icon: "ethernet"; onGoHome: root.goHome() }
+            PendingSection { title: i18n.pack.ethExternal; icon: "ethernet"; onGoHome: root.goHome() }
 
             // Mantenimiento
             ScrollPage {
                 Card {
                     Layout.fillWidth: true
-                    title: "Sistema"
+                    title: i18n.pack.system
                     titleIcon: "info"
 
                     RowLayout {
                         Text {
                             Layout.fillWidth: true
-                            text: "Versión " + system.version
+                            text: i18n.pack.version + " " + system.version
                             color: ui.text
                             font.pixelSize: ui.fontTitle
                             font.weight: Font.DemiBold
@@ -501,32 +504,32 @@ Item {
 
                     TouchButton {
                         Layout.fillWidth: true
-                        text: "Actualizar"
+                        text: i18n.pack.update
                         icon: "download"
                         kind: "success"
                         enabled: !system.busy
-                        onClicked: dialog.ask({ title: "Actualizar Mulita", kind: "success",
-                                                message: "Se descarga la rama v3 del repositorio. Reinicie la aplicación para aplicarla.",
-                                                confirmText: "Actualizar", confirmAction: system.update })
+                        onClicked: dialog.ask({ title: i18n.pack.updateTitle, kind: "success",
+                                                message: i18n.pack.updateBody,
+                                                confirmText: i18n.pack.update, confirmAction: system.update })
                     }
                     TouchButton {
                         Layout.fillWidth: true
-                        text: "Reiniciar app"
+                        text: i18n.pack.restartApp
                         icon: "restart"
                         kind: "warning"
                         enabled: !system.busy
-                        onClicked: dialog.ask({ title: "Reiniciar la aplicación", kind: "warning",
-                                                message: "Se detienen las capturas y pruebas en curso.",
-                                                confirmText: "Reiniciar", confirmAction: system.reset })
+                        onClicked: dialog.ask({ title: i18n.pack.restartTitle, kind: "warning",
+                                                message: i18n.pack.restartBody,
+                                                confirmText: i18n.pack.restart, confirmAction: system.reset })
                     }
                     TouchButton {
                         Layout.fillWidth: true
-                        text: "Apagar equipo"
+                        text: i18n.pack.powerOff
                         icon: "power"
                         kind: "danger"
-                        onClicked: dialog.ask({ title: "Apagar el equipo", kind: "danger",
-                                                message: "El equipo se apaga por completo.",
-                                                confirmText: "Apagar", confirmAction: system.poweroff })
+                        onClicked: dialog.ask({ title: i18n.pack.powerTitle, kind: "danger",
+                                                message: i18n.pack.powerBody,
+                                                confirmText: i18n.pack.power, confirmAction: system.poweroff })
                     }
                 }
             }

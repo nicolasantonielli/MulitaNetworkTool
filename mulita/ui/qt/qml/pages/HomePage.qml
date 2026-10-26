@@ -8,12 +8,12 @@ Item {
     signal open(int page)
 
     readonly property var tiles: [
-        { page: 1, icon: "capture", title: "Captura", subtitle: "Paquetes a archivo .pcap" },
-        { page: 2, icon: "trace", title: "Trazas", subtitle: "Ruta, latencia y ping" },
-        { page: 3, icon: "tap", title: "TAP", subtitle: "Puente y espejo de puertos" },
-        { page: 4, icon: "scan", title: "Escaneo", subtitle: "Puertos y hosts de la red" },
-        { page: 5, icon: "tools", title: "Herramientas", subtitle: "WoL, clima, Wi-Fi, MAC" },
-        { page: 6, icon: "settings", title: "Configuración", subtitle: "Pantalla, tema y sistema" }
+        { page: 1, icon: "capture", title: i18n.pack.homeCapture, subtitle: i18n.pack.homeCaptureSub },
+        { page: 2, icon: "trace", title: i18n.pack.homeTraces, subtitle: i18n.pack.homeTracesSub },
+        { page: 3, icon: "tap", title: i18n.pack.homeTap, subtitle: i18n.pack.homeTapSub },
+        { page: 4, icon: "scan", title: i18n.pack.homeScan, subtitle: i18n.pack.homeScanSub },
+        { page: 5, icon: "tools", title: i18n.pack.homeTools, subtitle: i18n.pack.homeToolsSub },
+        { page: 6, icon: "settings", title: i18n.pack.homeSettings, subtitle: i18n.pack.homeSettingsSub }
     ]
 
     function isActive(page) {

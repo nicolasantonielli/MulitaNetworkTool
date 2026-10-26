@@ -12,6 +12,7 @@ from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.ports import CommandRunner
+from mulita.presentation.i18n import tr
 
 _DEVICE = re.compile(r'^[A-Za-z0-9]+$')
 _USB_BUS = re.compile(r'usb\d+')
@@ -85,7 +86,7 @@ class CaptureFilesService:
         if source == target:
             return source.name
         if target.exists():
-            raise ValidationError('Ya existe un archivo con ese nombre')
+            raise ValidationError(tr('nameExists'))
         source.rename(target)
         return target.name
 
@@ -94,7 +95,7 @@ class CaptureFilesService:
         source = self._existing(place, name)
         target = self._destination(place, new_name)
         if target.exists():
-            raise ValidationError('Ya existe un archivo con ese nombre')
+            raise ValidationError(tr('nameExists'))
         shutil.copyfile(source, target)
         return target.name
 
@@ -116,12 +117,12 @@ class CaptureFilesService:
     def export(self, place: str, name: str, drive_id: str) -> str:
         self._guard(place)
         if not _DEVICE.fullmatch(drive_id or ''):
-            raise ValidationError('Pendrive invalido')
+            raise ValidationError(tr('badDrive'))
         source = self._existing(place, name)
         folder = self._drive_folder(drive_id)
         target = folder / source.name
         if target.exists():
-            raise ValidationError('En el pendrive ya existe ese archivo')
+            raise ValidationError(tr('usbExists'))
         shutil.copyfile(source, target)
         if hasattr(os, 'sync'):
             os.sync()
@@ -129,9 +130,9 @@ class CaptureFilesService:
 
     def _guard(self, place: str) -> None:
         if place == 'captura' and self._capture_active():
-            raise ValidationError('Hay una captura en curso')
+            raise ValidationError(tr('captureBusy'))
         if place == 'tap' and self._tap_active():
-            raise ValidationError('Hay un TAP en curso')
+            raise ValidationError(tr('tapBusy'))
 
     def _folder(self, place: str) -> Path:
         if place == 'captura':
@@ -140,20 +141,20 @@ class CaptureFilesService:
             return self._root / 'tap'
         if place == 'traza':
             return self._root / 'trazas'
-        raise ValidationError('Carpeta invalida')
+        raise ValidationError(tr('badFolder'))
 
     def _named(self, place: str, name: str) -> Path:
         folder = self._folder(place)
         filename = validation.trace_filename(name) if place == 'traza' else validation.capture_filename(name)
         path = folder / filename
         if path.parent.resolve() != folder.resolve():
-            raise ValidationError('Nombre de archivo invalido')
+            raise ValidationError(tr('badStoredName'))
         return path
 
     def _existing(self, place: str, name: str) -> Path:
         path = self._named(place, name)
         if not path.is_file():
-            raise ValidationError('No se encontro el archivo')
+            raise ValidationError(tr('fileMissing'))
         return path
 
     def _destination(self, place: str, name: str) -> Path:
@@ -180,15 +181,15 @@ class CaptureFilesService:
         drives = {item.device: item for item in self._found_drives()}
         drive = drives.get(drive_id)
         if drive is None:
-            raise ValidationError('No se encontro el pendrive')
+            raise ValidationError(tr('usbMissing'))
         mounted = drive.mountpoint or _mount_points().get(f'/dev/{drive_id}', '')
         if mounted:
             folder = Path(mounted)
             if not folder.is_dir():
-                raise ValidationError('No se pudo usar el pendrive')
+                raise ValidationError(tr('usbUnusable'))
             return folder
         if self._runner is None or self._commands is None or os.name != 'posix':
-            raise ValidationError('No se pudo usar el pendrive')
+            raise ValidationError(tr('usbUnusable'))
         target = _MOUNT_ROOT / drive_id
         target.mkdir(parents=True, exist_ok=True)
         result = self._runner.run(self._commands.mount_partition(drive_id, str(target)))

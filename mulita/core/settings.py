@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any, Mapping
 
 from mulita.core.errors import ValidationError
+from mulita.presentation.i18n import tr
 
 MM_PER_INCH = 25.4
 
@@ -34,12 +35,11 @@ class Language(Enum):
 
     @property
     def label(self) -> str:
-        return 'Español' if self is Language.ES else 'Inglés'
+        return 'Español' if self is Language.ES else 'English'
 
     @property
     def available(self) -> bool:
-        """Inglés queda visible hasta que la interfaz se traduzca."""
-        return self is Language.ES
+        return True
 
 
 @dataclass(frozen=True)
@@ -76,26 +76,23 @@ class Settings:
 
 def language(value: Any) -> Language:
     try:
-        chosen = Language(value)
+        return Language(value)
     except ValueError as exc:
-        raise ValidationError(f'Idioma invalido: {value}') from exc
-    if not chosen.available:
-        raise ValidationError('El inglés todavía no está disponible')
-    return chosen
+        raise ValidationError(tr('badLanguage', value=value)) from exc
 
 
 def theme(value: Any) -> Theme:
     try:
         return Theme(value)
     except ValueError as exc:
-        raise ValidationError(f'Tema invalido: {value}') from exc
+        raise ValidationError(tr('badTheme', value=value)) from exc
 
 
 def ui_scale(value: Any) -> float:
     try:
         number = float(value)
     except (TypeError, ValueError) as exc:
-        raise ValidationError(f'Escala invalida: {value}') from exc
+        raise ValidationError(tr('badScale', value=value)) from exc
     number = min(UI_SCALE_MAX, max(UI_SCALE_MIN, number))
     steps = round((number - UI_SCALE_MIN) / UI_SCALE_STEP)
     return round(UI_SCALE_MIN + steps * UI_SCALE_STEP, 2)

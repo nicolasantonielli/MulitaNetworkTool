@@ -15,13 +15,13 @@ ScrollPage {
 
         Text {
             Layout.fillWidth: true
-            text: "La configuración de esta interfaz estará disponible en una próxima versión."
+            text: i18n.pack.pending
             color: ui.textMuted
             font.pixelSize: ui.fontBody
             wrapMode: Text.Wrap
         }
         TouchButton {
-            text: "Volver al inicio"
+            text: i18n.pack.backHome
             icon: "back"
             kind: "neutral"
             onClicked: root.goHome()

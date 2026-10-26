@@ -13,7 +13,7 @@ Item {
         PageTabs {
             id: tabs
             Layout.fillWidth: true
-            tabs: ["Escaneo de puertos", "Descubrimiento IP"]
+            tabs: [i18n.pack.scanPorts, i18n.pack.scanDiscover]
         }
 
         StackLayout {
@@ -31,11 +31,11 @@ Item {
                     Field {
                         id: scanTarget
                         Layout.fillWidth: true
-                        placeholderText: "Destino y opciones (ej: -p 22,80 192.168.0.0/24)"
+                        placeholderText: i18n.pack.scanArgs
                         onAccepted: if (!portScan.busy) portScan.scan(text)
                     }
                     TouchButton {
-                        text: portScan.busy ? "Escaneando…" : "Escanear"
+                        text: portScan.busy ? i18n.pack.scanning : i18n.pack.scan
                         icon: "scan"
                         enabled: !portScan.busy
                         onClicked: portScan.scan(scanTarget.text)
@@ -46,7 +46,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     source: portScan.console
-                    placeholder: "Los puertos abiertos aparecen aquí"
+                    placeholder: i18n.pack.scanEmpty
                 }
             }
 
@@ -59,19 +59,19 @@ Item {
 
                     Text {
                         Layout.fillWidth: true
-                        text: "Detecta equipos de la red local por ARP"
+                        text: i18n.pack.discoverHint
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
                         elide: Text.ElideRight
                     }
                     StatusPill {
-                        text: discovery.running ? "Escuchando" : "Detenido"
+                        text: discovery.running ? i18n.pack.listening : i18n.pack.discoverStopped
                         tone: discovery.running ? ui.success : ui.textMuted
                         pulsing: discovery.running
                     }
                     TouchButton {
                         Layout.preferredWidth: ui.mm * 34
-                        text: discovery.running ? "Detener" : "Descubrir"
+                        text: discovery.running ? i18n.pack.stop : i18n.pack.discover
                         icon: discovery.running ? "stop" : "play"
                         kind: discovery.running ? "danger" : "success"
                         onClicked: discovery.running ? discovery.stop() : discovery.start()
@@ -82,7 +82,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     source: discovery.console
-                    placeholder: "Los equipos detectados aparecen aquí"
+                    placeholder: i18n.pack.discoverEmpty
                 }
             }
         }

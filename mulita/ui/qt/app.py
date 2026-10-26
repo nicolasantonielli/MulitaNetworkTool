@@ -42,8 +42,8 @@ class QtApplication:
         from mulita.ui.qt.bridge.network import (CaptureController,
                                                  NetworkController,
                                                  TapController)
-        from mulita.ui.qt.bridge.system import (Appearance, SettingsController,
-                                                SystemController)
+        from mulita.ui.qt.bridge.system import (Appearance, I18nController,
+                                                SettingsController, SystemController)
         from mulita.ui.qt.bridge.wifi import WifiController
         from mulita.ui.qt.bridge.tools import (ClimateController,
                                                FilesController,
@@ -79,6 +79,7 @@ class QtApplication:
         ctx = BridgeContext(config=config, services=services, dispatcher=QtDispatcher(), notifier=notifier)
         self._controllers = {
             'ui': Appearance(ctx),
+            'i18n': I18nController(ctx),
             'notifier': notifier,
             'settings': SettingsController(ctx),
             'system': SystemController(ctx),

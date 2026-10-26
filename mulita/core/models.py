@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from mulita.presentation.i18n import tr
+
 MISSING_COMMAND_CODE = 127
 TIMEOUT_CODE = 124
 
@@ -109,38 +111,38 @@ class WifiLink:
 
     def facts(self) -> list[tuple[str, str]]:
         rows = (
-            ('Red', self.ssid),
-            ('BSSID', self.bssid),
-            ('Seguridad', self.security),
-            ('Modo', self.mode),
-            ('Interfaz', self.interface),
-            ('MAC', self.mac),
-            ('Dirección IP', self.address),
-            ('Máscara', self.netmask),
-            ('Puerta de enlace', self.gateway),
-            ('DNS', self.dns),
-            ('IPv6', self.ipv6),
-            ('Banda', self.band),
-            ('Canal', self.channel),
-            ('Frecuencia', self.frequency),
-            ('Ancho de canal', self.width),
-            ('Frecuencia central', self.center),
-            ('Señal', self.signal),
-            ('Ruido', self.noise),
-            ('SNR', self.snr),
-            ('Velocidad de bajada', self.rate_rx),
-            ('Velocidad de subida', self.rate_tx),
-            ('MCS de bajada', self.mcs_rx),
-            ('MCS de subida', self.mcs_tx),
-            ('Potencia de transmisión', self.tx_power),
-            ('Tiempo en línea', self.uptime),
-            ('Beacon', self.beacon),
-            ('DTIM', self.dtim),
-            ('Reintentos de envío', self.retries),
-            ('Envíos fallidos', self.failed),
-            ('Beacons perdidos', self.beacon_loss),
-            ('Recibido', self.rx),
-            ('Enviado', self.tx),
+            (tr('factSsid'), self.ssid),
+            (tr('factBssid'), self.bssid),
+            (tr('factSecurity'), self.security),
+            (tr('factMode'), self.mode),
+            (tr('factIface'), self.interface),
+            (tr('factMac'), self.mac),
+            (tr('factIp'), self.address),
+            (tr('factMask'), self.netmask),
+            (tr('factGateway'), self.gateway),
+            (tr('factDns'), self.dns),
+            (tr('factIpv6'), self.ipv6),
+            (tr('factBand'), self.band),
+            (tr('factChannel'), self.channel),
+            (tr('factFreq'), self.frequency),
+            (tr('factWidth'), self.width),
+            (tr('factCenter'), self.center),
+            (tr('factSignal'), self.signal),
+            (tr('factNoise'), self.noise),
+            (tr('factSnr'), self.snr),
+            (tr('factRateRx'), self.rate_rx),
+            (tr('factRateTx'), self.rate_tx),
+            (tr('factMcsRx'), self.mcs_rx),
+            (tr('factMcsTx'), self.mcs_tx),
+            (tr('factTxPower'), self.tx_power),
+            (tr('factUptime'), self.uptime),
+            (tr('factBeacon'), self.beacon),
+            (tr('factDtim'), self.dtim),
+            (tr('factRetries'), self.retries),
+            (tr('factFailed'), self.failed),
+            (tr('factBeaconLoss'), self.beacon_loss),
+            (tr('factRx'), self.rx),
+            (tr('factTx'), self.tx),
         )
         return [(label, value) for label, value in rows if value]
 

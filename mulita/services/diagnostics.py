@@ -10,6 +10,7 @@ from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.models import PingRequest, TraceHop
 from mulita.core.parsers import parse_trace
+from mulita.presentation.i18n import tr
 from mulita.core.ports import CommandRunner, ExitListener, OutputListener
 from mulita.services.base import ProcessSession
 
@@ -32,19 +33,19 @@ class TraceService:
             return hops
         if not result.ok:
             detail = _trace_error(result.stderr or result.stdout)
-            raise CommandFailedError(detail or 'No se pudo trazar el destino', result)
+            raise CommandFailedError(detail or tr('traceFailed'), result)
         return ()
 
     def save(self, hops: tuple[TraceHop, ...], filename: str) -> str:
         if not hops:
-            raise ValidationError('No hay una traza para guardar')
+            raise ValidationError(tr('noTrace'))
         name = validation.trace_filename(filename)
         self._ensure_directory()
         path = self._directory / name
         if path.parent.resolve() != self._directory.resolve():
-            raise ValidationError('Nombre de archivo invalido')
+            raise ValidationError(tr('badStoredName'))
         if path.exists():
-            raise ValidationError('Ya existe un archivo con ese nombre')
+            raise ValidationError(tr('nameExists'))
         try:
             with path.open('w', encoding='utf-8', newline='') as handle:
                 writer = csv.writer(handle, lineterminator='\n')
@@ -55,7 +56,7 @@ class TraceService:
                         hop.last, hop.average, hop.best, hop.worst, hop.deviation,
                     ])
         except OSError as exc:
-            raise CommandFailedError('No se pudo guardar la traza') from exc
+            raise CommandFailedError(tr('saveTraceFailed')) from exc
         return name
 
     def _ensure_directory(self) -> None:
@@ -64,7 +65,7 @@ class TraceService:
         try:
             self._directory.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            raise CommandFailedError('No se pudo preparar la carpeta de trazas') from exc
+            raise CommandFailedError(tr('traceFolder')) from exc
 
 
 def _trace_error(text: str) -> str:

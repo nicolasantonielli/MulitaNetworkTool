@@ -6,6 +6,7 @@ from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.models import PING_COUNT, PING_INTERVAL, PING_SIZE, Range
 from mulita.presentation import texts
+from mulita.presentation.i18n import tr
 from mulita.ui.qt.bridge.base import (BridgeContext, SessionController,
                                       TaskController)
 
@@ -55,10 +56,10 @@ class TraceController(TaskController):
         self._hops = tuple(hops)
         self.hopsChanged.emit()
         if not self._hops:
-            self._ctx.notifier.info('Trazas', 'No hubo saltos')
+            self._ctx.notifier.info(tr('tracesTitle'), tr('noHops'))
 
     def _saved(self, name: str) -> None:
-        self._ctx.notifier.success('Trazas', name)
+        self._ctx.notifier.success(tr('tracesTitle'), name)
 
 
 class PingController(SessionController):

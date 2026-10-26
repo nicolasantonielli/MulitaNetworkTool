@@ -10,15 +10,15 @@ Item {
         catch (e) { return [] }
     }
     readonly property var columns: [
-        { title: "Salto", key: "hop", share: 8 },
-        { title: "Dirección", key: "address", share: 24 },
-        { title: "Pérdida", key: "loss", share: 11 },
-        { title: "Envíos", key: "sent", share: 9 },
-        { title: "Último", key: "last", share: 10 },
-        { title: "Media", key: "average", share: 10 },
-        { title: "Mejor", key: "best", share: 9 },
-        { title: "Peor", key: "worst", share: 9 },
-        { title: "Desvío", key: "deviation", share: 10 }
+        { title: i18n.pack.hop, key: "hop", share: 8 },
+        { title: i18n.pack.address, key: "address", share: 24 },
+        { title: i18n.pack.loss, key: "loss", share: 11 },
+        { title: i18n.pack.sent, key: "sent", share: 9 },
+        { title: i18n.pack.last, key: "last", share: 10 },
+        { title: i18n.pack.average, key: "average", share: 10 },
+        { title: i18n.pack.best, key: "best", share: 9 },
+        { title: i18n.pack.worst, key: "worst", share: 9 },
+        { title: i18n.pack.deviation, key: "deviation", share: 10 }
     ]
 
     function columnWidth(share) {
@@ -47,7 +47,7 @@ Item {
         PageTabs {
             id: tabs
             Layout.fillWidth: true
-            tabs: ["Trazas", "Ping"]
+            tabs: [i18n.pack.tabTraces, i18n.pack.tabPing]
         }
 
         StackLayout {
@@ -65,11 +65,11 @@ Item {
                     Field {
                         id: traceTarget
                         Layout.fillWidth: true
-                        placeholderText: "IP o nombre de destino"
+                        placeholderText: i18n.pack.dest
                         onAccepted: if (!trace.busy) trace.trace(text)
                     }
                     TouchButton {
-                        text: trace.busy ? "Trazando…" : "Trazar"
+                        text: trace.busy ? i18n.pack.tracing : i18n.pack.trace
                         icon: "trace"
                         enabled: !trace.busy
                         onClicked: trace.trace(traceTarget.text)
@@ -88,7 +88,7 @@ Item {
                         anchors.centerIn: parent
                         width: parent.width - ui.padding * 2
                         visible: root.hops.length === 0
-                        text: trace.busy ? "Trazando…" : "La ruta hacia el destino aparece aquí"
+                        text: trace.busy ? i18n.pack.tracing : i18n.pack.traceEmpty
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
                         horizontalAlignment: Text.AlignHCenter
@@ -103,7 +103,7 @@ Item {
 
                         Text {
                             Layout.fillWidth: true
-                            text: "Tiempos en milisegundos"
+                            text: i18n.pack.traceTimes
                             color: ui.textMuted
                             font.pixelSize: ui.fontSmall
                         }
@@ -179,7 +179,7 @@ Item {
                         id: traceFile
                         Layout.fillWidth: true
                         text: "traza"
-                        placeholderText: "Nombre del archivo"
+                        placeholderText: i18n.pack.fileName
                         enabled: !trace.busy
                     }
                     Text {
@@ -188,13 +188,13 @@ Item {
                         font.pixelSize: ui.fontBody
                     }
                     TouchButton {
-                        text: "Limpiar"
+                        text: i18n.pack.clear
                         kind: "neutral"
                         enabled: !trace.busy && root.hops.length > 0
                         onClicked: trace.clear()
                     }
                     TouchButton {
-                        text: "Guardar"
+                        text: i18n.pack.save
                         icon: "file"
                         kind: "success"
                         enabled: !trace.busy && root.hops.length > 0
@@ -213,12 +213,12 @@ Item {
                     Field {
                         id: pingTarget
                         Layout.fillWidth: true
-                        placeholderText: "IP o nombre de destino"
+                        placeholderText: i18n.pack.dest
                         enabled: !ping.running
                     }
                     TouchButton {
                         Layout.preferredWidth: ui.mm * 30
-                        text: ping.running ? "Detener" : "Ping"
+                        text: ping.running ? i18n.pack.stop : i18n.pack.tabPing
                         icon: ping.running ? "stop" : "play"
                         kind: ping.running ? "danger" : "success"
                         onClicked: ping.running ? ping.stop()
@@ -233,17 +233,17 @@ Item {
                     LabeledSlider {
                         id: pingCount
                         Layout.fillWidth: true
-                        label: "Envíos"
+                        label: i18n.pack.sent
                         from: ping.limits.count.min
                         to: ping.limits.count.max
                         stepSize: 1
                         initial: ping.limits.count.default
-                        valueText: Math.round(value) === 0 ? "Continuo" : Math.round(value) + " envíos"
+                        valueText: Math.round(value) === 0 ? i18n.pack.pingContinuous : Math.round(value) + " " + i18n.pack.pingSends
                     }
                     LabeledSlider {
                         id: pingInterval
                         Layout.fillWidth: true
-                        label: "Intervalo"
+                        label: i18n.pack.interval
                         from: ping.limits.interval.min
                         to: ping.limits.interval.max
                         stepSize: 0.1
@@ -253,7 +253,7 @@ Item {
                     LabeledSlider {
                         id: pingSize
                         Layout.fillWidth: true
-                        label: "Tamaño"
+                        label: i18n.pack.size
                         from: ping.limits.size.min
                         to: ping.limits.size.max
                         stepSize: 8
@@ -266,7 +266,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     source: ping.console
-                    placeholder: "Las respuestas del ping aparecen aquí"
+                    placeholder: i18n.pack.pingEmpty
                 }
             }
         }

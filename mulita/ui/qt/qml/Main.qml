@@ -10,13 +10,13 @@ ApplicationWindow {
     id: window
 
     readonly property var pages: [
-        { title: "Inicio", share: false },
-        { title: "Captura de paquetes", share: true },
-        { title: "Trazas", share: true },
-        { title: "TAP", share: true },
-        { title: "Escaneo", share: true },
-        { title: "Herramientas", share: true },
-        { title: "Configuración", share: false }
+        { title: i18n.pack.pageHome, share: false },
+        { title: i18n.pack.pageCapture, share: true },
+        { title: i18n.pack.pageTraces, share: true },
+        { title: i18n.pack.pageTap, share: true },
+        { title: i18n.pack.pageScan, share: true },
+        { title: i18n.pack.pageTools, share: true },
+        { title: i18n.pack.pageSettings, share: false }
     ]
     property int currentPage: 0
 

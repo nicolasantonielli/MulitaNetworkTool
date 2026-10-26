@@ -7,6 +7,7 @@ import json
 import re
 
 from mulita.core.errors import CommandFailedError
+from mulita.presentation.i18n import tr
 from mulita.core.models import (AddressMode, EthernetConfig, NetworkInterface,
                                 SpeedTestResult, TraceHop, WifiLink, WifiNetwork)
 
@@ -244,11 +245,11 @@ _WIDTH = re.compile(r'(\d+)\s*MHz', re.IGNORECASE)
 _HE_GI = re.compile(r'(?:HE|EHT)-GI\s+(\d+)', re.IGNORECASE)
 _GI_US = {'0': '0.8 µs', '1': '1.6 µs', '2': '3.2 µs'}
 _MODE = {
-    'managed': 'Infraestructura',
-    'AP': 'Punto de acceso',
-    'monitor': 'Monitor',
-    'mesh point': 'Mesh',
-    'IBSS': 'Ad hoc',
+    'managed': 'wifiModeInfra',
+    'AP': 'wifiModeAp',
+    'monitor': 'wifiModeMonitor',
+    'mesh point': 'wifiModeMesh',
+    'IBSS': 'wifiModeAdhoc',
 }
 
 
@@ -305,9 +306,9 @@ def _bitrate(line: str) -> tuple[str, str]:
     if width:
         parts.append(f'{width.group(1)} MHz')
     if re.search(r'short GI', line or '', re.IGNORECASE):
-        parts.append('GI corto')
+        parts.append(tr('wifiShortGi'))
     elif re.search(r'long GI', line or '', re.IGNORECASE):
-        parts.append('GI largo')
+        parts.append(tr('wifiLongGi'))
     else:
         gi = _HE_GI.search(line or '')
         if gi:
@@ -319,10 +320,10 @@ def _duration(seconds: int) -> str:
     minutes, sec = divmod(seconds, 60)
     hours, minutes = divmod(minutes, 60)
     if hours:
-        return f'{hours} h {minutes} min'
+        return tr('durationHours', hours=hours, minutes=minutes)
     if minutes:
-        return f'{minutes} min {sec} s'
-    return f'{sec} s'
+        return tr('durationMinutes', minutes=minutes, sec=sec)
+    return tr('durationSeconds', sec=sec)
 
 
 def _size(amount: int) -> str:
@@ -422,7 +423,7 @@ def build_wifi_link(interface: str, addr: str, route: str, lease: str, details: 
     if dbm is not None:
         signal = f'{dbm} dBm'
         if avg_match and int(avg_match.group(1)) != dbm:
-            signal += f' · media {avg_match.group(1)} dBm'
+            signal += tr('signalAvg', value=avg_match.group(1))
         if percent:
             signal += f' · {percent}'
     elif percent:
@@ -437,7 +438,7 @@ def build_wifi_link(interface: str, addr: str, route: str, lease: str, details: 
     rx = re.search(r'(\d+)', link.get('rx', ''))
     tx = re.search(r'(\d+)', link.get('tx', ''))
     kind_name = kind.group(1).strip() if kind else ''
-    mode = _MODE.get(kind_name, kind_name)
+    mode = tr(_MODE[kind_name]) if kind_name in _MODE else kind_name
     info_name = info_ssid.group(1).strip() if info_ssid else ''
     return WifiLink(
         interface=interface,
@@ -479,19 +480,19 @@ def parse_mac_vendor(text: str) -> str:
     """Cuerpo y codigo HTTP de `curl -w '\\n%{http_code}'` contra MACVendors."""
     body, separator, code = (text or '').rpartition('\n')
     if not separator:
-        raise CommandFailedError('No se pudo consultar el fabricante')
+        raise CommandFailedError(tr('vendorFail'))
     try:
         status = int(code.strip())
     except ValueError as exc:
-        raise CommandFailedError('No se pudo consultar el fabricante') from exc
+        raise CommandFailedError(tr('vendorFail')) from exc
     name = body.strip()
     if status == 200 and name:
         return name
     if status == 404:
-        raise CommandFailedError('No se encontro el fabricante de esa MAC')
+        raise CommandFailedError(tr('vendorMiss'))
     if status == 429:
-        raise CommandFailedError('Demasiadas consultas. La API permite una por segundo y mil por dia.')
-    raise CommandFailedError(f'No se pudo consultar el fabricante ({status})')
+        raise CommandFailedError(tr('vendorLimit'))
+    raise CommandFailedError(tr('vendorStatus', status=status))
 
 
 _TRACE_HOP = re.compile(

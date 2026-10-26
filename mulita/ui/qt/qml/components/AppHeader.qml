@@ -93,7 +93,7 @@ Rectangle {
                 size: Math.round(ui.icon * 0.8)
             }
             Text {
-                text: network.primaryAddress !== "" ? network.primaryAddress : "Sin red"
+                text: network.primaryAddress !== "" ? network.primaryAddress : i18n.pack.noNetwork
                 color: ui.textMuted
                 font.pixelSize: ui.fontSmall
             }
