@@ -239,26 +239,20 @@ Item {
                     return reply.detail || i18n.pack.pingFail
                 }
 
-                function noteText() {
-                    var item = summary
-                    if (!item)
-                        return ""
-                    var lines = []
-                    if (item.target)
-                        lines.push(i18n.pack.pingNoteTitle.replace("{target}", item.target))
-                    function add(label, value) {
-                        if (value)
-                            lines.push(label + ": " + value)
-                    }
-                    add(i18n.pack.pingSentLabel, item.transmitted)
-                    add(i18n.pack.pingReceivedLabel, item.received)
-                    add(i18n.pack.pingLossLabel, item.loss)
-                    add(i18n.pack.pingElapsedLabel, item.elapsed)
-                    add(i18n.pack.pingMinLabel, item.minimum ? item.minimum + " ms" : "")
-                    add(i18n.pack.pingAvgLabel, item.average ? item.average + " ms" : "")
-                    add(i18n.pack.pingMaxLabel, item.maximum ? item.maximum + " ms" : "")
-                    add(i18n.pack.pingDevLabel, item.deviation ? item.deviation + " ms" : "")
-                    return lines.join("\n")
+                readonly property var statColumns: [
+                    { title: i18n.pack.pingTarget, key: "target", share: 16 },
+                    { title: i18n.pack.pingSentLabel, key: "transmitted", share: 11 },
+                    { title: i18n.pack.pingReceivedLabel, key: "received", share: 12 },
+                    { title: i18n.pack.pingLossLabel, key: "loss", share: 11 },
+                    { title: i18n.pack.pingElapsedLabel, key: "elapsed", share: 14 },
+                    { title: i18n.pack.pingMinLabel, key: "minimum", share: 9 },
+                    { title: i18n.pack.pingAvgLabel, key: "average", share: 9 },
+                    { title: i18n.pack.pingMaxLabel, key: "maximum", share: 9 },
+                    { title: i18n.pack.pingDevLabel, key: "deviation", share: 9 }
+                ]
+
+                function statWidth(share) {
+                    return Math.max(1, Math.max(0, statsBox.width - ui.gap) * share / 100)
                 }
 
                 RowLayout {
@@ -398,23 +392,53 @@ Item {
                     }
                 }
 
-                ColumnLayout {
+                Rectangle {
+                    id: statsBox
+                    Layout.fillWidth: true
                     visible: pingPage.summary && pingPage.summary.ready
-                    spacing: Math.round(ui.gap * 0.25)
+                    implicitHeight: header.implicitHeight + values.implicitHeight + ui.gap
+                    radius: ui.radius
+                    color: ui.surface
+                    border.width: 1
+                    border.color: ui.border
 
-                    Text {
-                        text: i18n.pack.pingNote
-                        color: ui.textMuted
-                        font.pixelSize: ui.fontSmall
-                        font.weight: Font.DemiBold
-                    }
-                    Text {
-                        Layout.fillWidth: true
-                        text: pingPage.noteText()
-                        color: ui.text
-                        font.pixelSize: ui.fontSmall
-                        font.family: ui.monoFamily
-                        wrapMode: Text.Wrap
+                    Column {
+                        anchors.fill: parent
+                        anchors.margins: Math.round(ui.gap * 0.45)
+                        spacing: Math.round(ui.gap * 0.2)
+
+                        Row {
+                            id: header
+                            width: parent.width
+                            Repeater {
+                                model: pingPage.statColumns
+                                delegate: Text {
+                                    width: pingPage.statWidth(modelData.share)
+                                    text: modelData.title
+                                    color: ui.textMuted
+                                    font.pixelSize: ui.fontSmall
+                                    font.weight: Font.DemiBold
+                                    elide: Text.ElideRight
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                            }
+                        }
+                        Row {
+                            id: values
+                            width: parent.width
+                            Repeater {
+                                model: pingPage.statColumns
+                                delegate: Text {
+                                    width: pingPage.statWidth(modelData.share)
+                                    text: pingPage.summary ? (pingPage.summary[modelData.key] || "") : ""
+                                    color: ui.text
+                                    font.pixelSize: ui.fontSmall
+                                    font.family: ui.monoFamily
+                                    elide: Text.ElideRight
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                            }
+                        }
                     }
                 }
 

@@ -54,9 +54,9 @@ class CaptureFilesTest(unittest.TestCase):
             self.assertEqual((traces / 'camino.csv').read_text(encoding='utf-8'), 'a,b\n')
             pings = root / 'ping'
             pings.mkdir()
-            (pings / 'prueba.txt').write_text('nota\n', encoding='utf-8')
-            self.assertEqual(service.rename('ping', 'prueba.txt', 'final'), 'final.txt')
-            self.assertTrue((pings / 'final.txt').is_file())
+            (pings / 'prueba.statics.csv').write_text('destino\n', encoding='utf-8')
+            self.assertEqual(service.rename('ping', 'prueba.statics.csv', 'final'), 'final.statics.csv')
+            self.assertTrue((pings / 'final.statics.csv').is_file())
 
     def test_busy_capture_blocks_changes(self):
         with tempfile.TemporaryDirectory() as folder:

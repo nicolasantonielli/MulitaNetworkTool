@@ -25,7 +25,7 @@ _PLACES = {
     'captura': ('Captura', ('.pcap',)),
     'tap': ('TAP', ('.pcap',)),
     'traza': ('Traza', ('.csv',)),
-    'ping': ('Ping', ('.csv', '.txt')),
+    'ping': ('Ping', ('.csv',)),
 }
 
 
@@ -84,7 +84,7 @@ class CaptureFilesService:
     def rename(self, place: str, name: str, new_name: str) -> str:
         self._guard(place)
         source = self._existing(place, name)
-        target = self._destination(place, new_name, source.suffix.lower())
+        target = self._destination(place, new_name, self._kept_suffix(place, source))
         if source == target:
             return source.name
         if target.exists():
@@ -95,7 +95,7 @@ class CaptureFilesService:
     def copy(self, place: str, name: str, new_name: str) -> str:
         self._guard(place)
         source = self._existing(place, name)
-        target = self._destination(place, new_name, source.suffix.lower())
+        target = self._destination(place, new_name, self._kept_suffix(place, source))
         if target.exists():
             raise ValidationError(tr('nameExists'))
         shutil.copyfile(source, target)
@@ -150,7 +150,7 @@ class CaptureFilesService:
     def _named(self, place: str, name: str, suffix: str = '') -> Path:
         folder = self._folder(place)
         if place == 'ping':
-            chosen = suffix if suffix in ('.csv', '.txt') else _ping_suffix(name)
+            chosen = suffix if suffix in ('.csv', '.statics.csv') else _ping_suffix(name)
             filename = validation.named_file(validation.ping_basename(name), chosen)
         elif place == 'traza':
             filename = validation.trace_filename(name)
@@ -169,6 +169,11 @@ class CaptureFilesService:
 
     def _destination(self, place: str, name: str, suffix: str = '') -> Path:
         return self._named(place, name, suffix)
+
+    def _kept_suffix(self, place: str, source: Path) -> str:
+        if place == 'ping':
+            return _ping_suffix(source.name)
+        return source.suffix.lower()
 
     def _found_drives(self) -> tuple[UsbDrive, ...]:
         if self._drives is not None:
@@ -209,8 +214,8 @@ class CaptureFilesService:
 
 
 def _ping_suffix(name: str) -> str:
-    if (name or '').lower().endswith('.txt'):
-        return '.txt'
+    if (name or '').lower().endswith('.statics.csv'):
+        return '.statics.csv'
     return '.csv'
 
 

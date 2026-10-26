@@ -16,7 +16,7 @@ _FILENAME = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]*$')
 CAPTURE_EXTENSION = '.pcap'
 TRACE_EXTENSION = '.csv'
 PING_TABLE_EXTENSION = '.csv'
-PING_NOTE_EXTENSION = '.txt'
+PING_STATICS_SUFFIX = '.statics.csv'
 
 
 def require(value: str, field: str) -> str:
@@ -64,10 +64,11 @@ def capture_filename(value: str) -> str:
 
 def ping_basename(value: str) -> str:
     name = (value or '').strip()
-    for suffix in (PING_TABLE_EXTENSION, PING_NOTE_EXTENSION):
-        if name.lower().endswith(suffix):
-            name = name[:-len(suffix)]
-            break
+    lower = name.lower()
+    if lower.endswith(PING_STATICS_SUFFIX):
+        name = name[:-len(PING_STATICS_SUFFIX)]
+    elif lower.endswith(PING_TABLE_EXTENSION):
+        name = name[:-len(PING_TABLE_EXTENSION)]
     if not _FILENAME.match(name):
         raise ValidationError(tr('badFileName'))
     return name

@@ -83,24 +83,18 @@ def _trace_error(text: str) -> str:
     return line[:180]
 
 
-def ping_note(summary: PingSummary) -> str:
-    rows = []
-    if summary.target:
-        rows.append(tr('pingNoteTitle', target=summary.target))
-    pairs = (
-        ('pingSentLabel', summary.transmitted),
-        ('pingReceivedLabel', summary.received),
-        ('pingLossLabel', summary.loss),
-        ('pingElapsedLabel', summary.elapsed),
-        ('pingMinLabel', summary.minimum and f'{summary.minimum} ms'),
-        ('pingAvgLabel', summary.average and f'{summary.average} ms'),
-        ('pingMaxLabel', summary.maximum and f'{summary.maximum} ms'),
-        ('pingDevLabel', summary.deviation and f'{summary.deviation} ms'),
-    )
-    rows.extend(f'{tr(key)}: {value}' for key, value in pairs if value)
-    if not rows:
-        rows.append(tr('pingNoStats'))
-    return '\n'.join(rows) + '\n'
+def _write_statics(path: Path, summary: PingSummary) -> None:
+    with path.open('w', encoding='utf-8', newline='') as handle:
+        writer = csv.writer(handle, lineterminator='\n')
+        writer.writerow([
+            tr('pingTarget'), tr('pingSentLabel'), tr('pingReceivedLabel'), tr('pingLossLabel'),
+            tr('pingElapsedLabel'), tr('pingMinLabel'), tr('pingAvgLabel'),
+            tr('pingMaxLabel'), tr('pingDevLabel'),
+        ])
+        writer.writerow([
+            summary.target, summary.transmitted, summary.received, summary.loss, summary.elapsed,
+            summary.minimum, summary.average, summary.maximum, summary.deviation,
+        ])
 
 
 class PingService(ProcessSession):
@@ -116,12 +110,12 @@ class PingService(ProcessSession):
             raise ValidationError(tr('noPing'))
         stem = validation.ping_basename(filename)
         base = stem + validation.PING_TABLE_EXTENSION
-        note = stem + validation.PING_NOTE_EXTENSION
+        statics = stem + validation.PING_STATICS_SUFFIX
         self._ensure_directory()
         folder = self._directory
         table_path = folder / base
-        note_path = folder / note
-        for path in (table_path, note_path):
+        statics_path = folder / statics
+        for path in (table_path, statics_path):
             if path.parent.resolve() != folder.resolve():
                 raise ValidationError(tr('badStoredName'))
             if path.exists():
@@ -136,7 +130,7 @@ class PingService(ProcessSession):
                     writer.writerow([
                         reply.seq, reply.source, reply.ttl, reply.time, _ping_status(reply),
                     ])
-            note_path.write_text(ping_note(summary or PingSummary()), encoding='utf-8')
+            _write_statics(statics_path, summary or PingSummary())
         except OSError as exc:
             raise CommandFailedError(tr('savePingFailed')) from exc
         if hasattr(os, 'sync'):

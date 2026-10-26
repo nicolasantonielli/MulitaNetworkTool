@@ -148,10 +148,9 @@ class BlockingServicesTest(unittest.TestCase):
             services = services_with(FakeRunner())
             services.ping._directory = Path(folder)
             self.assertEqual(services.ping.save(replies, summary, 'prueba'), 'prueba.csv')
-            note = (Path(folder) / 'prueba.txt').read_text(encoding='utf-8')
-            self.assertIn('Ping a 8.8.8.8', note)
-            self.assertIn('Enviados: 2', note)
-            self.assertIn('Mínimo: 19.4 ms', note)
+            statics = (Path(folder) / 'prueba.statics.csv').read_text(encoding='utf-8')
+            self.assertTrue(statics.startswith('Destino,Enviados,Recibidos,Pérdida,Tiempo,Mínimo,Media,Máximo,Desvío\n'))
+            self.assertIn('8.8.8.8,2,2,0%,1001 ms,19.4,20.1,21.0,0.2\n', statics)
             table = (Path(folder) / 'prueba.csv').read_text(encoding='utf-8')
             self.assertIn('1,8.8.8.8,117,20.1,Respuesta', table)
             with self.assertRaises(ValidationError):

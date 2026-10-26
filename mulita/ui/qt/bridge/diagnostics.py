@@ -135,8 +135,8 @@ class PingController(SessionController):
         except MulitaError as exc:
             self._fail(exc)
             return
-        note = name[:-4] + '.txt' if name.endswith('.csv') else name
-        self._ctx.notifier.success(tr('pingTitle'), tr('pingSaved', table=name, note=note))
+        statics = name[:-4] + '.statics.csv' if name.endswith('.csv') else name
+        self._ctx.notifier.success(tr('pingTitle'), tr('pingSaved', table=name, statics=statics))
 
     def _output(self, text: str) -> None:
         self._pending += text.replace('\r', '')
