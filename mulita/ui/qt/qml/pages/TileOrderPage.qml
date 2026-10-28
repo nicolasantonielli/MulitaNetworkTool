@@ -11,6 +11,9 @@ ColumnLayout {
 
     property string group: "network"
     property bool dragging: false
+    property bool animateMoves: true
+    property int dragFrom: -1
+    property int hover: -1
     // Copia propia. La lista que viene de la configuracion no se usa como modelo
     // mientras el dedo la arrastra: si no, la vista la reconstruye y los cuadros se van.
     property var rows: []
@@ -130,18 +133,37 @@ ColumnLayout {
                     objectName: "orderRow"
                     width: column.width
                     height: board.rowHeight
-                    z: dragArea.pressed ? 2 : 0
+                    z: index === root.dragFrom ? 2 : 0
+
+                    // Las filas que no se arrastran se corren un lugar para abrir el hueco.
+                    readonly property real shift: {
+                        if (root.dragFrom < 0 || index === root.dragFrom)
+                            return 0
+                        if (root.dragFrom < root.hover && index > root.dragFrom && index <= root.hover)
+                            return -height
+                        if (root.hover < root.dragFrom && index >= root.hover && index < root.dragFrom)
+                            return height
+                        return 0
+                    }
+                    property real slide: 0
+                    onShiftChanged: slide = shift
+
+                    Behavior on slide {
+                        enabled: root.animateMoves
+                        NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+                    }
 
                     Rectangle {
                         id: card
 
                         anchors.left: parent.left
                         anchors.right: parent.right
+                        y: index === root.dragFrom ? dragArea.offset : slot.slide
                         height: Math.max(ui.fontBody * 1.8, parent.height - board.gap)
                         radius: ui.radius
-                        color: dragArea.pressed ? ui.surfaceHigh : ui.surface
-                        border.width: dragArea.pressed ? 2 : 1
-                        border.color: dragArea.pressed ? ui.primary : ui.border
+                        color: index === root.dragFrom ? ui.surfaceHigh : ui.surface
+                        border.width: index === root.dragFrom ? 2 : 1
+                        border.color: index === root.dragFrom ? ui.primary : ui.border
 
                         RowLayout {
                             anchors.fill: parent
@@ -181,34 +203,41 @@ ColumnLayout {
                             id: dragArea
 
                             property real origin: 0
-                            readonly property real slop: Math.max(8, ui.mm * 2)
+                            property real offset: 0
 
                             anchors.fill: parent
                             preventStealing: true
 
                             onPressed: {
                                 origin = mapToItem(column, mouse.x, mouse.y).y
+                                offset = 0
+                                root.dragFrom = index
+                                root.hover = index
                                 root.dragging = true
                             }
                             onPositionChanged: {
-                                if (!pressed)
+                                if (!pressed || slot.height <= 0)
                                     return
                                 var delta = mapToItem(column, mouse.x, mouse.y).y - origin
                                 var minY = -index * slot.height
                                 var maxY = (root.rows.length - 1 - index) * slot.height
-                                card.y = Math.max(minY, Math.min(maxY, delta))
+                                offset = Math.max(minY, Math.min(maxY, delta))
+                                var destination = Math.round(index + offset / slot.height)
+                                root.hover = Math.max(0, Math.min(root.rows.length - 1, destination))
                             }
                             onReleased: finish()
                             onCanceled: finish()
 
                             function finish() {
-                                var step = slot.height
-                                var slots = step > 0 && Math.abs(card.y) >= slop
-                                        ? Math.round(card.y / step) : 0
-                                var destination = Math.max(0, Math.min(root.rows.length - 1, index + slots))
-                                card.y = 0
+                                var from = index
+                                var destination = root.hover < 0 ? from : root.hover
+                                root.animateMoves = false
+                                offset = 0
+                                root.dragFrom = -1
+                                root.hover = -1
                                 root.dragging = false
-                                root.moveTile(index, destination)
+                                root.moveTile(from, destination)
+                                Qt.callLater(function() { root.animateMoves = true })
                             }
                         }
                     }
