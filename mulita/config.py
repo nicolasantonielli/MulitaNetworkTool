@@ -39,6 +39,7 @@ class Binaries:
     sshd: str = '/usr/sbin/sshd'
     ssh_keygen: str = '/usr/bin/ssh-keygen'
     openssl: str = '/usr/bin/openssl'
+    testssl: str = '/usr/bin/testssl'
     getent: str = '/usr/bin/getent'
     useradd: str = '/usr/sbin/useradd'
     userdel: str = '/usr/sbin/userdel'
@@ -82,6 +83,7 @@ class AppConfig:
     wifi_dir: PurePosixPath = PurePosixPath('/root/capturas/wifi')
     scan_dir: PurePosixPath = PurePosixPath('/root/capturas/escaneo')
     discovery_dir: PurePosixPath = PurePosixPath('/root/capturas/descubrimiento')
+    tls_dir: PurePosixPath = PurePosixPath('/root/capturas/tls')
     # Archivos que ve el tecnico: carpeta del TFTP, carpeta del servidor web y registros.
     servers_dir: PurePosixPath = PurePosixPath('/root/capturas/servidores')
     # Claves, certificados y estado interno. Fuera de las capturas para que no se compartan.

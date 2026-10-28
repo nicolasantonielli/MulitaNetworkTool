@@ -96,6 +96,24 @@ ensure_path() {
   return 1
 }
 
+# testssl.sh analiza certificados TLS. Es opcional: si el paquete no esta en los
+# repositorios, el resto de Mulita se instala igual.
+if ! command -v testssl >/dev/null 2>&1 && ! command -v testssl.sh >/dev/null 2>&1; then
+  echo "Instalando testssl.sh..."
+  export DEBIAN_FRONTEND=noninteractive
+  as_root apt-get update || true
+  as_root apt-get install -y testssl.sh \
+    || echo "Aviso: no se instalo testssl.sh. El analisis de certificados TLS no va a funcionar."
+fi
+# Debian lo instala como /usr/bin/testssl. Si queda con otro nombre, Mulita lo encuentra igual.
+if [[ ! -x /usr/bin/testssl ]]; then
+  found="$(command -v testssl.sh || command -v testssl || true)"
+  if [[ -n "$found" ]]; then
+    as_root ln -sfn "$found" /usr/bin/testssl
+    echo "Enlace /usr/bin/testssl -> $found"
+  fi
+fi
+
 missing=0
 for path in \
   /bin/tcpdump /bin/mtr /bin/ping /bin/nmap /sbin/netdiscover /usr/sbin/iw \

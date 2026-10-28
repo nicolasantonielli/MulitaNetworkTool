@@ -24,6 +24,7 @@ from mulita.services.network import (CaptureService, InterfaceService,
 from mulita.services.servers import ServerService
 from mulita.services.system import (KeyboardService, MaintenanceService,
                                     ShareService)
+from mulita.services.tls import TlsService
 from mulita.services.tools import (ClimateService, MacVendorService, PublicIpService,
                                    SpeedTestService, WakeOnLanService)
 from mulita.services.wifi import WifiService
@@ -71,6 +72,7 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
         settings=SettingsService(settings_store or JsonSettingsStore(config.settings_path)),
         servers=ServerService(runner, commands, config.servers_dir, config.servers_state_dir,
                               config.capture_dir),
+        tls=TlsService(runner, commands, config.tls_dir),
     )
 
 

@@ -34,6 +34,7 @@ Item {
         case 4: return discovery.running || portScan.busy
         case 5: return speedTest.busy || wakeOnLan.busy || macVendor.busy || files.busy
         case 8: return servers.anyRunning
+        case 9: return tls.running
         default: return false
         }
     }

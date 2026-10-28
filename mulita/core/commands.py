@@ -183,6 +183,13 @@ class CommandFactory:
             argv += ['-r', network]
         return argv
 
+    def tls_scan(self, target: str, flags: list[str], report: str) -> Argv:
+        # --warnings batch evita las preguntas, --color 0 deja texto plano y
+        # --ip one prueba una sola direccion aunque el nombre tenga varias.
+        return [self._bin.testssl, '--quiet', '--color', '0', '--warnings', 'batch',
+                '--connect-timeout', '10', '--openssl-timeout', '10', '--ip', 'one',
+                '--jsonfile', report, *flags, target]
+
     def iperf_server(self, port: int, bind: str = '', one_off: bool = False) -> Argv:
         argv = [self._bin.iperf3, '-s', '-p', str(port), '--forceflush']
         if bind:

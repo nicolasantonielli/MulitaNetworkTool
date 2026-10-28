@@ -12,6 +12,7 @@ from mulita.services.servers import ServerService
 from mulita.services.settings import SettingsService
 from mulita.services.system import (KeyboardService, MaintenanceService,
                                     ShareService)
+from mulita.services.tls import TlsService
 from mulita.services.tools import (ClimateService, MacVendorService, PublicIpService,
                                    SpeedTestService, WakeOnLanService)
 from mulita.services.wifi import WifiService
@@ -39,10 +40,11 @@ class Services:
     share: ShareService
     settings: SettingsService
     servers: ServerService
+    tls: TlsService
 
     def shutdown(self) -> None:
         """Al cerrar la aplicacion no quedan capturas ni pings huerfanos."""
-        for session in (self.capture, self.ping, self.discovery):
+        for session in (self.capture, self.ping, self.discovery, self.tls):
             session.stop()
         self.tap.stop()
         self.servers.stop_all()

@@ -7,8 +7,8 @@ Aplicacion de diagnostico de red pensada para Raspberry Pi 4, con soporte de ent
 El inicio tiene dos paginas de seis cuadros: **Red** y **Ciberseguridad**.
 Deslizar el dedo hacia la izquierda pasa a Ciberseguridad y hacia la derecha
 vuelve a Red. Tocar el nombre de una pagina, debajo de los cuadros, tambien la
-abre. Las herramientas de Ciberseguridad usan una plantilla comun y todavia
-estan en preparacion.
+abre. **Servidores** y **Certificados TLS** ya funcionan. Las demas herramientas de
+Ciberseguridad usan una plantilla comun y todavia estan en preparacion.
 
 ## Servidores
 
@@ -48,6 +48,35 @@ Detalles:
   `registros` (CSV del registro).
 
 Necesitan `iperf3`, `dnsmasq-base`, `openssh-server` y `openssl`, que instala `install-lite.sh`.
+
+## Certificados TLS
+
+El cuadro **Certificados TLS** de Ciberseguridad analiza un servidor con
+[testssl.sh](https://testssl.sh). Tiene tres pestanas: **Analisis**, **Resultado** y **Salida**.
+
+1. En **Analisis**, escribir el servidor (`ejemplo.com`, `ejemplo.com:8443`, una IP o una URL
+   `https://...`; sin puerto usa el 443) y elegir el tipo de analisis.
+2. **Iniciar** pasa a **Salida**, donde se ve el avance de testssl.sh. **Detener** corta el
+   analisis y deja lo que alcanzo a revisar.
+3. Al terminar se abre **Resultado**: un resumen por severidad y una tabla agrupada en
+   Certificado, Protocolos, Cifrados, Vulnerabilidades y Otros. Mantener presionada una celda
+   permite copiar su texto.
+
+| Tipo | Que revisa | Demora |
+| --- | --- | --- |
+| Certificado | Nombre, emisor, vigencia, firma, tamano de clave, cadena de confianza y OCSP | segundos |
+| Protocolos y cifrados | Versiones SSL/TLS ofrecidas y categorias de cifrados | un minuto o dos |
+| Vulnerabilidades | Heartbleed, ROBOT, SWEET32, POODLE, renegociacion y otras | un minuto o dos |
+| Completo | Los tres anteriores | varios minutos en la Pi |
+
+- **Guardar** crea un CSV en `/root/capturas/tls` llamado `tls-<servidor>-<fecha>-<hora>.csv`. Aparece
+  en el gestor de archivos de Herramientas como **Certificados TLS**.
+- Se prueba una sola direccion, aunque el nombre tenga varias. Un servidor con mas de un
+  certificado (RSA y ECDSA) muestra cada uno con su numero, por ejemplo `#2`.
+- Los resultados dependen de que Mulita llegue al servidor por la red. Para probar el HTTPS de la
+  propia Mulita, usar su direccion y el puerto 443.
+- Necesita el paquete `testssl.sh`. `install-lite.sh` lo instala, pero sin detener la instalacion
+  si no esta en los repositorios. En ese caso la aplicacion avisa que falta.
 
 ## Copiar y pegar texto
 
