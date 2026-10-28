@@ -11,17 +11,41 @@ Item {
     property var cyberTools: []
 
     readonly property var tiles: [
-        { page: 1, icon: "capture", title: i18n.pack.homeCapture, subtitle: i18n.pack.homeCaptureSub },
-        { page: 2, icon: "trace", title: i18n.pack.homeTraces, subtitle: i18n.pack.homeTracesSub },
-        { page: 3, icon: "tap", title: i18n.pack.homeTap, subtitle: i18n.pack.homeTapSub },
-        { page: 4, icon: "scan", title: i18n.pack.homeScan, subtitle: i18n.pack.homeScanSub },
-        { page: 5, icon: "tools", title: i18n.pack.homeTools, subtitle: i18n.pack.homeToolsSub },
-        { page: 6, icon: "settings", title: i18n.pack.homeSettings, subtitle: i18n.pack.homeSettingsSub }
+        { id: "capture", page: 1, icon: "capture", title: i18n.pack.homeCapture, subtitle: i18n.pack.homeCaptureSub },
+        { id: "traces", page: 2, icon: "trace", title: i18n.pack.homeTraces, subtitle: i18n.pack.homeTracesSub },
+        { id: "tap", page: 3, icon: "tap", title: i18n.pack.homeTap, subtitle: i18n.pack.homeTapSub },
+        { id: "scan", page: 4, icon: "scan", title: i18n.pack.homeScan, subtitle: i18n.pack.homeScanSub },
+        { id: "tools", page: 5, icon: "tools", title: i18n.pack.homeTools, subtitle: i18n.pack.homeToolsSub },
+        { id: "settings", page: 6, icon: "settings", title: i18n.pack.homeSettings, subtitle: i18n.pack.homeSettingsSub }
     ]
 
+    function arrange(catalog, ids) {
+        var byId = {}
+        var placed = {}
+        var result = []
+        for (var i = 0; i < catalog.length; ++i)
+            byId[catalog[i].id] = catalog[i]
+        var wanted = ids || []
+        for (var j = 0; j < wanted.length; ++j) {
+            var tile = byId[wanted[j]]
+            if (tile && !placed[wanted[j]]) {
+                result.push(tile)
+                placed[wanted[j]] = true
+            }
+        }
+        for (var k = 0; k < catalog.length; ++k) {
+            if (!placed[catalog[k].id])
+                result.push(catalog[k])
+        }
+        return result
+    }
+
+    readonly property var networkTiles: arrange(tiles, settings.tileOrder.network)
+    readonly property var cyberTiles: arrange(cyberTools, settings.tileOrder.cyber)
+
     readonly property var sections: [
-        { title: i18n.pack.homeNetwork, tiles: root.tiles },
-        { title: i18n.pack.homeCyber, tiles: root.cyberTools }
+        { title: i18n.pack.homeNetwork, tiles: root.networkTiles },
+        { title: i18n.pack.homeCyber, tiles: root.cyberTiles }
     ]
 
     readonly property int indicatorHeight: ui.padding

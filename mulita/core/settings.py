@@ -1,4 +1,4 @@
-"""Preferencias del equipo. El panel es fijo; del archivo se leen tema, escala, idioma y brillo."""
+"""Preferencias del equipo. El panel es fijo; del archivo se leen tema, escala, idioma, brillo y el orden de los cuadros."""
 from __future__ import annotations
 
 import math
@@ -20,6 +20,11 @@ UI_SCALE_MAX = 1.25
 UI_SCALE_STEP = 0.05
 BRIGHTNESS_MIN = 1
 BRIGHTNESS_MAX = 100
+
+# Orden de fabrica de los cuadros del inicio. La pantalla solo cambia la posicion.
+NETWORK_ORDER = ('capture', 'traces', 'tap', 'scan', 'tools', 'settings')
+CYBER_ORDER = ('vuln', 'wifi', 'arp', 'nmap', 'tls', 'servers')
+TILE_GROUPS = {'network': NETWORK_ORDER, 'cyber': CYBER_ORDER}
 
 
 class Theme(Enum):
@@ -63,11 +68,18 @@ class DisplaySettings:
 
 
 @dataclass(frozen=True)
+class HomeOrder:
+    network: tuple[str, ...] = NETWORK_ORDER
+    cyber: tuple[str, ...] = CYBER_ORDER
+
+
+@dataclass(frozen=True)
 class Settings:
     display: DisplaySettings = field(default_factory=DisplaySettings)
     theme: Theme = Theme.OSCURO
     language: Language = Language.ES
     brightness: int = BRIGHTNESS_MAX
+    home: HomeOrder = field(default_factory=HomeOrder)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -75,6 +87,10 @@ class Settings:
             'scale': self.display.ui_scale,
             'language': self.language.value,
             'brightness': self.brightness,
+            'homeOrder': {
+                'network': list(self.home.network),
+                'cyber': list(self.home.cyber),
+            },
         }
 
 
@@ -110,8 +126,35 @@ def ui_scale(value: Any) -> float:
     return round(UI_SCALE_MIN + steps * UI_SCALE_STEP, 2)
 
 
+def tile_order(group: str, value: Any) -> tuple[str, ...]:
+    """Acepta una permutacion del grupo. Lo desconocido se descarta y lo que falte vuelve al final, en el orden de fabrica."""
+    try:
+        default = TILE_GROUPS[group]
+    except KeyError as exc:
+        raise ValidationError(tr('badTileGroup', value=group)) from exc
+    if not isinstance(value, list):
+        return default
+    kept: list[str] = []
+    allowed = set(default)
+    for item in value:
+        if isinstance(item, str) and item in allowed and item not in kept:
+            kept.append(item)
+    for item in default:
+        if item not in kept:
+            kept.append(item)
+    return tuple(kept)
+
+
+def home_order_from(value: Any) -> HomeOrder:
+    raw = value if isinstance(value, Mapping) else {}
+    return HomeOrder(
+        network=tile_order('network', raw.get('network', list(NETWORK_ORDER))),
+        cyber=tile_order('cyber', raw.get('cyber', list(CYBER_ORDER))),
+    )
+
+
 def settings_from_dict(data: Mapping[str, Any]) -> Settings:
-    """El tamaño del panel no se configura. Del archivo se leen tema, escala, idioma y brillo."""
+    """El tamaño del panel no se configura. Del archivo se leen tema, escala, idioma, brillo y el orden de los cuadros."""
     defaults = Settings()
     try:
         chosen_theme = theme(data.get('theme', defaults.theme.value))
@@ -127,7 +170,8 @@ def settings_from_dict(data: Mapping[str, Any]) -> Settings:
         level = defaults.brightness
     chosen_language = _stored_language(data.get('language', defaults.language.value))
     return Settings(display=replace(defaults.display, ui_scale=scale), theme=chosen_theme,
-                    language=chosen_language, brightness=level)
+                    language=chosen_language, brightness=level,
+                    home=home_order_from(data.get('homeOrder')))
 
 
 def _stored_language(value: Any) -> Language:
@@ -152,3 +196,17 @@ def with_scale(settings: Settings, scale: float) -> Settings:
 
 def with_brightness(settings: Settings, level: float) -> Settings:
     return replace(settings, brightness=brightness(level))
+
+
+def with_tile_order(settings: Settings, group: str, order: Any) -> Settings:
+    current = settings.home
+    chosen = tile_order(group, order)
+    if group == 'network':
+        home = replace(current, network=chosen)
+    else:
+        home = replace(current, cyber=chosen)
+    return replace(settings, home=home)
+
+
+def reset_tile_order(settings: Settings) -> Settings:
+    return replace(settings, home=HomeOrder())

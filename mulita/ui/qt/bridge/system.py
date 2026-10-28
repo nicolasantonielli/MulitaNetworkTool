@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import json
 import os
 import sys
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QColor, QGuiApplication
 
-from mulita.core.errors import MulitaError
+from mulita.core.errors import MulitaError, ValidationError
 from mulita.core.settings import Language, Settings, Theme
 from mulita.presentation import i18n
 from mulita.presentation.theme import Metrics, palette_for
@@ -114,6 +115,24 @@ class SettingsController(Controller):
             self._services.settings.set_scale(value)
         except MulitaError as exc:
             self._fail(exc)
+
+    @pyqtProperty('QVariantMap', notify=changed)
+    def tileOrder(self) -> dict:
+        home = self._current.home
+        return {'network': list(home.network), 'cyber': list(home.cyber)}
+
+    @pyqtSlot(str, str)
+    def setTileOrder(self, group: str, order_json: str) -> None:
+        try:
+            order = json.loads(order_json or '[]')
+            self._services.settings.set_tile_order(group, order)
+        except (MulitaError, ValueError) as exc:
+            self._fail(exc if isinstance(exc, MulitaError) else ValidationError(i18n.tr('badTileOrder')))
+
+    @pyqtSlot()
+    def resetTileOrder(self) -> None:
+        self._services.settings.reset_tile_order()
+        self._ctx.notifier.success(i18n.tr('tileOrderTitle'), i18n.tr('tileOrderResetDone'))
 
     @pyqtSlot(float)
     def setBrightness(self, value: float) -> None:

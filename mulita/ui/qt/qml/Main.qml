@@ -26,12 +26,12 @@ ApplicationWindow {
 
     readonly property int cyberPage: 7
     readonly property var cyberTools: [
-        { tool: 0, icon: "bug", title: i18n.pack.cyberVuln, subtitle: i18n.pack.cyberVulnSub },
-        { tool: 1, icon: "wifi", title: i18n.pack.cyberWifi, subtitle: i18n.pack.cyberWifiSub },
-        { tool: 2, icon: "shield", title: i18n.pack.cyberArp, subtitle: i18n.pack.cyberArpSub },
-        { page: 10, icon: "scan", title: i18n.pack.cyberNmap, subtitle: i18n.pack.cyberNmapSub },
-        { page: 9, icon: "lock", title: i18n.pack.cyberTls, subtitle: i18n.pack.cyberTlsSub },
-        { page: 8, icon: "server", title: i18n.pack.homeServers, subtitle: i18n.pack.homeServersSub }
+        { id: "vuln", tool: 0, icon: "bug", title: i18n.pack.cyberVuln, subtitle: i18n.pack.cyberVulnSub },
+        { id: "wifi", tool: 1, icon: "wifi", title: i18n.pack.cyberWifi, subtitle: i18n.pack.cyberWifiSub },
+        { id: "arp", tool: 2, icon: "shield", title: i18n.pack.cyberArp, subtitle: i18n.pack.cyberArpSub },
+        { id: "nmap", page: 10, icon: "scan", title: i18n.pack.cyberNmap, subtitle: i18n.pack.cyberNmapSub },
+        { id: "tls", page: 9, icon: "lock", title: i18n.pack.cyberTls, subtitle: i18n.pack.cyberTlsSub },
+        { id: "servers", page: 8, icon: "server", title: i18n.pack.homeServers, subtitle: i18n.pack.homeServersSub }
     ]
     property int cyberTool: 0
 

@@ -51,6 +51,12 @@ class SettingsService:
     def backlight_ready(self) -> bool:
         return self._backlight.available()
 
+    def set_tile_order(self, group: str, order: Any) -> Settings:
+        return self._commit(rules.with_tile_order(self._current, group, order))
+
+    def reset_tile_order(self) -> Settings:
+        return self._commit(rules.reset_tile_order(self._current))
+
     def set_brightness(self, value: Any) -> Settings:
         updated = self._commit(rules.with_brightness(self._current, value))
         self._backlight.apply(updated.brightness)

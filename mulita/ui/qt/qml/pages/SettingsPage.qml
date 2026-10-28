@@ -18,7 +18,7 @@ Item {
         SideNav {
             id: nav
             objectName: "settingsNav"
-            visible: currentIndex !== 5
+            visible: currentIndex !== 5 && currentIndex !== 6
             Layout.preferredWidth: Math.round(root.width * 0.27)
             Layout.fillHeight: true
             onCurrentIndexChanged: {
@@ -58,6 +58,26 @@ Item {
                         text: i18n.pack.version + " " + system.version
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
+                    }
+                }
+                Card {
+                    Layout.fillWidth: true
+                    title: i18n.pack.tileOrderTitle
+                    titleIcon: "display"
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: i18n.pack.tileOrderHint
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        wrapMode: Text.Wrap
+                    }
+                    TouchButton {
+                        Layout.fillWidth: true
+                        text: i18n.pack.tileOrderOpen
+                        icon: "play"
+                        kind: "neutral"
+                        onClicked: nav.currentIndex = 6
                     }
                 }
                 Card {
@@ -570,6 +590,7 @@ Item {
             }
 
             TouchTestPage { onGoBack: nav.currentIndex = 1 }
+            TileOrderPage { onGoBack: nav.currentIndex = 0 }
         }
     }
 }

@@ -10,7 +10,8 @@ from mulita.adapters.backlight import MailboxBacklight, PanelBacklight, SysfsBac
 from mulita.adapters.settings_store import JsonSettingsStore, MemorySettingsStore
 from mulita.core import settings as rules
 from mulita.core.errors import CommandFailedError, ValidationError
-from mulita.core.settings import DisplaySettings, Language, Settings, Theme
+from mulita.core.settings import (CYBER_ORDER, NETWORK_ORDER, DisplaySettings,
+                                 Language, Settings, Theme)
 from mulita.presentation.theme import Metrics
 from mulita.services.settings import SettingsService
 
@@ -157,6 +158,21 @@ class SettingsServiceTest(unittest.TestCase):
         self.assertEqual(updated.brightness, 35)
         self.assertEqual(self.store.load().brightness, 35)
         self.assertEqual(self.light.levels, [100, 35])
+
+    def test_tile_order_is_saved_and_reset_restores_the_factory_order(self):
+        updated = self.service.set_tile_order('network', ['settings', 'capture', 'nope', 'capture'])
+        self.assertEqual(updated.home.network, ('settings', 'capture', 'traces', 'tap', 'scan', 'tools'))
+        self.assertEqual(self.store.load().home.network, updated.home.network)
+        self.assertEqual(self.notified, [updated])
+        self.assertEqual(rules.settings_from_dict({}).home.network, NETWORK_ORDER)
+        partial = rules.settings_from_dict({'homeOrder': {'cyber': ['servers', 'tls']}})
+        self.assertEqual(partial.home.cyber, ('servers', 'tls', 'vuln', 'wifi', 'arp', 'nmap'))
+        self.assertEqual(partial.home.network, NETWORK_ORDER)
+        restored = self.service.reset_tile_order()
+        self.assertEqual(restored.home.network, NETWORK_ORDER)
+        self.assertEqual(restored.home.cyber, CYBER_ORDER)
+        with self.assertRaises(ValidationError):
+            self.service.set_tile_order('otro', ['capture'])
 
     def test_missing_backlight_keeps_the_saved_level(self):
         self.light.ready = False
