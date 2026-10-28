@@ -33,6 +33,7 @@ Item {
         case 3: return tap.running
         case 4: return discovery.running || portScan.busy
         case 5: return speedTest.busy || wakeOnLan.busy || macVendor.busy || files.busy
+        case 8: return servers.anyRunning
         default: return false
         }
     }

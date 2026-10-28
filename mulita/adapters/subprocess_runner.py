@@ -62,13 +62,15 @@ class _FinishedCommand(RunningCommand):
 
 class SubprocessCommandRunner(CommandRunner):
 
-    def run(self, argv: Sequence[str], timeout: float | None = None) -> CommandResult:
+    def run(self, argv: Sequence[str], timeout: float | None = None,
+            input_text: str | None = None) -> CommandResult:
         argv = list(argv)
         log.info('run %s', argv)
+        options = {'input': input_text} if input_text is not None else {'stdin': subprocess.DEVNULL}
         try:
             completed = subprocess.run(
                 argv, capture_output=True, text=True, errors='replace',
-                stdin=subprocess.DEVNULL, timeout=timeout)
+                timeout=timeout, **options)
         except FileNotFoundError:
             return CommandResult(MISSING_COMMAND_CODE, '', _missing_message(argv[0]))
         except subprocess.TimeoutExpired as exc:

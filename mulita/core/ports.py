@@ -28,8 +28,10 @@ class RunningCommand(ABC):
 class CommandRunner(ABC):
 
     @abstractmethod
-    def run(self, argv: Sequence[str], timeout: float | None = None) -> CommandResult:
-        """Ejecuta y espera el final. Bloquea al que llama."""
+    def run(self, argv: Sequence[str], timeout: float | None = None,
+            input_text: str | None = None) -> CommandResult:
+        """Ejecuta y espera el final. Bloquea al que llama.
+        `input_text` llega por la entrada estandar: asi un secreto no queda en los argumentos."""
 
     @abstractmethod
     def start(self, argv: Sequence[str],

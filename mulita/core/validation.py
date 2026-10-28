@@ -174,6 +174,49 @@ def wifi_password(value: str, required: bool) -> str:
     return text
 
 
+_SYSTEM_USER = re.compile(r'^[a-z_][a-z0-9_-]{0,30}$')
+_DNS_LABEL = re.compile(r'^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$')
+PASSWORD_MIN = 6
+PASSWORD_MAX = 64
+
+
+def port_number(value: str, field: str) -> int:
+    text = (value or '').strip()
+    if not text.isdigit() or not 1 <= int(text) <= 65535:
+        raise ValidationError(tr('badPort', field=field, value=text or tr('empty')))
+    return int(text)
+
+
+def system_user(value: str) -> str:
+    text = (value or '').strip()
+    if not _SYSTEM_USER.match(text) or text == 'root':
+        raise ValidationError(tr('badUser', value=text or tr('empty')))
+    return text
+
+
+def temporary_password(value: str) -> str:
+    text = value or ''
+    if (not PASSWORD_MIN <= len(text) <= PASSWORD_MAX or any(ch in text for ch in '\r\n\0')
+            or text != text.strip()):
+        raise ValidationError(tr('badTempPassword', minimum=PASSWORD_MIN, maximum=PASSWORD_MAX))
+    return text
+
+
+def dns_name(value: str) -> str:
+    text = (value or '').strip().rstrip('.').lower()
+    labels = text.split('.')
+    if not text or len(text) > 253 or not all(_DNS_LABEL.match(label) for label in labels):
+        raise ValidationError(tr('badDnsName', value=text or tr('empty')))
+    return text
+
+
+def integer_between(value: str, minimum: int, maximum: int, field: str) -> int:
+    text = (value or '').strip()
+    if not text.isdigit() or not minimum <= int(text) <= maximum:
+        raise ValidationError(tr('outOfRange', field=field, minimum=minimum, maximum=maximum))
+    return int(text)
+
+
 def ping_request(target: str, count: float, interval: float, size: float) -> PingRequest:
     return PingRequest(
         target=host(target),

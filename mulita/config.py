@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Sequence
@@ -33,6 +34,17 @@ class Binaries:
     iw: str = '/usr/sbin/iw'
     systemctl: str = '/usr/bin/systemctl'
     systemd_run: str = '/usr/bin/systemd-run'
+    iperf3: str = '/usr/bin/iperf3'
+    dnsmasq: str = '/usr/sbin/dnsmasq'
+    sshd: str = '/usr/sbin/sshd'
+    ssh_keygen: str = '/usr/bin/ssh-keygen'
+    openssl: str = '/usr/bin/openssl'
+    getent: str = '/usr/bin/getent'
+    useradd: str = '/usr/sbin/useradd'
+    userdel: str = '/usr/sbin/userdel'
+    chpasswd: str = '/usr/sbin/chpasswd'
+    chown: str = '/usr/bin/chown'
+    python: str = sys.executable or 'python3'
     onboard: str = 'onboard'
     killall: str = 'killall'
     poweroff: str = 'poweroff'
@@ -70,6 +82,10 @@ class AppConfig:
     wifi_dir: PurePosixPath = PurePosixPath('/root/capturas/wifi')
     scan_dir: PurePosixPath = PurePosixPath('/root/capturas/escaneo')
     discovery_dir: PurePosixPath = PurePosixPath('/root/capturas/descubrimiento')
+    # Archivos que ve el tecnico: carpeta del TFTP, carpeta del servidor web y registros.
+    servers_dir: PurePosixPath = PurePosixPath('/root/capturas/servidores')
+    # Claves, certificados y estado interno. Fuera de las capturas para que no se compartan.
+    servers_state_dir: Path = Path.home() / '.config' / 'mulita' / 'servers'
     trace_cycles: int = 6
     public_ip_url: str = 'https://ipwho.is/'
     public_ip_timeout: int = 10

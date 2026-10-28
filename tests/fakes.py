@@ -37,12 +37,15 @@ class FakeRunner(CommandRunner):
     def __init__(self, results: dict[str, CommandResult] | None = None):
         self.results = results or {}
         self.runs: list[list[str]] = []
+        self.inputs: list[str | None] = []
         self.starts: list[list[str]] = []
         self.handles: list[FakeCommand] = []
         self.outputs: list[Optional[OutputListener]] = []
 
-    def run(self, argv: Sequence[str], timeout: float | None = None) -> CommandResult:
+    def run(self, argv: Sequence[str], timeout: float | None = None,
+            input_text: str | None = None) -> CommandResult:
         self.runs.append(list(argv))
+        self.inputs.append(input_text)
         return self.results.get(argv[0], CommandResult(0, 'ok\n'))
 
     def start(self, argv: Sequence[str],

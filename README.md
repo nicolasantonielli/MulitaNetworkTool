@@ -10,6 +10,45 @@ vuelve a Red. Tocar el nombre de una pagina, debajo de los cuadros, tambien la
 abre. Las herramientas de Ciberseguridad usan una plantilla comun y todavia
 estan en preparacion.
 
+## Servidores
+
+En la pagina **Ciberseguridad** del inicio, el cuadro **Servidores** abre la lista de
+servicios de prueba. Cada uno tiene dos pestanas: **Ajustes** y **Registro**. El boton
+**Iniciar** arranca el servicio y se pueden tener varios activos a la vez, uno por tipo.
+El registro guarda las ultimas 500 entradas, con la mas nueva primero, y se puede exportar a
+CSV. Un servidor que cae muestra el motivo en un aviso.
+
+| Servicio | Que hace | Puerto por defecto |
+| --- | --- | --- |
+| iPerf3 | Servidor `iperf3 -s`. El otro equipo corre `iperf3 -c <IP de Mulita>` | 5201 |
+| TFTP | Entrega y recibe archivos de la carpeta `servidores/tftp`. Las subidas reemplazan un archivo existente | 69 |
+| SFTP | Usuario temporal con clave, limitado a la carpeta de capturas. Las subidas van a `respaldos` | 2222 |
+| HTTP/HTTPS | Pagina de conexion, descargas de prueba (`/prueba/10` son 10 MB), `/archivos/` y `/capturas/` | 80 y 443 |
+| DNS | Resuelve un nombre de prueba y registra cada consulta. Puede reenviar el resto a otro DNS | 53 |
+| DHCP | Reparte direcciones y lista las concesiones | 67 |
+| NTP | Entrega la hora del sistema de Mulita | 123 |
+
+Detalles:
+
+- **Interfaz.** iPerf3, TFTP, SFTP, HTTP/HTTPS y NTP escuchan en todas las interfaces o en una
+  elegida. DNS y DHCP necesitan una interfaz con direccion IPv4.
+- **DHCP.** Se niega a iniciar en la interfaz que tiene la ruta por defecto, para no competir con
+  el DHCP de la red. Sin rango, usa la red de la interfaz entre `.100` y `.150`. Gateway y DNS
+  valen por defecto la direccion de Mulita.
+- **SFTP.** El usuario se crea al iniciar y se elimina al detener. No puede ser un usuario que ya
+  exista en el sistema. Solo ve la carpeta de capturas. El registro muestra los ingresos y
+  desconexiones, no cada archivo. El puerto 22 queda para el SSH del sistema.
+- **HTTPS.** Usa un certificado propio, creado la primera vez. El navegador avisa que no es
+  confiable. El certificado y las claves se guardan fuera de las carpetas compartidas.
+- **DNS.** Responde el nombre de prueba (`mulita.test` por defecto) con la direccion elegida y
+  no guarda respuestas en memoria, asi el registro muestra todo lo que pregunta el equipo.
+- **NTP.** La precision es la del reloj de Mulita. El estrato anunciado se elige a mano.
+- Los puertos menores a 1024 funcionan porque Mulita corre como administrador.
+- Los archivos estan en `/root/capturas/servidores`: `tftp` (TFTP), `web` (servidor web) y
+  `registros` (CSV del registro).
+
+Necesitan `iperf3`, `dnsmasq-base`, `openssh-server` y `openssl`, que instala `install-lite.sh`.
+
 ## Copiar y pegar texto
 
 Mantener presionado un texto para abrir el menu **Copiar**. Vale para un texto

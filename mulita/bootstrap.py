@@ -21,6 +21,7 @@ from mulita.services.ethernet import EthernetService
 from mulita.services.files import CaptureFilesService
 from mulita.services.network import (CaptureService, InterfaceService,
                                      TapService)
+from mulita.services.servers import ServerService
 from mulita.services.system import (KeyboardService, MaintenanceService,
                                     ShareService)
 from mulita.services.tools import (ClimateService, MacVendorService, PublicIpService,
@@ -68,6 +69,8 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
         keyboard=KeyboardService(runner, commands),
         share=ShareService(),
         settings=SettingsService(settings_store or JsonSettingsStore(config.settings_path)),
+        servers=ServerService(runner, commands, config.servers_dir, config.servers_state_dir,
+                              config.capture_dir),
     )
 
 

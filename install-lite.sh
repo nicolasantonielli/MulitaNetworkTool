@@ -62,6 +62,10 @@ APT_PACKAGES=(
   speedtest-cli
   git
   psmisc
+  iperf3
+  dnsmasq-base
+  openssh-server
+  openssl
 )
 
 if ! dpkg -s "${APT_PACKAGES[@]}" >/dev/null 2>&1; then
@@ -95,7 +99,9 @@ ensure_path() {
 missing=0
 for path in \
   /bin/tcpdump /bin/mtr /bin/ping /bin/nmap /sbin/netdiscover /usr/sbin/iw \
-  /bin/wakeonlan /bin/speedtest /bin/curl /usr/bin/ip /usr/sbin/tc /usr/bin/mount /usr/bin/lsblk /usr/bin/git /bin/bash
+  /bin/wakeonlan /bin/speedtest /bin/curl /usr/bin/ip /usr/sbin/tc /usr/bin/mount /usr/bin/lsblk /usr/bin/git /bin/bash \
+  /usr/bin/iperf3 /usr/sbin/dnsmasq /usr/sbin/sshd /usr/bin/ssh-keygen /usr/bin/openssl \
+  /usr/sbin/useradd /usr/sbin/userdel /usr/sbin/chpasswd /usr/bin/getent /usr/bin/chown
 do
   ensure_path "$path" || missing=1
 done

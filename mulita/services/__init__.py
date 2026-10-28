@@ -8,6 +8,7 @@ from mulita.services.ethernet import EthernetService
 from mulita.services.files import CaptureFilesService
 from mulita.services.network import (CaptureService, InterfaceService,
                                      TapService)
+from mulita.services.servers import ServerService
 from mulita.services.settings import SettingsService
 from mulita.services.system import (KeyboardService, MaintenanceService,
                                     ShareService)
@@ -37,10 +38,12 @@ class Services:
     keyboard: KeyboardService
     share: ShareService
     settings: SettingsService
+    servers: ServerService
 
     def shutdown(self) -> None:
         """Al cerrar la aplicacion no quedan capturas ni pings huerfanos."""
         for session in (self.capture, self.ping, self.discovery):
             session.stop()
         self.tap.stop()
+        self.servers.stop_all()
         self.keyboard.hide()

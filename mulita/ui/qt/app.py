@@ -42,6 +42,7 @@ class QtApplication:
         from mulita.ui.qt.bridge.network import (CaptureController,
                                                  NetworkController,
                                                  TapController)
+        from mulita.ui.qt.bridge.servers import ServersController
         from mulita.ui.qt.bridge.system import (Appearance, I18nController,
                                                 SettingsController, SystemController)
         from mulita.ui.qt.bridge.wifi import WifiController
@@ -105,6 +106,7 @@ class QtApplication:
             'publicIp': PublicIpController(ctx),
             'macVendor': MacVendorController(ctx),
             'files': FilesController(ctx),
+            'servers': ServersController(ctx),
         }
 
         self.engine = QQmlApplicationEngine()

@@ -17,7 +17,8 @@ ApplicationWindow {
         { title: i18n.pack.pageScan, share: true },
         { title: i18n.pack.pageTools, share: true },
         { title: i18n.pack.pageSettings, share: false },
-        { title: window.cyberTools[window.cyberTool].title, share: false }
+        { title: window.cyberTools[window.cyberTool].title, share: false },
+        { title: i18n.pack.pageServers, share: false }
     ]
     property int currentPage: 0
 
@@ -28,7 +29,7 @@ ApplicationWindow {
         { tool: 2, icon: "shield", title: i18n.pack.cyberArp, subtitle: i18n.pack.cyberArpSub },
         { tool: 3, icon: "ethernet", title: i18n.pack.cyberDhcp, subtitle: i18n.pack.cyberDhcpSub },
         { tool: 4, icon: "lock", title: i18n.pack.cyberTls, subtitle: i18n.pack.cyberTlsSub },
-        { tool: 5, icon: "globe", title: i18n.pack.cyberDns, subtitle: i18n.pack.cyberDnsSub }
+        { page: 8, icon: "server", title: i18n.pack.homeServers, subtitle: i18n.pack.homeServersSub }
     ]
     property int cyberTool: 0
 
@@ -108,6 +109,7 @@ ApplicationWindow {
             ToolsPage { }
             SettingsPage { onGoHome: window.navigate(0) }
             CyberPage { tool: window.cyberTools[window.cyberTool] }
+            ServersPage { }
 
             onCurrentIndexChanged: pageFade.restart()
         }
