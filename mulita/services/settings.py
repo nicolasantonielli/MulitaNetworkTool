@@ -51,8 +51,8 @@ class SettingsService:
     def backlight_ready(self) -> bool:
         return self._backlight.available()
 
-    def set_tile_order(self, group: str, order: Any) -> Settings:
-        return self._commit(rules.with_tile_order(self._current, group, order))
+    def set_home_screens(self, screens: Any) -> Settings:
+        return self._commit(rules.with_home_screens(self._current, screens))
 
     def reset_tile_order(self) -> Settings:
         return self._commit(rules.reset_tile_order(self._current))

@@ -4,15 +4,17 @@ Aplicacion de diagnostico de red pensada para Raspberry Pi 4, con soporte de ent
 
 ## Menu de inicio
 
-El inicio tiene dos paginas de seis cuadros: **Red** y **Ciberseguridad**.
-Deslizar el dedo hacia la izquierda pasa a Ciberseguridad y hacia la derecha
-vuelve a Red. Tocar el nombre de una pagina, debajo de los cuadros, tambien la
-abre. **Servidores**, **Certificados TLS** y **Escaneo Nmap** ya funcionan. Las demas
-herramientas de Ciberseguridad usan una plantilla comun y todavia estan en preparacion.
+El inicio son pantallas numeradas **1**, **2**, **3**… Cada una lleva de 1 a 6 cuadros,
+y un cuadro puede estar en cualquier pantalla. Deslizar cambia de pantalla. Tocar el
+numero de abajo tambien la abre. En Ajustes, **Ordenar** muestra todos los cuadros
+juntos, con un separador por pantalla. El **+** del ultimo separador agrega una
+pantalla. **Servidores**, **Certificados TLS** y **Escaneo Nmap** ya funcionan. Las
+demas herramientas de ciberseguridad usan una plantilla comun y todavia estan en
+preparacion.
 
 ## Servidores
 
-En la pagina **Ciberseguridad** del inicio, el cuadro **Servidores** abre la lista de
+En el inicio, el cuadro **Servidores** abre la lista de
 servicios de prueba. Cada uno tiene dos pestanas: **Ajustes** y **Registro**. El boton
 **Iniciar** arranca el servicio y se pueden tener varios activos a la vez, uno por tipo.
 El registro guarda las ultimas 500 entradas, con la mas nueva primero, y se puede exportar a

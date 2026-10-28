@@ -2,38 +2,61 @@ import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import "../components"
 
-// Reordena los cuadros del inicio arrastrandolos. El cambio se guarda al soltar.
+// Todas las filas juntas. Un separador abre cada pantalla (de 1 a 6 cuadros).
+// El más del último separador agrega una pantalla, moviendo allí el último cuadro.
 ColumnLayout {
     id: root
 
     objectName: "tileOrderPage"
     signal goBack()
 
-    property string group: "network"
     property bool dragging: false
-    property bool animateMoves: true
-    property int dragFrom: -1
-    property int hover: -1
-    // Copia propia. La lista que viene de la configuracion no se usa como modelo
-    // mientras el dedo la arrastra: si no, la vista la reconstruye y los cuadros se van.
-    property var rows: []
+    property int dragLine: -1
+    property string dragId: ""
+    property var screens: []
 
-    readonly property var order: {
-        var stored = settings.tileOrder || ({})
-        var list = stored[group]
-        return list && list.length ? list : []
+    readonly property real rowH: Math.round(ui.touch * 0.78)
+    readonly property bool canAdd: {
+        var last = screens.length ? screens[screens.length - 1] : []
+        return last.length >= 2
+    }
+    readonly property var lines: {
+        var out = []
+        for (var s = 0; s < screens.length; ++s) {
+            out.push({ kind: "separator", screen: s, last: s === screens.length - 1, id: "" })
+            var page = screens[s]
+            for (var t = 0; t < page.length; ++t)
+                out.push({ kind: "tile", screen: s, tileIndex: t, id: page[t], last: false })
+        }
+        return out
     }
 
-    function readOrder() {
-        var copy = []
-        for (var i = 0; i < order.length; ++i)
-            copy.push(String(order[i]))
-        return copy
+    function copyScreens(source) {
+        var stored = source || []
+        var next = []
+        for (var s = 0; s < stored.length; ++s) {
+            var page = []
+            var ids = stored[s] || []
+            for (var i = 0; i < ids.length; ++i)
+                page.push(String(ids[i]))
+            if (page.length)
+                next.push(page)
+        }
+        return next
     }
 
-    onOrderChanged: if (!dragging) rows = readOrder()
-    onGroupChanged: Qt.callLater(function() { if (!root.dragging) root.rows = root.readOrder() })
-    Component.onCompleted: rows = readOrder()
+    function reload() {
+        if (dragging)
+            return
+        screens = copyScreens(settings.tileOrder && settings.tileOrder.screens)
+    }
+
+    Component.onCompleted: reload()
+
+    Connections {
+        target: settings
+        function onChanged() { root.reload() }
+    }
 
     function labelOf(id) {
         var names = {
@@ -62,16 +85,63 @@ ColumnLayout {
         return names[id] || "info"
     }
 
-    function moveTile(from, to) {
-        if (from === to || from < 0 || to < 0 || from >= rows.length || to >= rows.length)
+    function save(next) {
+        screens = next
+        settings.setHomeScreens(JSON.stringify(next))
+    }
+
+    function addScreen() {
+        if (!canAdd || dragging)
             return
-        var next = []
-        for (var i = 0; i < rows.length; ++i)
-            next.push(rows[i])
-        var moved = next.splice(from, 1)[0]
-        next.splice(to, 0, moved)
-        rows = next
-        settings.setTileOrder(group, JSON.stringify(next))
+        var next = copyScreens(screens)
+        var last = next[next.length - 1].slice()
+        var moved = last.pop()
+        next[next.length - 1] = last
+        next.push([moved])
+        save(next)
+        Qt.callLater(function() { flick.contentY = Math.max(0, flick.contentHeight - flick.height) })
+    }
+
+    function lineAt(y) {
+        var index = Math.floor(y / rowH)
+        if (index < 0)
+            return 0
+        if (index >= lines.length)
+            return lines.length - 1
+        return index
+    }
+
+    function moveTile(fromScreen, fromIndex, toScreen, toIndex) {
+        var next = copyScreens(screens)
+        if (fromScreen < 0 || toScreen < 0 || fromScreen >= next.length || toScreen >= next.length)
+            return
+        if (fromIndex < 0 || fromIndex >= next[fromScreen].length)
+            return
+        if (fromScreen !== toScreen && next[toScreen].length >= 6)
+            return
+        var page = next[fromScreen].slice()
+        var id = page.splice(fromIndex, 1)[0]
+        if (fromScreen === toScreen) {
+            if (fromIndex < toIndex)
+                toIndex -= 1
+            toIndex = Math.max(0, Math.min(toIndex, page.length))
+            page.splice(toIndex, 0, id)
+            next[fromScreen] = page
+            save(next)
+            return
+        }
+        if (!page.length)
+            next.splice(fromScreen, 1)
+        else
+            next[fromScreen] = page
+        if (toScreen > fromScreen && !page.length)
+            toScreen -= 1
+        if (toScreen < 0 || toScreen >= next.length)
+            return
+        var dest = next[toScreen].slice()
+        dest.splice(Math.max(0, Math.min(toIndex, dest.length)), 0, id)
+        next[toScreen] = dest
+        save(next)
     }
 
     RowLayout {
@@ -98,72 +168,78 @@ ColumnLayout {
         }
     }
 
-    ChoiceChips {
-        Layout.fillWidth: true
-        enabled: !root.dragging
-        model: [
-            { label: i18n.pack.homeNetwork, value: "network" },
-            { label: i18n.pack.homeCyber, value: "cyber" }
-        ]
-        value: root.group
-        onActivated: root.group = value
-    }
-
-    Item {
-        id: board
-
-        readonly property real gap: Math.round(ui.gap * 0.35)
-        readonly property real rowHeight: root.rows.length > 0 ? height / root.rows.length : ui.touch
+    Flickable {
+        id: flick
+        objectName: "orderFlick"
 
         Layout.fillWidth: true
         Layout.fillHeight: true
+        contentWidth: width
+        contentHeight: column.height
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        interactive: !root.dragging
+        flickableDirection: Flickable.VerticalFlick
 
         Column {
             id: column
-            width: parent.width
+            width: flick.width
 
             Repeater {
                 id: orderTiles
                 objectName: "orderTiles"
-                model: root.rows
+                model: root.lines
 
                 delegate: Item {
                     id: slot
 
-                    objectName: "orderRow"
+                    objectName: modelData.kind === "tile" ? "orderRow" : "orderSeparator"
                     width: column.width
-                    height: board.rowHeight
-                    z: index === root.dragFrom ? 2 : 0
+                    height: root.rowH
 
-                    // Las filas que no se arrastran se corren un lugar para abrir el hueco.
-                    readonly property real shift: {
-                        if (root.dragFrom < 0 || index === root.dragFrom)
-                            return 0
-                        if (root.dragFrom < root.hover && index > root.dragFrom && index <= root.hover)
-                            return -height
-                        if (root.hover < root.dragFrom && index >= root.hover && index < root.dragFrom)
-                            return height
-                        return 0
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: modelData.kind === "separator"
+                        height: Math.max(1, Math.round(ui.mm * 0.4))
+                        color: ui.border
                     }
-                    property real slide: 0
-                    onShiftChanged: slide = shift
 
-                    Behavior on slide {
-                        enabled: root.animateMoves
-                        NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: ui.gap
+                        anchors.rightMargin: ui.gap
+                        visible: modelData.kind === "separator"
+                        spacing: ui.gap
+
+                        Text {
+                            text: String(modelData.screen + 1)
+                            color: ui.primary
+                            font.pixelSize: ui.fontBody
+                            font.weight: Font.Bold
+                        }
+                        Item { Layout.fillWidth: true }
+                        IconButton {
+                            visible: modelData.last === true
+                            icon: "plus"
+                            iconColor: root.canAdd ? ui.primary : ui.textMuted
+                            enabled: root.canAdd && !root.dragging
+                            onClicked: root.addScreen()
+                        }
                     }
 
                     Rectangle {
                         id: card
 
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        y: index === root.dragFrom ? dragArea.offset : slot.slide
-                        height: Math.max(ui.fontBody * 1.8, parent.height - board.gap)
+                        anchors.fill: parent
+                        anchors.topMargin: Math.round(root.rowH * 0.08)
+                        anchors.bottomMargin: Math.round(root.rowH * 0.08)
+                        visible: modelData.kind === "tile"
                         radius: ui.radius
-                        color: index === root.dragFrom ? ui.surfaceHigh : ui.surface
-                        border.width: index === root.dragFrom ? 2 : 1
-                        border.color: index === root.dragFrom ? ui.primary : ui.border
+                        color: root.dragLine === index ? ui.surfaceHigh : ui.surface
+                        border.width: root.dragLine === index ? 2 : 1
+                        border.color: root.dragLine === index ? ui.primary : ui.border
 
                         RowLayout {
                             anchors.fill: parent
@@ -172,26 +248,26 @@ ColumnLayout {
                             spacing: ui.gap
 
                             Column {
-                                spacing: Math.round(ui.mm * 0.7)
+                                spacing: Math.round(ui.mm * 0.55)
                                 Layout.alignment: Qt.AlignVCenter
                                 Repeater {
                                     model: 3
                                     delegate: Rectangle {
                                         width: Math.round(ui.mm * 3.2)
-                                        height: Math.max(2, Math.round(ui.mm * 0.45))
+                                        height: Math.max(2, Math.round(ui.mm * 0.4))
                                         radius: height / 2
                                         color: ui.textMuted
                                     }
                                 }
                             }
                             Icon {
-                                name: root.iconOf(modelData)
+                                name: root.iconOf(modelData.id)
                                 color: ui.primary
                                 size: Math.round(ui.icon * 0.85)
                             }
                             Text {
                                 Layout.fillWidth: true
-                                text: root.labelOf(modelData)
+                                text: root.labelOf(modelData.id)
                                 color: ui.text
                                 font.pixelSize: ui.fontBody
                                 font.weight: Font.DemiBold
@@ -211,33 +287,38 @@ ColumnLayout {
                             onPressed: {
                                 origin = mapToItem(column, mouse.x, mouse.y).y
                                 offset = 0
-                                root.dragFrom = index
-                                root.hover = index
+                                root.dragLine = index
+                                root.dragId = modelData.id
                                 root.dragging = true
+                                card.z = 2
                             }
                             onPositionChanged: {
-                                if (!pressed || slot.height <= 0)
+                                if (!pressed)
                                     return
-                                var delta = mapToItem(column, mouse.x, mouse.y).y - origin
-                                var minY = -index * slot.height
-                                var maxY = (root.rows.length - 1 - index) * slot.height
-                                offset = Math.max(minY, Math.min(maxY, delta))
-                                var destination = Math.round(index + offset / slot.height)
-                                root.hover = Math.max(0, Math.min(root.rows.length - 1, destination))
+                                var y = mapToItem(column, mouse.x, mouse.y).y
+                                offset = y - origin
+                                var minY = -slot.y
+                                var maxY = column.height - slot.y - slot.height
+                                offset = Math.max(minY, Math.min(maxY, offset))
+                                card.y = offset
                             }
                             onReleased: finish()
                             onCanceled: finish()
 
                             function finish() {
-                                var from = index
-                                var destination = root.hover < 0 ? from : root.hover
-                                root.animateMoves = false
-                                offset = 0
-                                root.dragFrom = -1
-                                root.hover = -1
+                                var target = root.lineAt(slot.y + card.y + slot.height / 2)
+                                var line = root.lines[target]
+                                var fromScreen = modelData.screen
+                                var fromIndex = modelData.tileIndex
+                                card.y = 0
+                                card.z = 0
+                                root.dragLine = -1
+                                root.dragId = ""
                                 root.dragging = false
-                                root.moveTile(from, destination)
-                                Qt.callLater(function() { root.animateMoves = true })
+                                if (!line)
+                                    return
+                                var toIndex = line.kind === "separator" ? 0 : line.tileIndex
+                                root.moveTile(fromScreen, fromIndex, line.screen, toIndex)
                             }
                         }
                     }

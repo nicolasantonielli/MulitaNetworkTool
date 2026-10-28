@@ -19,34 +19,60 @@ Item {
         { id: "settings", page: 6, icon: "settings", title: i18n.pack.homeSettings, subtitle: i18n.pack.homeSettingsSub }
     ]
 
-    function arrange(catalog, ids) {
-        var byId = {}
-        var placed = {}
-        var result = []
-        for (var i = 0; i < catalog.length; ++i)
-            byId[catalog[i].id] = catalog[i]
-        var wanted = ids || []
-        for (var j = 0; j < wanted.length; ++j) {
-            var tile = byId[wanted[j]]
-            if (tile && !placed[wanted[j]]) {
-                result.push(tile)
-                placed[wanted[j]] = true
-            }
-        }
-        for (var k = 0; k < catalog.length; ++k) {
-            if (!placed[catalog[k].id])
-                result.push(catalog[k])
-        }
-        return result
+    readonly property var catalog: {
+        var all = []
+        for (var i = 0; i < tiles.length; ++i)
+            all.push(tiles[i])
+        for (var j = 0; j < cyberTools.length; ++j)
+            all.push(cyberTools[j])
+        return all
     }
 
-    readonly property var networkTiles: arrange(tiles, settings.tileOrder.network)
-    readonly property var cyberTiles: arrange(cyberTools, settings.tileOrder.cyber)
+    function screenTiles() {
+        var byId = {}
+        var placed = {}
+        var pages = []
+        for (var i = 0; i < catalog.length; ++i)
+            byId[catalog[i].id] = catalog[i]
+        var stored = (settings.tileOrder && settings.tileOrder.screens) || []
+        for (var s = 0; s < stored.length; ++s) {
+            var page = []
+            var ids = stored[s] || []
+            for (var n = 0; n < ids.length && page.length < 6; ++n) {
+                var tile = byId[String(ids[n])]
+                if (tile && !placed[tile.id]) {
+                    page.push(tile)
+                    placed[tile.id] = true
+                }
+            }
+            if (page.length)
+                pages.push(page)
+        }
+        var rest = []
+        for (var k = 0; k < catalog.length; ++k)
+            if (!placed[catalog[k].id])
+                rest.push(catalog[k])
+        if (!pages.length)
+            pages.push([])
+        for (var r = 0; r < rest.length; ++r) {
+            if (pages[pages.length - 1].length >= 6)
+                pages.push([])
+            pages[pages.length - 1].push(rest[r])
+        }
+        var ready = []
+        for (var p = 0; p < pages.length; ++p)
+            if (pages[p].length)
+                ready.push(pages[p])
+        return ready
+    }
 
-    readonly property var sections: [
-        { title: i18n.pack.homeNetwork, tiles: root.networkTiles },
-        { title: i18n.pack.homeCyber, tiles: root.cyberTiles }
-    ]
+    readonly property var sections: {
+        var pages = root.screenTiles()
+        var out = []
+        for (var i = 0; i < pages.length; ++i)
+            out.push({ title: String(i + 1), tiles: pages[i] })
+        return out
+    }
 
     readonly property int indicatorHeight: ui.padding
 
@@ -117,7 +143,7 @@ Item {
             Item {
                 id: marker
                 readonly property bool current: pager.currentIndex === index
-                width: label.implicitWidth + dot.width + ui.gap * 2
+                width: Math.max(ui.touch * 0.8, label.implicitWidth + dot.width + ui.gap * 2)
                 height: root.indicatorHeight
 
                 Row {

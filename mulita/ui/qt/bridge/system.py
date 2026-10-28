@@ -118,14 +118,13 @@ class SettingsController(Controller):
 
     @pyqtProperty('QVariantMap', notify=changed)
     def tileOrder(self) -> dict:
-        home = self._current.home
-        return {'network': list(home.network), 'cyber': list(home.cyber)}
+        return {'screens': [list(screen) for screen in self._current.home.screens]}
 
-    @pyqtSlot(str, str)
-    def setTileOrder(self, group: str, order_json: str) -> None:
+    @pyqtSlot(str)
+    def setHomeScreens(self, order_json: str) -> None:
         try:
-            order = json.loads(order_json or '[]')
-            self._services.settings.set_tile_order(group, order)
+            screens = json.loads(order_json or '[]')
+            self._services.settings.set_home_screens(screens)
         except (MulitaError, ValueError) as exc:
             self._fail(exc if isinstance(exc, MulitaError) else ValidationError(i18n.tr('badTileOrder')))
 

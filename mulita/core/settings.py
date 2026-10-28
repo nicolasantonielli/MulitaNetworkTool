@@ -21,10 +21,12 @@ UI_SCALE_STEP = 0.05
 BRIGHTNESS_MIN = 1
 BRIGHTNESS_MAX = 100
 
-# Orden de fabrica de los cuadros del inicio. La pantalla solo cambia la posicion.
+# Orden de fabrica. Cada pantalla del inicio lleva de 1 a 6 cuadros, sin importar el rubro.
 NETWORK_ORDER = ('capture', 'traces', 'tap', 'scan', 'tools', 'settings')
 CYBER_ORDER = ('vuln', 'wifi', 'arp', 'nmap', 'tls', 'servers')
-TILE_GROUPS = {'network': NETWORK_ORDER, 'cyber': CYBER_ORDER}
+ALL_TILES = NETWORK_ORDER + CYBER_ORDER
+SCREEN_LIMIT = 6
+DEFAULT_SCREENS = (NETWORK_ORDER, CYBER_ORDER)
 
 
 class Theme(Enum):
@@ -69,8 +71,7 @@ class DisplaySettings:
 
 @dataclass(frozen=True)
 class HomeOrder:
-    network: tuple[str, ...] = NETWORK_ORDER
-    cyber: tuple[str, ...] = CYBER_ORDER
+    screens: tuple[tuple[str, ...], ...] = DEFAULT_SCREENS
 
 
 @dataclass(frozen=True)
@@ -88,8 +89,7 @@ class Settings:
             'language': self.language.value,
             'brightness': self.brightness,
             'homeOrder': {
-                'network': list(self.home.network),
-                'cyber': list(self.home.cyber),
+                'screens': [list(screen) for screen in self.home.screens],
             },
         }
 
@@ -126,12 +126,8 @@ def ui_scale(value: Any) -> float:
     return round(UI_SCALE_MIN + steps * UI_SCALE_STEP, 2)
 
 
-def tile_order(group: str, value: Any) -> tuple[str, ...]:
-    """Acepta una permutacion del grupo. Lo desconocido se descarta y lo que falte vuelve al final, en el orden de fabrica."""
-    try:
-        default = TILE_GROUPS[group]
-    except KeyError as exc:
-        raise ValidationError(tr('badTileGroup', value=group)) from exc
+def _complete(default: tuple[str, ...], value: Any) -> tuple[str, ...]:
+    """Completa un grupo viejo (Red o Ciberseguridad) para poder leer ajustes ya guardados."""
     if not isinstance(value, list):
         return default
     kept: list[str] = []
@@ -145,12 +141,59 @@ def tile_order(group: str, value: Any) -> tuple[str, ...]:
     return tuple(kept)
 
 
+def normalize_screens(value: Any) -> tuple[tuple[str, ...], ...]:
+    """De 1 a 6 cuadros por pantalla. Lo desconocido se descarta y lo que falte se agrega al final."""
+    allowed = set(ALL_TILES)
+    seen: set[str] = set()
+    screens: list[list[str]] = []
+    if isinstance(value, list):
+        for raw in value:
+            if not isinstance(raw, list):
+                continue
+            page: list[str] = []
+            for item in raw:
+                if not isinstance(item, str) or item not in allowed or item in seen:
+                    continue
+                if len(page) >= SCREEN_LIMIT:
+                    screens.append(page)
+                    page = []
+                page.append(item)
+                seen.add(item)
+            if page:
+                screens.append(page)
+    rest = [item for item in ALL_TILES if item not in seen]
+    if not screens:
+        page = []
+        built: list[tuple[str, ...]] = []
+        for item in rest:
+            if len(page) >= SCREEN_LIMIT:
+                built.append(tuple(page))
+                page = []
+            page.append(item)
+        if page:
+            built.append(tuple(page))
+        return tuple(built)
+    current = list(screens[-1])
+    built = [tuple(page) for page in screens[:-1]]
+    for item in rest:
+        if len(current) >= SCREEN_LIMIT:
+            built.append(tuple(current))
+            current = []
+        current.append(item)
+    if current:
+        built.append(tuple(current))
+    return tuple(built)
+
+
 def home_order_from(value: Any) -> HomeOrder:
     raw = value if isinstance(value, Mapping) else {}
-    return HomeOrder(
-        network=tile_order('network', raw.get('network', list(NETWORK_ORDER))),
-        cyber=tile_order('cyber', raw.get('cyber', list(CYBER_ORDER))),
-    )
+    if 'screens' in raw:
+        return HomeOrder(screens=normalize_screens(raw.get('screens')))
+    # Ajustes anteriores: dos grupos fijos. Pasan a ser la pantalla 1 y la 2.
+    return HomeOrder(screens=(
+        _complete(NETWORK_ORDER, raw.get('network', list(NETWORK_ORDER))),
+        _complete(CYBER_ORDER, raw.get('cyber', list(CYBER_ORDER))),
+    ))
 
 
 def settings_from_dict(data: Mapping[str, Any]) -> Settings:
@@ -198,14 +241,10 @@ def with_brightness(settings: Settings, level: float) -> Settings:
     return replace(settings, brightness=brightness(level))
 
 
-def with_tile_order(settings: Settings, group: str, order: Any) -> Settings:
-    current = settings.home
-    chosen = tile_order(group, order)
-    if group == 'network':
-        home = replace(current, network=chosen)
-    else:
-        home = replace(current, cyber=chosen)
-    return replace(settings, home=home)
+def with_home_screens(settings: Settings, screens: Any) -> Settings:
+    if not isinstance(screens, list):
+        raise ValidationError(tr('badTileOrder'))
+    return replace(settings, home=HomeOrder(screens=normalize_screens(screens)))
 
 
 def reset_tile_order(settings: Settings) -> Settings:

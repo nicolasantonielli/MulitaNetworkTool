@@ -159,20 +159,27 @@ class SettingsServiceTest(unittest.TestCase):
         self.assertEqual(self.store.load().brightness, 35)
         self.assertEqual(self.light.levels, [100, 35])
 
-    def test_tile_order_is_saved_and_reset_restores_the_factory_order(self):
-        updated = self.service.set_tile_order('network', ['settings', 'capture', 'nope', 'capture'])
-        self.assertEqual(updated.home.network, ('settings', 'capture', 'traces', 'tap', 'scan', 'tools'))
-        self.assertEqual(self.store.load().home.network, updated.home.network)
-        self.assertEqual(self.notified, [updated])
-        self.assertEqual(rules.settings_from_dict({}).home.network, NETWORK_ORDER)
-        partial = rules.settings_from_dict({'homeOrder': {'cyber': ['servers', 'tls']}})
-        self.assertEqual(partial.home.cyber, ('servers', 'tls', 'vuln', 'wifi', 'arp', 'nmap'))
-        self.assertEqual(partial.home.network, NETWORK_ORDER)
+    def test_home_screens_keep_between_one_and_six_tiles(self):
+        updated = self.service.set_home_screens([
+            ['settings', 'capture', 'nope', 'capture', 'traces', 'tap', 'scan', 'tools'],
+            ['servers'],
+        ])
+        self.assertEqual(updated.home.screens[0], ('settings', 'capture', 'traces', 'tap', 'scan', 'tools'))
+        self.assertIn('servers', updated.home.screens[1])
+        self.assertLessEqual(max(len(screen) for screen in updated.home.screens), 6)
+        self.assertTrue(all(screen for screen in updated.home.screens))
+        flat = [tile for screen in updated.home.screens for tile in screen]
+        self.assertEqual(flat, list(dict.fromkeys(flat)))
+        self.assertEqual(set(flat), set(NETWORK_ORDER + CYBER_ORDER))
+        self.assertEqual(self.store.load().home.screens, updated.home.screens)
+        self.assertEqual(rules.settings_from_dict({}).home.screens, (NETWORK_ORDER, CYBER_ORDER))
+        legacy = rules.settings_from_dict({'homeOrder': {'cyber': ['servers', 'tls']}})
+        self.assertEqual(legacy.home.screens[0], NETWORK_ORDER)
+        self.assertEqual(legacy.home.screens[1], ('servers', 'tls', 'vuln', 'wifi', 'arp', 'nmap'))
         restored = self.service.reset_tile_order()
-        self.assertEqual(restored.home.network, NETWORK_ORDER)
-        self.assertEqual(restored.home.cyber, CYBER_ORDER)
+        self.assertEqual(restored.home.screens, (NETWORK_ORDER, CYBER_ORDER))
         with self.assertRaises(ValidationError):
-            self.service.set_tile_order('otro', ['capture'])
+            self.service.set_home_screens('no es una lista')
 
     def test_missing_backlight_keeps_the_saved_level(self):
         self.light.ready = False
