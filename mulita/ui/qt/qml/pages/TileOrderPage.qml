@@ -11,7 +11,9 @@ ColumnLayout {
     signal goBack()
 
     property bool dragging: false
+    property bool animateMoves: true
     property int dragLine: -1
+    property int hover: -1
     property string dragId: ""
     property var screens: []
 
@@ -196,6 +198,33 @@ ColumnLayout {
                     objectName: modelData.kind === "tile" ? "orderRow" : "orderSeparator"
                     width: column.width
                     height: root.rowH
+                    z: index === root.dragLine ? 2 : 0
+
+                    // Las filas que no se arrastran se corren para abrir el hueco.
+                    readonly property real shift: {
+                        if (root.dragLine < 0 || index === root.dragLine)
+                            return 0
+                        if (root.dragLine < root.hover && index > root.dragLine && index <= root.hover)
+                            return -height
+                        if (root.hover < root.dragLine && index >= root.hover && index < root.dragLine)
+                            return height
+                        return 0
+                    }
+                    property real slide: 0
+                    onShiftChanged: slide = shift
+
+                    Behavior on slide {
+                        enabled: root.animateMoves
+                        NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+                    }
+
+                    Item {
+                        id: mover
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        height: parent.height
+                        // El arrastrado sigue el dedo. El resto se corre con slide.
+                        y: index === root.dragLine ? dragArea.offset : slot.slide
 
                     Rectangle {
                         anchors.left: parent.left
@@ -232,9 +261,11 @@ ColumnLayout {
                     Rectangle {
                         id: card
 
-                        anchors.fill: parent
-                        anchors.topMargin: Math.round(root.rowH * 0.08)
-                        anchors.bottomMargin: Math.round(root.rowH * 0.08)
+                        readonly property real margin: Math.round(root.rowH * 0.08)
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        y: margin
+                        height: parent.height - margin * 2
                         visible: modelData.kind === "tile"
                         radius: ui.radius
                         color: root.dragLine === index ? ui.surfaceHigh : ui.surface
@@ -288,39 +319,41 @@ ColumnLayout {
                                 origin = mapToItem(column, mouse.x, mouse.y).y
                                 offset = 0
                                 root.dragLine = index
+                                root.hover = index
                                 root.dragId = modelData.id
                                 root.dragging = true
-                                card.z = 2
                             }
                             onPositionChanged: {
                                 if (!pressed)
                                     return
                                 var y = mapToItem(column, mouse.x, mouse.y).y
-                                offset = y - origin
+                                var delta = y - origin
                                 var minY = -slot.y
                                 var maxY = column.height - slot.y - slot.height
-                                offset = Math.max(minY, Math.min(maxY, offset))
-                                card.y = offset
+                                offset = Math.max(minY, Math.min(maxY, delta))
+                                root.hover = root.lineAt(slot.y + offset + slot.height / 2)
                             }
                             onReleased: finish()
                             onCanceled: finish()
 
                             function finish() {
-                                var target = root.lineAt(slot.y + card.y + slot.height / 2)
-                                var line = root.lines[target]
+                                var line = root.lines[root.hover]
                                 var fromScreen = modelData.screen
                                 var fromIndex = modelData.tileIndex
-                                card.y = 0
-                                card.z = 0
+                                root.animateMoves = false
+                                offset = 0
                                 root.dragLine = -1
+                                root.hover = -1
                                 root.dragId = ""
                                 root.dragging = false
-                                if (!line)
-                                    return
-                                var toIndex = line.kind === "separator" ? 0 : line.tileIndex
-                                root.moveTile(fromScreen, fromIndex, line.screen, toIndex)
+                                if (line && modelData.kind === "tile") {
+                                    var toIndex = line.kind === "separator" ? 0 : line.tileIndex
+                                    root.moveTile(fromScreen, fromIndex, line.screen, toIndex)
+                                }
+                                Qt.callLater(function() { root.animateMoves = true })
                             }
                         }
+                    }
                     }
                 }
             }
