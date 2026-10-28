@@ -19,7 +19,8 @@ ApplicationWindow {
         { title: i18n.pack.pageSettings, share: false },
         { title: window.cyberTools[window.cyberTool].title, share: false },
         { title: i18n.pack.pageServers, share: false },
-        { title: i18n.pack.cyberTls, share: false }
+        { title: i18n.pack.cyberTls, share: false },
+        { title: i18n.pack.cyberNmap, share: false }
     ]
     property int currentPage: 0
 
@@ -28,7 +29,7 @@ ApplicationWindow {
         { tool: 0, icon: "bug", title: i18n.pack.cyberVuln, subtitle: i18n.pack.cyberVulnSub },
         { tool: 1, icon: "wifi", title: i18n.pack.cyberWifi, subtitle: i18n.pack.cyberWifiSub },
         { tool: 2, icon: "shield", title: i18n.pack.cyberArp, subtitle: i18n.pack.cyberArpSub },
-        { tool: 3, icon: "ethernet", title: i18n.pack.cyberDhcp, subtitle: i18n.pack.cyberDhcpSub },
+        { page: 10, icon: "scan", title: i18n.pack.cyberNmap, subtitle: i18n.pack.cyberNmapSub },
         { page: 9, icon: "lock", title: i18n.pack.cyberTls, subtitle: i18n.pack.cyberTlsSub },
         { page: 8, icon: "server", title: i18n.pack.homeServers, subtitle: i18n.pack.homeServersSub }
     ]
@@ -112,6 +113,7 @@ ApplicationWindow {
             CyberPage { tool: window.cyberTools[window.cyberTool] }
             ServersPage { }
             TlsPage { }
+            NmapPage { }
 
             onCurrentIndexChanged: pageFade.restart()
         }

@@ -43,6 +43,7 @@ class QtApplication:
                                                  NetworkController,
                                                  TapController)
         from mulita.ui.qt.bridge.servers import ServersController
+        from mulita.ui.qt.bridge.nmapscan import NmapController
         from mulita.ui.qt.bridge.tls import TlsController
         from mulita.ui.qt.bridge.system import (Appearance, I18nController,
                                                 SettingsController, SystemController)
@@ -109,6 +110,7 @@ class QtApplication:
             'files': FilesController(ctx),
             'servers': ServersController(ctx),
             'tls': TlsController(ctx),
+            'nmapScan': NmapController(ctx),
         }
 
         self.engine = QQmlApplicationEngine()

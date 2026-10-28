@@ -7,8 +7,8 @@ Aplicacion de diagnostico de red pensada para Raspberry Pi 4, con soporte de ent
 El inicio tiene dos paginas de seis cuadros: **Red** y **Ciberseguridad**.
 Deslizar el dedo hacia la izquierda pasa a Ciberseguridad y hacia la derecha
 vuelve a Red. Tocar el nombre de una pagina, debajo de los cuadros, tambien la
-abre. **Servidores** y **Certificados TLS** ya funcionan. Las demas herramientas de
-Ciberseguridad usan una plantilla comun y todavia estan en preparacion.
+abre. **Servidores**, **Certificados TLS** y **Escaneo Nmap** ya funcionan. Las demas
+herramientas de Ciberseguridad usan una plantilla comun y todavia estan en preparacion.
 
 ## Servidores
 
@@ -77,6 +77,26 @@ El cuadro **Certificados TLS** de Ciberseguridad analiza un servidor con
   propia Mulita, usar su direccion y el puerto 443.
 - Necesita el paquete `testssl.sh`. `install-lite.sh` lo instala, pero sin detener la instalacion
   si no esta en los repositorios. En ese caso la aplicacion avisa que falta.
+
+## Escaneo Nmap
+
+El cuadro **Escaneo Nmap** reemplaza al marcador de DHCP falso. No es una terminal: se elige un
+perfil, se ve el comando completo y Nmap corre como proceso directo, sin shell.
+
+Hay perfiles para descubrimiento, ARP local, TCP (rápido, estándar, todos los puertos y SYN),
+puertos a elección, versiones, sistema operativo, UDP, certificados y cifrados TLS, SMB, SSH,
+HTTP y comprobaciones sueltas. El modo **Comando propio** acepta argumentos o un comando pegado
+que empiece por `nmap` (se quita solo ese nombre). Se puede guardar, duplicar y borrar.
+
+- Un escaneo a la vez. **Detener** corta también los procesos hijos y marca el informe como
+  cancelado. Si el XML quedó a medias, la lectura se señala como parcial.
+- El estado `open|filtered` se muestra como «Abierto o filtrado». Una versión detectada no se
+  presenta como vulnerabilidad, y la falta de hallazgos no se presenta como seguridad.
+- Cada ejecución queda en `/root/capturas/nmap/<fecha>/`: `informe.xml`, `salida.txt`,
+  `progreso.txt`, `errores.txt`, `puertos.csv` y `meta.json`. El historial abre, reutiliza y
+  compara dos escaneos.
+- En Windows, o con `--test`, la pantalla muestra **Simulación**. No inventa resultados.
+- Nmap ya lo instala `install-lite.sh`.
 
 ## Copiar y pegar texto
 

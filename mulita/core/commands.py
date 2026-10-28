@@ -173,6 +173,9 @@ class CommandFactory:
     def port_scan(self, arguments: list[str]) -> Argv:
         return [self._bin.nmap, *arguments]
 
+    def nmap(self, arguments: list[str]) -> Argv:
+        return [self._bin.nmap, *arguments]
+
     def discovery(self, interface: str = '', network: str = '') -> Argv:
         # -d no lee ~/.netdiscover. -L deja la salida parseable y sigue
         # escuchando. Sin -f recorre toda la red, no solo .1 .100 y .254.

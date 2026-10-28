@@ -41,6 +41,8 @@ class FakeRunner(CommandRunner):
         self.starts: list[list[str]] = []
         self.handles: list[FakeCommand] = []
         self.outputs: list[Optional[OutputListener]] = []
+        self.errors: list[Optional[OutputListener]] = []
+        self.groups: list[bool] = []
 
     def run(self, argv: Sequence[str], timeout: float | None = None,
             input_text: str | None = None) -> CommandResult:
@@ -50,9 +52,13 @@ class FakeRunner(CommandRunner):
 
     def start(self, argv: Sequence[str],
               on_output: Optional[OutputListener] = None,
-              on_exit: Optional[ExitListener] = None) -> RunningCommand:
+              on_exit: Optional[ExitListener] = None,
+              on_error: Optional[OutputListener] = None,
+              group: bool = False) -> RunningCommand:
         self.starts.append(list(argv))
         self.outputs.append(on_output)
+        self.errors.append(on_error)
+        self.groups.append(group)
         handle = FakeCommand(on_exit)
         self.handles.append(handle)
         return handle

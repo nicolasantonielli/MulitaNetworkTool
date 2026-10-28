@@ -35,6 +35,7 @@ Item {
         case 5: return speedTest.busy || wakeOnLan.busy || macVendor.busy || files.busy
         case 8: return servers.anyRunning
         case 9: return tls.running
+        case 10: return nmapScan.phase === "running" || nmapScan.phase === "starting"
         default: return false
         }
     }

@@ -82,6 +82,7 @@ class AppConfig:
     ping_dir: PurePosixPath = PurePosixPath('/root/capturas/ping')
     wifi_dir: PurePosixPath = PurePosixPath('/root/capturas/wifi')
     scan_dir: PurePosixPath = PurePosixPath('/root/capturas/escaneo')
+    nmap_dir: PurePosixPath = PurePosixPath('/root/capturas/nmap')
     discovery_dir: PurePosixPath = PurePosixPath('/root/capturas/descubrimiento')
     tls_dir: PurePosixPath = PurePosixPath('/root/capturas/tls')
     # Archivos que ve el tecnico: carpeta del TFTP, carpeta del servidor web y registros.

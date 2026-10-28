@@ -12,6 +12,7 @@ from mulita.services.servers import ServerService
 from mulita.services.settings import SettingsService
 from mulita.services.system import (KeyboardService, MaintenanceService,
                                     ShareService)
+from mulita.services.nmapscan import NmapScanService
 from mulita.services.tls import TlsService
 from mulita.services.tools import (ClimateService, MacVendorService, PublicIpService,
                                    SpeedTestService, WakeOnLanService)
@@ -41,10 +42,11 @@ class Services:
     settings: SettingsService
     servers: ServerService
     tls: TlsService
+    nmap: NmapScanService
 
     def shutdown(self) -> None:
         """Al cerrar la aplicacion no quedan capturas ni pings huerfanos."""
-        for session in (self.capture, self.ping, self.discovery, self.tls):
+        for session in (self.capture, self.ping, self.discovery, self.tls, self.nmap):
             session.stop()
         self.tap.stop()
         self.servers.stop_all()

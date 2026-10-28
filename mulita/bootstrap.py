@@ -24,6 +24,7 @@ from mulita.services.network import (CaptureService, InterfaceService,
 from mulita.services.servers import ServerService
 from mulita.services.system import (KeyboardService, MaintenanceService,
                                     ShareService)
+from mulita.services.nmapscan import NmapScanService
 from mulita.services.tls import TlsService
 from mulita.services.tools import (ClimateService, MacVendorService, PublicIpService,
                                    SpeedTestService, WakeOnLanService)
@@ -73,6 +74,8 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
         servers=ServerService(runner, commands, config.servers_dir, config.servers_state_dir,
                               config.capture_dir),
         tls=TlsService(runner, commands, config.tls_dir),
+        nmap=NmapScanService(runner, commands, config.nmap_dir,
+                             config.settings_path.parent / 'nmap', config.capture_dir),
     )
 
 

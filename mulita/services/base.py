@@ -21,10 +21,13 @@ class ProcessSession:
 
     def _launch(self, argv: Sequence[str],
                 on_output: Optional[OutputListener] = None,
-                on_exit: Optional[ExitListener] = None) -> None:
+                on_exit: Optional[ExitListener] = None,
+                on_error: Optional[OutputListener] = None,
+                group: bool = False) -> None:
         if self.is_running:
             raise AlreadyRunningError(f'{self._name} ya esta en ejecucion')
-        self._handle = self._runner.start(argv, on_output=on_output, on_exit=on_exit)
+        self._handle = self._runner.start(
+            argv, on_output=on_output, on_exit=on_exit, on_error=on_error, group=group)
 
     def stop(self) -> None:
         if self.is_running:

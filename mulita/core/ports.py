@@ -36,8 +36,11 @@ class CommandRunner(ABC):
     @abstractmethod
     def start(self, argv: Sequence[str],
               on_output: Optional[OutputListener] = None,
-              on_exit: Optional[ExitListener] = None) -> RunningCommand:
-        """Lanza sin esperar. Los callbacks llegan desde otro hilo."""
+              on_exit: Optional[ExitListener] = None,
+              on_error: Optional[OutputListener] = None,
+              group: bool = False) -> RunningCommand:
+        """Lanza sin esperar. Los callbacks llegan desde otro hilo.
+        `on_error` separa stderr. `group` permite detener también los procesos hijos."""
 
 
 class SettingsStore(ABC):
