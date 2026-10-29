@@ -268,9 +268,9 @@ ColumnLayout {
 
                         RowLayout {
                             anchors.fill: parent
-                            anchors.leftMargin: ui.padding
-                            anchors.rightMargin: ui.padding
-                            spacing: ui.gap
+                            anchors.leftMargin: ui.padding * 2
+                            anchors.rightMargin: ui.padding * 2
+                            spacing: ui.padding
 
                             Column {
                                 spacing: Math.round(ui.mm * 0.55)
