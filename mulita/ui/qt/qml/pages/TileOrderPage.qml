@@ -18,7 +18,7 @@ ColumnLayout {
     property var screens: []
 
     readonly property real rowH: Math.round(ui.touch * 0.92)
-    readonly property real gutter: ui.touch
+    readonly property real rowWidth: ui.windowWidth / 2
     readonly property bool canAdd: {
         var last = screens.length ? screens[screens.length - 1] : []
         return last.length >= 2
@@ -229,10 +229,9 @@ ColumnLayout {
 
                     RowLayout {
                         anchors.left: parent.left
-                        anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.leftMargin: ui.padding
-                        anchors.rightMargin: root.gutter
+                        width: root.rowWidth
                         visible: modelData.kind === "separator"
                         spacing: ui.gap
 
@@ -257,9 +256,8 @@ ColumnLayout {
 
                         readonly property real margin: Math.round(root.rowH * 0.14)
                         anchors.left: parent.left
-                        anchors.right: parent.right
                         anchors.leftMargin: ui.padding
-                        anchors.rightMargin: root.gutter
+                        width: root.rowWidth
                         y: margin
                         height: parent.height - margin * 2
                         visible: modelData.kind === "tile"
