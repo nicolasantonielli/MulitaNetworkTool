@@ -17,7 +17,8 @@ ColumnLayout {
     property string dragId: ""
     property var screens: []
 
-    readonly property real rowH: Math.round(ui.touch * 0.78)
+    readonly property real rowH: Math.round(ui.touch * 0.92)
+    readonly property real gutter: ui.touch
     readonly property bool canAdd: {
         var last = screens.length ? screens[screens.length - 1] : []
         return last.length >= 2
@@ -226,19 +227,12 @@ ColumnLayout {
                         // El arrastrado sigue el dedo. El resto se corre con slide.
                         y: index === root.dragLine ? dragArea.offset : slot.slide
 
-                    Rectangle {
+                    RowLayout {
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: modelData.kind === "separator"
-                        height: Math.max(1, Math.round(ui.mm * 0.4))
-                        color: ui.border
-                    }
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: ui.gap
-                        anchors.rightMargin: ui.gap
+                        anchors.leftMargin: ui.padding
+                        anchors.rightMargin: root.gutter
                         visible: modelData.kind === "separator"
                         spacing: ui.gap
 
@@ -261,9 +255,11 @@ ColumnLayout {
                     Rectangle {
                         id: card
 
-                        readonly property real margin: Math.round(root.rowH * 0.08)
+                        readonly property real margin: Math.round(root.rowH * 0.14)
                         anchors.left: parent.left
                         anchors.right: parent.right
+                        anchors.leftMargin: ui.padding
+                        anchors.rightMargin: root.gutter
                         y: margin
                         height: parent.height - margin * 2
                         visible: modelData.kind === "tile"
@@ -274,8 +270,8 @@ ColumnLayout {
 
                         RowLayout {
                             anchors.fill: parent
-                            anchors.leftMargin: ui.gap
-                            anchors.rightMargin: ui.gap
+                            anchors.leftMargin: ui.padding
+                            anchors.rightMargin: ui.padding
                             spacing: ui.gap
 
                             Column {
