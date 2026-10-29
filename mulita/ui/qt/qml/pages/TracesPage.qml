@@ -55,7 +55,8 @@ Item {
             currentIndex: tabs.currentIndex
 
             // Trazas (mtr)
-            ColumnLayout {
+            ScrollPage {
+                expand: true
                 spacing: ui.gap
 
                 RowLayout {
@@ -78,6 +79,7 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    Layout.minimumHeight: Math.round(ui.touch * 2.6)
                     radius: ui.radius
                     color: ui.surface
                     border.width: 1
@@ -204,8 +206,9 @@ Item {
             }
 
             // Ping
-            ColumnLayout {
+            ScrollPage {
                 id: pingPage
+                expand: true
                 spacing: ui.gap
 
                 readonly property var replies: {
@@ -312,6 +315,7 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    Layout.minimumHeight: Math.round(ui.touch * 2.6)
                     radius: ui.radius
                     color: ui.surface
                     border.width: 1

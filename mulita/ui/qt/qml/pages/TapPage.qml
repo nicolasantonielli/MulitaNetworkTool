@@ -38,12 +38,14 @@ Item {
             Layout.fillHeight: true
             currentIndex: tabs.currentIndex
 
-            ColumnLayout {
+            ScrollPage {
+                expand: true
                 spacing: ui.gap
 
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    Layout.minimumHeight: Math.round(ui.touch * 3)
                     spacing: ui.gap
 
                     Repeater {
@@ -149,8 +151,9 @@ Item {
                 }
             }
 
-            ColumnLayout {
+            ScrollPage {
                 id: tapOut
+                expand: true
                 spacing: ui.gap
 
                 readonly property var lines: {
@@ -161,6 +164,7 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    Layout.minimumHeight: Math.round(ui.touch * 2.6)
                     radius: ui.radius
                     color: ui.surface
                     border.width: 1

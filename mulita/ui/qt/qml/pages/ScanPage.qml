@@ -22,8 +22,9 @@ Item {
             currentIndex: tabs.currentIndex
 
             // Escaneo de puertos (nmap)
-            ColumnLayout {
+            ScrollPage {
                 id: scanPage
+                expand: true
                 spacing: ui.gap
 
                 readonly property var ports: {
@@ -72,6 +73,7 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    Layout.minimumHeight: Math.round(ui.touch * 2.6)
                     radius: ui.radius
                     color: ui.surface
                     border.width: 1
@@ -182,8 +184,9 @@ Item {
             }
 
             // Descubrimiento IP (netdiscover)
-            ColumnLayout {
+            ScrollPage {
                 id: discoverPage
+                expand: true
                 spacing: ui.gap
 
                 property string selectedInterface: ""
@@ -290,6 +293,7 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    Layout.minimumHeight: Math.round(ui.touch * 2.6)
                     radius: ui.radius
                     color: ui.surface
                     border.width: 1
