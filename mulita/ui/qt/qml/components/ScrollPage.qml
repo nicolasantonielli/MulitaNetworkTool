@@ -8,6 +8,8 @@ Item {
 
     default property alias content: column.data
     property alias spacing: column.spacing
+    // Con expand, el contenido llena la columna y, si no entra, se desplaza solo esta.
+    property bool expand: false
 
     Layout.fillWidth: true
     Layout.fillHeight: true
@@ -29,12 +31,14 @@ Item {
         flickableDirection: Flickable.VerticalFlick
         boundsBehavior: Flickable.StopAtBounds
         contentWidth: width
-        contentHeight: Math.max(column.implicitHeight, column.childrenRect.height)
+        contentHeight: root.expand
+                ? Math.max(column.implicitHeight, height)
+                : Math.max(column.implicitHeight, column.childrenRect.height)
 
         ColumnLayout {
             id: column
             width: flick.width
-            height: implicitHeight
+            height: root.expand ? Math.max(implicitHeight, flick.height) : implicitHeight
             spacing: ui.gap
         }
     }

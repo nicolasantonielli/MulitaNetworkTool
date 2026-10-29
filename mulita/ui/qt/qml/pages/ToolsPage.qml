@@ -42,7 +42,8 @@ Item {
             currentIndex: nav.currentIndex
 
             // Wake on LAN
-            ColumnLayout {
+            ScrollPage {
+                expand: true
                 spacing: ui.gap
 
                 RowLayout {
@@ -249,7 +250,8 @@ Item {
             }
 
             // Temperatura ambiente
-            ColumnLayout {
+            ScrollPage {
+                expand: true
                 spacing: ui.gap
 
                 RowLayout {
@@ -295,8 +297,9 @@ Item {
             }
 
             // Test de velocidad
-            ColumnLayout {
+            ScrollPage {
                 id: speedPage
+                expand: true
                 spacing: ui.gap
 
                 property string selectedInterface: ""
@@ -419,8 +422,9 @@ Item {
             }
 
             // IP publica
-            ColumnLayout {
+            ScrollPage {
                 id: publicPage
+                expand: true
                 spacing: ui.gap
 
                 readonly property var facts: {
@@ -533,8 +537,9 @@ Item {
             }
 
             // Info Wi-Fi
-            ColumnLayout {
+            ScrollPage {
                 id: wifiInfo
+                expand: true
                 spacing: ui.gap
 
                 readonly property var linkFacts: {
@@ -639,7 +644,8 @@ Item {
             }
 
             // MAC vendors
-            ColumnLayout {
+            ScrollPage {
+                expand: true
                 spacing: ui.gap
 
                 Field {
@@ -679,8 +685,9 @@ Item {
             }
 
             // Gestión de archivos
-            ColumnLayout {
+            ScrollPage {
                 id: filesPage
+                expand: true
                 spacing: ui.gap
 
                 property var picked: []
