@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from tests.fakes import FakeRunner
 
@@ -310,6 +311,13 @@ class SftpTest(unittest.TestCase):
         self.service._make_dir = lambda path, message: None
         (self.root / 'estado' / 'sftp').mkdir(parents=True)
         (self.root / 'estado' / 'sftp' / 'host_ed25519').write_text('key')
+        # Solo /run/sshd es del sistema: los archivos de configuración siguen
+        # escribiéndose realmente dentro del directorio temporal de la prueba.
+        self.sshd_runtime = Mock()
+        path_patch = patch('mulita.services.servers.Path', side_effect=lambda value:
+                           self.sshd_runtime if value == '/run/sshd' else Path(value))
+        path_patch.start()
+        self.addCleanup(path_patch.stop)
 
     def config(self):
         return (self.root / 'estado' / 'sftp' / 'sshd_config').read_text()
@@ -324,6 +332,7 @@ class SftpTest(unittest.TestCase):
         self.assertEqual(self.runner.inputs[index], 'tecnico:Clave123\n')
         self.assertFalse(any('Clave123' in ' '.join(call) for call in self.runner.runs))
         self.assertEqual(self.runner.starts[-1][:3], [BIN.sshd, '-D', '-e'])
+        self.sshd_runtime.mkdir.assert_called_once_with(mode=0o755, parents=True, exist_ok=True)
 
     def test_config_confines_the_user_to_the_captures_folder(self):
         self.service.start('sftp', {'user': 'tecnico', 'password': 'Clave123', 'port': '2200',

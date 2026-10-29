@@ -39,8 +39,12 @@ _TAKES_VALUE = {
     '--script-timeout', '--dns-servers', '--proxies', '-oN', '-oX', '-oG', '-oA', '-oS',
     '--max-retries', '--host-timeout', '--min-rate', '--max-rate', '--min-parallelism',
     '--max-parallelism', '--max-rtt-timeout', '--min-rtt-timeout', '--initial-rtt-timeout',
+    '--scan-delay', '--max-scan-delay', '--min-hostgroup', '--max-hostgroup',
+    '--script-args-file', '--script-help', '--scanflags', '--exclude-ports',
+    '--mtu', '--ttl', '--spoof-mac', '--ip-options', '--resume', '--port-ratio',
+    '--max-os-tries', '-iR', '-sI', '-b', '-T',
 }
-_FILE_OPTIONS = {'-iL', '--excludefile'}
+_FILE_OPTIONS = {'-iL', '--excludefile', '--script-args-file'}
 _PRIVILEGE = ('requires root', 'raw socket', 'raw sockets', 'privileges')
 
 Resolver = Callable[[str], str | None]
@@ -276,11 +280,23 @@ def _compile_custom(line: str, targets_field: str, resolve_file: Resolver, notes
     display: list[str] = []
     resolved: list[str] = []
     inline_targets: list[str] = []
+    scripts: list[str] = []
+    listed = False
     index = 0
     while index < len(parsed):
         token = parsed[index]
         _reject_output_option(token)
-        if token in _TAKES_VALUE or token.split('=', 1)[0] in _FILE_OPTIONS:
+        option, separator, attached = token.partition('=')
+        if separator and option in _TAKES_VALUE:
+            shown, real = _resolve_option(option, attached, resolve_file)
+            display.append(option + '=' + shown)
+            resolved.append(option + '=' + real)
+            if option == '--script':
+                scripts.extend(real.split(','))
+            listed = listed or option == '-iL'
+            index += 1
+            continue
+        if token in _TAKES_VALUE:
             if index + 1 >= len(parsed):
                 raise ValidationError(tr('nmapOptionNeedsValue', option=token))
             value = parsed[index + 1]
@@ -288,22 +304,20 @@ def _compile_custom(line: str, targets_field: str, resolve_file: Resolver, notes
             shown, real = _resolve_option(token, value, resolve_file)
             display.extend([token, shown])
             resolved.extend([token, real])
+            if token == '--script':
+                scripts.extend(real.split(','))
+            listed = listed or token == '-iL'
             index += 2
-            continue
-        if token.startswith('--script='):
-            shown, real = _resolve_option('--script', token.split('=', 1)[1], resolve_file)
-            display.append('--script=' + shown)
-            resolved.append('--script=' + real)
-            index += 1
             continue
         if token.startswith('-'):
             display.append(token)
             resolved.append(token)
+            if token in ('-sC', '-A'):
+                scripts.append('default')
             index += 1
             continue
         inline_targets.append(_one_target(token))
         index += 1
-    listed = '-iL' in parsed
     if inline_targets:
         notes.append(tr('nmapTargetInLine'))
         targets = inline_targets
@@ -315,7 +329,8 @@ def _compile_custom(line: str, targets_field: str, resolve_file: Resolver, notes
         notes.append(tr('nmapTargetInField'))
     _runtime_flags(resolved)
     _runtime_flags(display)
-    return Compiled('custom', '', resolved + targets, display + targets, len(targets))
+    return Compiled('custom', '', resolved + targets, display + targets, len(targets),
+                    scripts=tuple(dict.fromkeys(scripts)))
 
 
 def saved_arguments(line: str) -> str:
@@ -484,7 +499,7 @@ def _runtime_flags(args: list[str]) -> None:
     front = []
     if '-v' not in args and '-vv' not in args and '--verbose' not in args:
         front.append('-v')
-    if '--stats-every' not in args:
+    if not any(arg == '--stats-every' or arg.startswith('--stats-every=') for arg in args):
         front.extend(['--stats-every', '5s'])
     args[:0] = front
 

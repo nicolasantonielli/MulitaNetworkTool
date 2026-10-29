@@ -19,6 +19,16 @@ import tempfile
 from pathlib import Path
 
 
+class DeferredDispatcher:
+    """Controla por separado la preparación y su respuesta a la interfaz."""
+
+    def wrap(self, callback):
+        return callback
+
+    def background(self, task, success, failure):
+        self.task, self.success, self.failure = task, success, failure
+
+
 class ServersControllerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -88,6 +98,56 @@ class ServersControllerTest(unittest.TestCase):
         self.start('ntp')
         self.assertFalse(self.controller.start('ntp', '{}'))
         self.assertEqual(len(self.runner.starts), 1)
+
+    def test_stop_before_preparation_finishes_stops_the_eventual_process(self):
+        dispatcher = DeferredDispatcher()
+        self.controller._ctx.dispatcher = dispatcher
+        self.assertTrue(self.controller.start('ntp', '{}'))
+        self.controller.stop('ntp')
+        self.assertEqual(self.states(), {'ntp': 'starting'})
+        self.assertFalse(self.controller.start('ntp', '{}'))
+        dispatcher.success(dispatcher.task())
+        self.assertFalse(self.service.is_running('ntp'))
+        self.assertEqual(self.states(), {})
+        self.assertEqual(self.toasts, [])
+        self.assertTrue(self.controller.start('ntp', '{}'))
+
+    def test_stop_after_launch_but_before_start_callback_is_not_lost(self):
+        dispatcher = DeferredDispatcher()
+        self.controller._ctx.dispatcher = dispatcher
+        self.controller.start('ntp', '{}')
+        result = dispatcher.task()
+        self.assertTrue(self.service.is_running('ntp'))
+        self.controller.stop('ntp')
+        dispatcher.success(result)
+        self.assertFalse(self.service.is_running('ntp'))
+        self.assertEqual(self.states(), {})
+        self.assertEqual(self.toasts, [])
+
+    def test_cancelled_preparation_failure_returns_to_idle(self):
+        dispatcher = DeferredDispatcher()
+        self.controller._ctx.dispatcher = dispatcher
+        self.controller.start('iperf', '{"port":"abc"}')
+        self.controller.stop('iperf')
+        try:
+            dispatcher.task()
+        except Exception as error:
+            dispatcher.failure(error)
+        self.assertEqual(self.states(), {})
+        self.assertEqual(self.runner.starts, [])
+        self.assertEqual(self.toasts, [])
+        self.assertFalse(self.controller._stopping)
+
+    def test_early_exit_keeps_start_locked_until_preparation_returns(self):
+        dispatcher = DeferredDispatcher()
+        self.controller._ctx.dispatcher = dispatcher
+        self.controller.start('ntp', '{}')
+        result = dispatcher.task()
+        self.runner.handles[-1].finish(2)
+        self.assertFalse(self.controller.start('ntp', '{}'))
+        dispatcher.success(result)
+        self.assertEqual(self.states(), {})
+        self.assertEqual(self.toasts[-1], ('error', tr('srvNtp'), tr('serverFailed', code=2)))
 
     def test_invalid_settings_show_an_error_and_leave_the_server_stopped(self):
         self.assertTrue(self.controller.start('iperf', json.dumps({'port': 'abc'})))

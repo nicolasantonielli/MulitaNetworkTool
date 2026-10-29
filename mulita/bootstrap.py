@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from pathlib import Path
 from typing import Sequence
 
 from mulita.adapters.sensors import Dht11Sensor, FixedClimateSensor
@@ -26,6 +27,7 @@ from mulita.services.system import (KeyboardService, MaintenanceService,
                                     ShareService)
 from mulita.services.nmapscan import NmapScanService
 from mulita.services.tls import TlsService
+from mulita.services.switchport import SwitchPortService
 from mulita.services.tools import (ClimateService, MacVendorService, PublicIpService,
                                    SpeedTestService, WakeOnLanService)
 from mulita.services.wifi import WifiService
@@ -76,6 +78,7 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
         tls=TlsService(runner, commands, config.tls_dir),
         nmap=NmapScanService(runner, commands, config.nmap_dir,
                              config.settings_path.parent / 'nmap', config.capture_dir),
+        switchport=SwitchPortService(Path(config.capture_dir) / 'puerto-switch'),
     )
 
 

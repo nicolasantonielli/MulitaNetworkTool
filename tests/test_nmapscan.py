@@ -171,6 +171,35 @@ class CompileTest(unittest.TestCase):
         self.assertIn('-iL', listed.args)
         self.assertIsInstance(listed.args, list)
 
+    def test_custom_option_values_remain_attached_to_their_options(self):
+        for flag, value in (('--scan-delay', '100ms'), ('--max-scan-delay', '1s'),
+                            ('--min-hostgroup', '8'), ('--mtu', '24')):
+            with self.subTest(flag=flag):
+                compiled = compile_scan(options(profile='custom',
+                    custom=f'{flag} {value} -sV 192.168.1.10'))
+                at = compiled.args.index(flag)
+                self.assertEqual(compiled.args[at:at + 3], [flag, value, '-sV'])
+                self.assertEqual(compiled.target_count, 1)
+        attached = compile_scan(options(profile='custom',
+            custom='--scan-delay=100ms --stats-every=10s -sV 192.168.1.10'))
+        self.assertIn('--scan-delay=100ms', attached.args)
+        self.assertNotIn('--stats-every', attached.args)
+
+    def test_custom_scripts_are_collected_for_preflight(self):
+        for flag in ('--script ssl-cert,ssh-hostkey', '--script=ssl-cert,ssh-hostkey'):
+            with self.subTest(flag=flag):
+                compiled = compile_scan(options(profile='custom', custom=f'{flag} 10.0.0.5'))
+                self.assertEqual(compiled.scripts, ('ssl-cert', 'ssh-hostkey'))
+        for flag in ('-sC', '-A'):
+            self.assertEqual(compile_scan(options(profile='custom', custom=flag)).scripts, ('default',))
+
+    def test_custom_equals_file_option_resolves_without_consuming_next_flag(self):
+        compiled = compile_scan(options(profile='custom',
+            custom='--excludefile=@escaneo/lista.txt -sV 10.0.0.5'),
+            resolve_file=lambda _value: '/tmp/lista.txt')
+        self.assertIn('--excludefile=/tmp/lista.txt', compiled.args)
+        self.assertIn('-sV', compiled.args)
+
     def test_custom_file_token_is_resolved_for_the_process_and_hidden_in_the_preview(self):
         def resolve(value):
             return 'C:/capturas/escaneo/lista.txt' if value == '@escaneo/lista.txt' else None
@@ -317,6 +346,35 @@ class ServiceTest(unittest.TestCase):
             self.service.prepare(options(profile='checks', ports='443', scripts=['ssl-heartbleed']))
         self.assertIn('ssl-heartbleed', str(caught.exception))
         self.assertEqual(self.runner.starts, [])
+
+    def test_missing_custom_script_is_reported_before_launch(self):
+        from mulita.core.errors import CommandFailedError
+        self.runner.run = self._help
+        for flag in ('--script ssl-cert', '--script=ssl-cert'):
+            with self.subTest(flag=flag):
+                with self.assertRaises(CommandFailedError) as caught:
+                    self.service.prepare(options(profile='custom', custom=f'{flag} 10.0.0.5'))
+                self.assertIn('ssl-cert', str(caught.exception))
+        self.assertEqual(self.runner.starts, [])
+
+    def test_logs_are_persisted_during_scan_with_bounded_memory(self):
+        prepared = self.service.prepare(options())
+        self.service.launch(prepared)
+        self.runner.errors[-1]('requires root\n')
+        for number in range(100):
+            self.runner.outputs[-1](f'line {number}\n')
+        self.runner.outputs[-1]('x' * 10000 + '\n')
+        # Aún no se notificó la salida del proceso: los registros ya existen.
+        progress = (prepared.folder / 'progreso.txt').read_text(encoding='utf-8')
+        self.assertIn('line 0\n', progress)
+        self.assertIn('line 99\n', progress)
+        self.assertIn('x' * 10000, progress)
+        self.assertEqual((prepared.folder / 'errores.txt').read_text(encoding='utf-8'), 'requires root\n')
+        self.assertLessEqual(len(self.service._tail), 8)
+        self.assertTrue(all(len(line) <= 2048 for line in self.service._tail))
+        self.runner.handles[-1].finish(1)
+        self.assertTrue(self.service.outcome.privilege)
+        self.assertEqual((prepared.folder / 'progreso.txt').read_text(encoding='utf-8'), progress)
 
     def _help(self, argv, timeout=None, input_text=None):
         self.runner.runs.append(list(argv))

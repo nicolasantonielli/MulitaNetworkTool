@@ -45,6 +45,7 @@ class QtApplication:
         from mulita.ui.qt.bridge.servers import ServersController
         from mulita.ui.qt.bridge.nmapscan import NmapController
         from mulita.ui.qt.bridge.tls import TlsController
+        from mulita.ui.qt.bridge.switchport import SwitchPortController
         from mulita.ui.qt.bridge.system import (Appearance, I18nController,
                                                 SettingsController, SystemController)
         from mulita.ui.qt.bridge.wifi import WifiController
@@ -111,6 +112,7 @@ class QtApplication:
             'servers': ServersController(ctx),
             'tls': TlsController(ctx),
             'nmapScan': NmapController(ctx),
+            'switchPort': SwitchPortController(ctx),
         }
 
         self.engine = QQmlApplicationEngine()

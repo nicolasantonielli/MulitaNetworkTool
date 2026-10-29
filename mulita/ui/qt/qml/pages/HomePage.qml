@@ -86,6 +86,7 @@ Item {
         case 8: return servers.anyRunning
         case 9: return tls.running
         case 10: return nmapScan.phase === "running" || nmapScan.phase === "starting"
+        case 11: return switchPort.running
         default: return false
         }
     }

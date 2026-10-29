@@ -170,14 +170,15 @@ class SettingsServiceTest(unittest.TestCase):
         self.assertTrue(all(screen for screen in updated.home.screens))
         flat = [tile for screen in updated.home.screens for tile in screen]
         self.assertEqual(flat, list(dict.fromkeys(flat)))
-        self.assertEqual(set(flat), set(NETWORK_ORDER + CYBER_ORDER))
+        self.assertEqual(set(flat), set(rules.ALL_TILES))
         self.assertEqual(self.store.load().home.screens, updated.home.screens)
-        self.assertEqual(rules.settings_from_dict({}).home.screens, (NETWORK_ORDER, CYBER_ORDER))
+        self.assertEqual(rules.settings_from_dict({}).home.screens, rules.DEFAULT_SCREENS)
         legacy = rules.settings_from_dict({'homeOrder': {'cyber': ['servers', 'tls']}})
         self.assertEqual(legacy.home.screens[0], NETWORK_ORDER)
         self.assertEqual(legacy.home.screens[1], ('servers', 'tls', 'vuln', 'wifi', 'arp', 'nmap'))
+        self.assertEqual(legacy.home.screens[2], ('switchport',))
         restored = self.service.reset_tile_order()
-        self.assertEqual(restored.home.screens, (NETWORK_ORDER, CYBER_ORDER))
+        self.assertEqual(restored.home.screens, rules.DEFAULT_SCREENS)
         with self.assertRaises(ValidationError):
             self.service.set_home_screens('no es una lista')
 

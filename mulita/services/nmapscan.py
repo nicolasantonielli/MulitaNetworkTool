@@ -5,6 +5,8 @@ import csv
 import json
 import os
 import re
+import threading
+from collections import deque
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path, PurePosixPath
@@ -89,8 +91,9 @@ class NmapScanService(ProcessSession):
         self._known: set[str] = set()
         self._active: Path | None = None
         self._cancel = False
-        self._stdout: list[str] = []
-        self._stderr: list[str] = []
+        self._tail: deque[str] = deque(maxlen=8)
+        self._privilege = False
+        self._log_lock = threading.Lock()
 
     def probe(self) -> str:
         self._ensure_nmap()
@@ -116,8 +119,12 @@ class NmapScanService(ProcessSession):
         count = prepared.compiled.target_count
         head, tail = (args[:-count], args[-count:]) if count else (args, [])
         argv = self._commands.nmap([*head, '-oX', str(xml), '-oN', str(normal), *tail])
-        self._stdout = []
-        self._stderr = []
+        self._tail.clear()
+        self._privilege = False
+        progress_log = prepared.folder / 'progreso.txt'
+        error_log = prepared.folder / 'errores.txt'
+        self._write_text(progress_log, '')
+        self._write_text(error_log, '')
         self._active = prepared.folder
         self.outcome = None
 
@@ -130,8 +137,8 @@ class NmapScanService(ProcessSession):
             if on_exit:
                 on_exit(code)
 
-        self._launch(argv, lambda text: self._keep(self._stdout, text, emit), finished,
-                     lambda text: self._keep(self._stderr, text, emit), group=True)
+        self._launch(argv, lambda text: self._keep(progress_log, text, emit), finished,
+                     lambda text: self._keep(error_log, text, emit), group=True)
 
     def request_cancel(self) -> None:
         self._cancel = True
@@ -274,11 +281,8 @@ class NmapScanService(ProcessSession):
 
     def _finish(self, prepared: Prepared, code: int) -> None:
         folder = prepared.folder
-        self._write_text(folder / 'progreso.txt', ''.join(self._stdout))
-        self._write_text(folder / 'errores.txt', ''.join(self._stderr))
         document = parse_xml(self._read_text(folder / 'informe.xml'), prepared.today)
         self._write_csv(folder, document.hosts)
-        streamed = ''.join(self._stdout + self._stderr)
         cancelled = self._cancel
         self._cancel = False
         if cancelled:
@@ -292,11 +296,10 @@ class NmapScanService(ProcessSession):
         else:
             status, partial = 'error', True
         self._write_meta(prepared, status, code, partial or document.partial)
-        lines = [line.strip() for line in streamed.splitlines() if line.strip()]
         self.outcome = Outcome(
             document.hosts, status, partial or document.partial, prepared.compiled.command,
-            prepared.compiled.profile_id, code, privilege_error(streamed),
-            open_tcp_ports(document.hosts), '\n'.join(lines[-8:]), folder.name)
+            prepared.compiled.profile_id, code, self._privilege,
+            open_tcp_ports(document.hosts), '\n'.join(self._tail), folder.name)
         self._active = None
         if hasattr(os, 'sync'):
             os.sync()
@@ -395,9 +398,16 @@ class NmapScanService(ProcessSession):
         except OSError as exc:
             raise CommandFailedError(tr('nmapFolder')) from exc
 
-    @staticmethod
-    def _keep(sink: list[str], text: str, emit) -> None:
-        sink.append(text)
+    def _keep(self, path: Path, text: str, emit) -> None:
+        # Cada bloque queda escrito antes de notificar a la pantalla. Solo se
+        # retiene una cola acotada para el mensaje final, no todo el escaneo.
+        with self._log_lock:
+            with path.open('a', encoding='utf-8') as handle:
+                handle.write(text)
+            self._privilege = self._privilege or privilege_error(text)
+            for line in text.splitlines():
+                if line.strip():
+                    self._tail.append(line.strip()[-2048:])
         emit(text)
 
 

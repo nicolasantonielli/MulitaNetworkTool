@@ -14,6 +14,7 @@ from mulita.services.system import (KeyboardService, MaintenanceService,
                                     ShareService)
 from mulita.services.nmapscan import NmapScanService
 from mulita.services.tls import TlsService
+from mulita.services.switchport import SwitchPortService
 from mulita.services.tools import (ClimateService, MacVendorService, PublicIpService,
                                    SpeedTestService, WakeOnLanService)
 from mulita.services.wifi import WifiService
@@ -43,6 +44,7 @@ class Services:
     servers: ServerService
     tls: TlsService
     nmap: NmapScanService
+    switchport: SwitchPortService
 
     def shutdown(self) -> None:
         """Al cerrar la aplicacion no quedan capturas ni pings huerfanos."""
@@ -50,4 +52,5 @@ class Services:
             session.stop()
         self.tap.stop()
         self.servers.stop_all()
+        self.switchport.stop()
         self.keyboard.hide()

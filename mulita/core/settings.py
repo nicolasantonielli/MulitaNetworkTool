@@ -24,9 +24,9 @@ BRIGHTNESS_MAX = 100
 # Orden de fabrica. Cada pantalla del inicio lleva de 1 a 6 cuadros, sin importar el rubro.
 NETWORK_ORDER = ('capture', 'traces', 'tap', 'scan', 'tools', 'settings')
 CYBER_ORDER = ('vuln', 'wifi', 'arp', 'nmap', 'tls', 'servers')
-ALL_TILES = NETWORK_ORDER + CYBER_ORDER
+ALL_TILES = NETWORK_ORDER + CYBER_ORDER + ('switchport',)
 SCREEN_LIMIT = 6
-DEFAULT_SCREENS = (NETWORK_ORDER, CYBER_ORDER)
+DEFAULT_SCREENS = (NETWORK_ORDER, CYBER_ORDER, ('switchport',))
 
 
 class Theme(Enum):
@@ -190,10 +190,10 @@ def home_order_from(value: Any) -> HomeOrder:
     if 'screens' in raw:
         return HomeOrder(screens=normalize_screens(raw.get('screens')))
     # Ajustes anteriores: dos grupos fijos. Pasan a ser la pantalla 1 y la 2.
-    return HomeOrder(screens=(
-        _complete(NETWORK_ORDER, raw.get('network', list(NETWORK_ORDER))),
-        _complete(CYBER_ORDER, raw.get('cyber', list(CYBER_ORDER))),
-    ))
+    return HomeOrder(screens=normalize_screens([
+        list(_complete(NETWORK_ORDER, raw.get('network', list(NETWORK_ORDER)))),
+        list(_complete(CYBER_ORDER, raw.get('cyber', list(CYBER_ORDER)))),
+    ]))
 
 
 def settings_from_dict(data: Mapping[str, Any]) -> Settings:

@@ -1,5 +1,28 @@
 # Mulita Network Tool
 
+## Puerto de switch
+
+El cuadro **Puerto de switch** identifica el vecino conectado mediante anuncios
+LLDP y CDP. Seleccionar una interfaz Ethernet y escuchar durante 15 a 180 segundos
+(60 por defecto). Muestra nombre del equipo, boca, descripción, dirección de
+administración y modelo/descripción del sistema cuando el vecino los anuncia.
+Separa PVID/VLAN nativa, VLAN de voz y nombres de VLAN anunciados de las etiquetas
+802.1Q observadas en el tráfico recibido. Los anuncios que vencen su TTL o se
+retiran dejan de aparecer; LLDP y CDP se conservan como evidencias separadas.
+
+La detección en Linux usa captura Ethernet pasiva con permisos root o
+`CAP_NET_RAW`, sin dependencias adicionales, sin necesitar IP y sin cambiar
+direcciones, rutas ni configuración del switch. La recepción promiscua dura solo
+la sesión y se libera al cerrar el socket. Muestra también enlace, velocidad,
+dúplex y contadores de errores locales disponibles en el controlador Ethernet.
+**Guardar** exporta un JSON en `/root/capturas/puerto-switch/`.
+
+La ausencia de anuncios no demuestra que no haya switch. En una boca de acceso,
+los paquetes pueden llegar sin etiqueta y no permiten deducir el número de VLAN.
+Las VLAN observadas no enumeran todas las permitidas en un trunk. EDP, medición
+eléctrica de PoE, mapa de hilos y certificación de cable no están incluidos.
+En Windows y modo test se muestra una demostración marcada **SIMULACIÓN**.
+
 Aplicacion de diagnostico de red pensada para Raspberry Pi 4, con soporte de entorno de pruebas en Windows.
 
 ## Menu de inicio

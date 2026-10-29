@@ -20,7 +20,8 @@ ApplicationWindow {
         { title: window.cyberTools[window.cyberTool].title, share: false },
         { title: i18n.pack.pageServers, share: false },
         { title: i18n.pack.cyberTls, share: false },
-        { title: i18n.pack.cyberNmap, share: false }
+        { title: i18n.pack.cyberNmap, share: false },
+        { title: i18n.pack.switchTitle, share: false }
     ]
     property int currentPage: 0
 
@@ -31,7 +32,8 @@ ApplicationWindow {
         { id: "arp", tool: 2, icon: "shield", title: i18n.pack.cyberArp, subtitle: i18n.pack.cyberArpSub },
         { id: "nmap", page: 10, icon: "scan", title: i18n.pack.cyberNmap, subtitle: i18n.pack.cyberNmapSub },
         { id: "tls", page: 9, icon: "lock", title: i18n.pack.cyberTls, subtitle: i18n.pack.cyberTlsSub },
-        { id: "servers", page: 8, icon: "server", title: i18n.pack.homeServers, subtitle: i18n.pack.homeServersSub }
+        { id: "servers", page: 8, icon: "server", title: i18n.pack.homeServers, subtitle: i18n.pack.homeServersSub },
+        { id: "switchport", page: 11, icon: "ethernet", title: i18n.pack.switchTitle, subtitle: i18n.pack.switchSubtitle }
     ]
     property int cyberTool: 0
 
@@ -114,6 +116,7 @@ ApplicationWindow {
             ServersPage { }
             TlsPage { }
             NmapPage { }
+            SwitchPortPage { }
 
             onCurrentIndexChanged: pageFade.restart()
         }

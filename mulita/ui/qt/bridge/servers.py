@@ -28,6 +28,8 @@ class ServersController(Controller):
         self._logs = {kind.id: ServerLog(kind, clock) if clock else ServerLog(kind) for kind in KINDS}
         self._states: dict[str, str] = {}
         self._stopping: set[str] = set()
+        self._starting: set[str] = set()
+        self._early_exits: dict[str, int] = {}
         self._current = ''
         self._password = suggest_password()
 
@@ -81,6 +83,7 @@ class ServersController(Controller):
         except ValueError:
             values = {}
         self._stopping.discard(kind)
+        self._starting.add(kind)
         self._logs[kind].clear()
         self._set_state(kind, STARTING)
         self._notify_rows(kind)
@@ -99,6 +102,11 @@ class ServersController(Controller):
         if kind not in self._logs or self._states.get(kind, IDLE) == IDLE:
             return
         self._stopping.add(kind)
+        # La preparación todavía puede crear recursos o lanzar el proceso.
+        # Esperar su respuesta evita limpiar SFTP a mitad de su configuración
+        # y mantiene bloqueado un segundo arranque del mismo servidor.
+        if kind in self._starting:
+            return
         self._services.servers.stop(kind)
         if not self._services.servers.is_running(kind):
             self._set_state(kind, IDLE)
@@ -136,19 +144,36 @@ class ServersController(Controller):
             self.rowsChanged.emit()
 
     def _started(self, kind: str) -> None:
+        self._starting.discard(kind)
+        if kind in self._stopping:
+            self._services.servers.stop(kind)
+            if not self._services.servers.is_running(kind):
+                self._exited(kind, self._early_exits.pop(kind, 0))
+            return
+        if kind in self._early_exits:
+            self._exited(kind, self._early_exits.pop(kind))
+            return
         # Un proceso que cae al instante avisa su salida antes que esta respuesta.
         if self._states.get(kind) == STARTING and self._services.servers.is_running(kind):
             self._set_state(kind, RUNNING)
 
     def _rejected(self, kind: str, error: Exception) -> None:
+        self._starting.discard(kind)
+        self._early_exits.pop(kind, None)
+        stopped = kind in self._stopping
+        self._stopping.discard(kind)
         self._set_state(kind, IDLE)
-        self._fail(error)
+        if not stopped:
+            self._fail(error)
 
     def _output(self, kind: str, text: str) -> None:
         if self._logs[kind].feed(text):
             self._notify_rows(kind)
 
     def _exited(self, kind: str, code: int) -> None:
+        if kind in self._starting:
+            self._early_exits[kind] = code
+            return
         if self._services.servers.is_running(kind):
             return
         if self._logs[kind].flush():
