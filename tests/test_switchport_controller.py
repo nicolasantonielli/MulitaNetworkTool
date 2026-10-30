@@ -70,3 +70,21 @@ class SwitchPortControllerTest(unittest.TestCase):
         self.services.shutdown()
         self.dispatcher.finish()
         self.assertTrue(json.loads(self.controller.reportJson)['cancelled'])
+
+    def test_clear_resets_screen_and_preserves_saved_reports(self):
+        self.controller.start('eth0', 60)
+        self.dispatcher.finish()
+        self.controller.save()
+        self.controller.clear()
+        self.assertEqual(json.loads(self.controller.reportJson), {})
+        self.assertEqual(self.controller.status, '')
+        self.assertEqual(len(list(self.services.switchport.directory.glob('*.json'))), 1)
+
+    def test_clear_does_not_discard_an_active_capture(self):
+        self.controller.start('eth0', 60)
+        status = self.controller.status
+        self.controller.clear()
+        self.assertTrue(self.controller.running)
+        self.assertEqual(self.controller.status, status)
+        self.dispatcher.finish()
+        self.assertTrue(json.loads(self.controller.reportJson)['neighbors'])

@@ -56,6 +56,14 @@ class SwitchPortController(Controller):
         self.changed.emit()
 
     @pyqtSlot()
+    def clear(self):
+        if self._running:
+            return
+        self._report = {}
+        self._status = ''
+        self.changed.emit()
+
+    @pyqtSlot()
     def save(self):
         if self._running or not self._report:
             return

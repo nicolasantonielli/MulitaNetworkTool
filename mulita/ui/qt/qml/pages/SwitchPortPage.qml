@@ -52,7 +52,7 @@ Item {
             }
             ComboBox {
                 id: duration
-                Layout.preferredWidth: ui.touch * 2.4
+                Layout.preferredWidth: ui.touch * 1.5
                 Layout.preferredHeight: ui.touch
                 model: [15, 30, 60, 120, 180]
                 currentIndex: 2
@@ -68,6 +68,13 @@ Item {
                     if (switchPort.running) switchPort.stop()
                     else switchPort.start(root.interfaces[iface.currentIndex].value, Number(duration.currentText))
                 }
+            }
+            TouchButton {
+                objectName: "switchClear"
+                text: i18n.pack.clear
+                kind: "neutral"
+                enabled: !switchPort.running && (!!root.report.interface || switchPort.status !== "")
+                onClicked: switchPort.clear()
             }
             TouchButton {
                 text: i18n.pack.save
