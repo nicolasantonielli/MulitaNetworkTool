@@ -747,6 +747,7 @@ Item {
                     }
                     Field {
                         id: vlanNumber
+                        numericKeyboard: true
                         Layout.fillWidth: true
                         visible: vlanSwitch.checked
                         enabled: !interna.busy

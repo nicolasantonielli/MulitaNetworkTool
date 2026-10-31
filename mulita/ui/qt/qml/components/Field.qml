@@ -9,6 +9,7 @@ TextField {
     readonly property bool takesKeyboard: true
     // La clave cambia el teclado a signos. Una direccion no los necesita.
     property bool symbolKeys: false
+    property bool numericKeyboard: false
     // Ancho reservado a la derecha para otro icono, como el ojo de la clave.
     property real accessoryWidth: 0
 

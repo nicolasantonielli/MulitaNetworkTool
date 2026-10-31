@@ -17,6 +17,7 @@ Rectangle {
     property double typedAt: 0
     readonly property bool active: field !== null
     readonly property bool symbolField: field && field.symbolKeys === true
+    readonly property bool numeric: field && field.numericKeyboard === true
     readonly property int keyHeight: Math.round(ui.touch * 0.82)
     readonly property var letterKeys: [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
@@ -30,7 +31,8 @@ Rectangle {
         "'", "\"", "`", "~", "=", "+", "[", "]", "{", "}",
         "\\", "|", ";", ":", "<", ">", ",", ".", "/", "?"
     ]
-    readonly property var keys: symbolField && symbols ? symbolKeys : letterKeys
+    readonly property var keys: numeric ? ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+                                       : (symbolField && symbols ? symbolKeys : letterKeys)
 
     onFieldChanged: {
         caps = false
@@ -148,6 +150,8 @@ Rectangle {
         var item = field
         if (!item || !ch)
             return
+        if (numeric && !/^[0-9]+$/.test(ch))
+            return
         typedAt = Date.now()
         typing = true
         var current = item.text || ""
@@ -157,7 +161,7 @@ Rectangle {
         var next = current.substring(0, pos) + ch + current.substring(pos)
         if (item.insert)
             item.insert(pos, ch)
-        if ((item.text || "") === current)
+        if (!numeric && (item.text || "") === current)
             item.text = next
         if ((item.text || "").charAt(pos) === ch)
             item.cursorPosition = pos + ch.length
@@ -217,8 +221,9 @@ Rectangle {
 
     ColumnLayout {
         id: column
-        anchors.left: parent.left
-        anchors.right: parent.right
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: root.numeric ? Math.min(parent.width - ui.gap, ui.touch * 5)
+                            : parent.width - ui.gap
         anchors.top: parent.top
         anchors.margins: Math.round(ui.gap * 0.4)
         spacing: Math.round(ui.gap * 0.35)
@@ -228,8 +233,9 @@ Rectangle {
             id: keyGrid
             Layout.fillWidth: true
             readonly property real gap: Math.round(ui.gap * 0.3)
-            readonly property real cell: Math.max(1, (width - 9 * gap) / 10)
-            implicitHeight: root.keyHeight * 4 + gap * 3
+            readonly property int columns: root.numeric ? 5 : 10
+            readonly property real cell: Math.max(1, (width - (columns - 1) * gap) / columns)
+            implicitHeight: root.numeric ? root.keyHeight * 2 + gap : root.keyHeight * 4 + gap * 3
             height: implicitHeight
 
             Repeater {
@@ -240,8 +246,8 @@ Rectangle {
                     readonly property int slot: index
 
                     visible: letter !== ""
-                    x: (slot % 10) * (keyGrid.cell + keyGrid.gap)
-                    y: Math.floor(slot / 10) * (root.keyHeight + keyGrid.gap)
+                    x: (slot % keyGrid.columns) * (keyGrid.cell + keyGrid.gap)
+                    y: Math.floor(slot / keyGrid.columns) * (root.keyHeight + keyGrid.gap)
                     width: keyGrid.cell
                     height: root.keyHeight
                     radius: ui.radius
@@ -276,6 +282,7 @@ Rectangle {
             spacing: Math.round(ui.gap * 0.3)
 
             TouchButton {
+                visible: !root.numeric
                 Layout.preferredWidth: ui.touch * 1.7
                 Layout.preferredHeight: root.keyHeight
                 text: i18n.pack.kbShift
@@ -287,7 +294,7 @@ Rectangle {
                 }
             }
             TouchButton {
-                visible: root.symbolField
+                visible: root.symbolField && !root.numeric
                 Layout.preferredWidth: ui.touch * 2
                 Layout.preferredHeight: root.keyHeight
                 text: root.symbols ? i18n.pack.kbLetters : i18n.pack.kbSymbols
@@ -300,6 +307,7 @@ Rectangle {
                 }
             }
             TouchButton {
+                Layout.fillWidth: root.numeric
                 Layout.preferredWidth: ui.touch * 1.4
                 Layout.preferredHeight: root.keyHeight
                 icon: "back"
@@ -307,6 +315,7 @@ Rectangle {
                 onClicked: root.backspace()
             }
             TouchButton {
+                visible: !root.numeric
                 Layout.fillWidth: true
                 Layout.preferredHeight: root.keyHeight
                 text: i18n.pack.kbSpace
@@ -315,7 +324,7 @@ Rectangle {
             }
             TouchButton {
                 // En la clave estos signos estan en la pagina Signos.
-                visible: !root.symbolField
+                visible: !root.symbolField && !root.numeric
                 Layout.preferredWidth: ui.touch * 1.2
                 Layout.preferredHeight: root.keyHeight
                 text: "/"
@@ -323,7 +332,7 @@ Rectangle {
                 onClicked: root.type("/")
             }
             TouchButton {
-                visible: !root.symbolField
+                visible: !root.symbolField && !root.numeric
                 Layout.preferredWidth: ui.touch * 1.2
                 Layout.preferredHeight: root.keyHeight
                 text: ":"
@@ -331,6 +340,7 @@ Rectangle {
                 onClicked: root.type(":")
             }
             TouchButton {
+                Layout.fillWidth: root.numeric
                 Layout.preferredWidth: ui.touch * 1.7
                 Layout.preferredHeight: root.keyHeight
                 icon: "close"
