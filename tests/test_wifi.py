@@ -55,6 +55,50 @@ class WifiRulesTest(unittest.TestCase):
 
 class WifiServiceTest(unittest.TestCase):
 
+    def test_disconnect_only_disconnects_wifi_device(self):
+        script = Script([CommandResult(0, DEVICES), CommandResult(0)])
+        service(script).disconnect()
+        self.assertEqual(script.runs, [
+            [NM, '-t', '-f', 'DEVICE,TYPE', 'device', 'status'],
+            [NM, 'device', 'disconnect', 'wlan0']])
+
+    def test_disconnect_without_wifi_does_not_change_connections(self):
+        script = Script([CommandResult(0, 'eth0:ethernet\n')])
+        with self.assertRaises(ValidationError):
+            service(script).disconnect()
+        self.assertEqual(len(script.runs), 1)
+
+    def test_disconnect_reports_failure(self):
+        script = Script([CommandResult(0, DEVICES), CommandResult(4, '', 'permission denied')])
+        with self.assertRaises(CommandFailedError):
+            service(script).disconnect()
+
+    def test_forget_deletes_active_profile_by_uuid(self):
+        uuid = '8e9c9517-b657-4c8a-b7bc-7d4928f54810'
+        script = Script([CommandResult(0, DEVICES), CommandResult(0, uuid + '\n'), CommandResult(0)])
+        service(script).forget()
+        self.assertEqual(script.runs[1], [NM, '-g', 'GENERAL.CON-UUID', 'device', 'show', 'wlan0'])
+        self.assertEqual(script.runs[2], [NM, 'connection', 'delete', 'uuid', uuid])
+
+    def test_forget_without_active_connection_does_not_delete(self):
+        for value in ('', '--\n'):
+            script = Script([CommandResult(0, DEVICES), CommandResult(0, value)])
+            with self.assertRaises(ValidationError):
+                service(script).forget()
+            self.assertEqual(len(script.runs), 2)
+
+    def test_forget_without_wifi_does_not_delete(self):
+        script = Script([CommandResult(0, 'eth0:ethernet\n')])
+        with self.assertRaises(ValidationError):
+            service(script).forget()
+        self.assertEqual(len(script.runs), 1)
+
+    def test_forget_reports_delete_failure(self):
+        script = Script([CommandResult(0, DEVICES), CommandResult(0, 'profile-uuid'),
+                         CommandResult(4, '', 'permission denied')])
+        with self.assertRaises(CommandFailedError):
+            service(script).forget()
+
     def test_scan_lists_networks_on_wlan0(self):
         script = Script([CommandResult(0, DEVICES), CommandResult(0), CommandResult(0, LIST)])
         device, networks = service(script).scan()

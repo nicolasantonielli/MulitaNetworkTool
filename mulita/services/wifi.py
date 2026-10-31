@@ -109,6 +109,22 @@ class WifiService:
         self._checked(self._commands.wifi_up(name, device), f'No se pudo conectar a {name}')
         return name
 
+    def forget(self) -> None:
+        device = self.interface()
+        if not device:
+            raise ValidationError(tr('noWifi'))
+        result = self._checked(self._commands.wifi_active_uuid(device), tr('wifiForgetFailed'))
+        uuid = result.stdout.strip()
+        if not uuid or uuid == '--':
+            raise ValidationError(tr('noConnection'))
+        self._checked(self._commands.wifi_delete_uuid(uuid), tr('wifiForgetFailed'))
+
+    def disconnect(self) -> None:
+        device = self.interface()
+        if not device:
+            raise ValidationError(tr('noWifi'))
+        self._checked(self._commands.wifi_disconnect(device), tr('wifiDisconnectFailed'))
+
     def _checked(self, argv: list[str], message: str):
         result = self._runner.run(argv)
         if not result.ok:

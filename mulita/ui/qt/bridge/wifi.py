@@ -42,6 +42,32 @@ class WifiController(TaskController):
         } for network in self._networks]
 
     @pyqtProperty(str, notify=networksChanged)
+    def linkName(self) -> str:
+        return self._link.ssid
+
+    @pyqtSlot()
+    def forget(self) -> None:
+        def forgotten(_result) -> None:
+            self._link = WifiLink()
+            self._networks = ()
+            self.networksChanged.emit()
+            self._ctx.notifier.success('Wi-Fi', tr('wifiForgotten'))
+            self.loadLink()
+
+        self._task(self._services.wifi.forget, forgotten)
+
+    @pyqtSlot()
+    def disconnect(self) -> None:
+        def disconnected(_result) -> None:
+            self._link = WifiLink()
+            self._networks = ()
+            self.networksChanged.emit()
+            self._ctx.notifier.success('Wi-Fi', tr('wifiDisconnected'))
+            self.loadLink()
+
+        self._task(self._services.wifi.disconnect, disconnected)
+
+    @pyqtProperty(str, notify=networksChanged)
     def networksJson(self) -> str:
         return json.dumps(self._rows())
 
