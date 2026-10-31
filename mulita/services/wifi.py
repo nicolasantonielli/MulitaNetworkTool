@@ -109,6 +109,21 @@ class WifiService:
         self._checked(self._commands.wifi_up(name, device), f'No se pudo conectar a {name}')
         return name
 
+    def reconnect_saved(self, ssid: str) -> bool:
+        name = validation.wifi_ssid(ssid)
+        device = self.interface()
+        if not device:
+            raise ValidationError(tr('noWifi'))
+        for profile in self.saved():
+            result = self._checked(self._commands.wifi_profile_ssid(profile['uuid']),
+                                   tr('wifiSavedFailed'))
+            if result.stdout.rstrip('\r\n') != name:
+                continue
+            activated = self._runner.run(self._commands.wifi_up_uuid(profile['uuid'], device))
+            if activated.ok:
+                return True
+        return False
+
     def forget(self) -> None:
         device = self.interface()
         if not device:

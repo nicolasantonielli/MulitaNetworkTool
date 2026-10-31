@@ -55,6 +55,35 @@ class WifiRulesTest(unittest.TestCase):
 
 class WifiServiceTest(unittest.TestCase):
 
+    def test_reconnect_uses_ssid_and_uuid_instead_of_profile_name(self):
+        script = Script([CommandResult(0, DEVICES),
+                         CommandResult(0, 'uuid-1:Nombre distinto:wifi\n'),
+                         CommandResult(0, 'Casa:Norte\n'), CommandResult(0)])
+        self.assertTrue(service(script).reconnect_saved('Casa:Norte'))
+        self.assertEqual(script.runs[-1],
+                         [NM, 'connection', 'up', 'uuid', 'uuid-1', 'ifname', 'wlan0'])
+        self.assertFalse(any('delete' in run or 'modify' in run or 'add' in run for run in script.runs))
+
+    def test_reconnect_without_matching_profile_requests_password(self):
+        script = Script([CommandResult(0, DEVICES),
+                         CommandResult(0, 'uuid-1:Casa:wifi\n'), CommandResult(0, 'Otra\n')])
+        self.assertFalse(service(script).reconnect_saved('Casa'))
+        self.assertFalse(any('up' in run for run in script.runs))
+
+    def test_reconnect_failure_allows_entering_password(self):
+        script = Script([CommandResult(0, DEVICES),
+                         CommandResult(0, 'uuid-1:Casa:wifi\n'),
+                         CommandResult(0, 'Casa\n'), CommandResult(4, '', 'Secrets required')])
+        self.assertFalse(service(script).reconnect_saved('Casa'))
+
+    def test_reconnect_tries_other_saved_profiles_for_same_ssid(self):
+        script = Script([CommandResult(0, DEVICES),
+                         CommandResult(0, 'uuid-1:Casa:wifi\nuuid-2:Casa:wifi\n'),
+                         CommandResult(0, 'Casa\n'), CommandResult(4),
+                         CommandResult(0, 'Casa\n'), CommandResult(0)])
+        self.assertTrue(service(script).reconnect_saved('Casa'))
+        self.assertEqual(script.runs[-1][4], 'uuid-2')
+
     def test_saved_lists_only_wifi_and_unescapes_names(self):
         script = Script([CommandResult(0,
             'uuid-1:Casa\\:Norte:802-11-wireless\n'

@@ -101,6 +101,13 @@ class CommandFactory:
     def wifi_saved(self) -> Argv:
         return [self._bin.nmcli, '-t', '-f', 'UUID,NAME,TYPE', 'connection', 'show']
 
+    def wifi_profile_ssid(self, uuid: str) -> Argv:
+        return [self._bin.nmcli, '-e', 'no', '-g', '802-11-wireless.ssid',
+                'connection', 'show', 'uuid', uuid]
+
+    def wifi_up_uuid(self, uuid: str, interface: str) -> Argv:
+        return [self._bin.nmcli, 'connection', 'up', 'uuid', uuid, 'ifname', interface]
+
     def wifi_delete_uuid(self, uuid: str) -> Argv:
         return [self._bin.nmcli, 'connection', 'delete', 'uuid', uuid]
 

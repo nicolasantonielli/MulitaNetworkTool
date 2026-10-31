@@ -13,6 +13,7 @@ from mulita.ui.qt.bridge.base import TaskController
 class WifiController(TaskController):
     """Redes Wi-Fi visibles y la conexion elegida."""
     networksChanged = pyqtSignal()
+    passwordRequested = pyqtSignal(str, bool, arguments=['ssid', 'secure'])
 
     def __init__(self, ctx):
         super().__init__(ctx)
@@ -119,6 +120,21 @@ class WifiController(TaskController):
             self.refresh()
 
         self._task(lambda: self._services.wifi.connect(ssid, password, secure), connected)
+
+    @pyqtSlot(str, bool)
+    def connectRemembered(self, ssid: str, secure: bool) -> None:
+        if not secure:
+            self.connectTo(ssid, '', False)
+            return
+
+        def finished(connected: bool) -> None:
+            if connected:
+                self._ctx.notifier.success('Wi-Fi', tr('wifiConnected', name=ssid))
+                self.refresh()
+            else:
+                self.passwordRequested.emit(ssid, secure)
+
+        self._task(lambda: self._services.wifi.reconnect_saved(ssid), finished)
 
     def _show(self, found: tuple[str | None, tuple[WifiNetwork, ...]]) -> None:
         device, networks = found

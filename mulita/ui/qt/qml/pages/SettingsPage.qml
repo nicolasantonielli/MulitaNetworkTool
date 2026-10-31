@@ -203,7 +203,7 @@ Item {
                         message: i18n.pack.connectTitle,
                         confirmText: i18n.pack.connect,
                         cancelText: i18n.pack.cancel,
-                        confirmAction: function() { wifiPage.afterConfirm(ssid, secure) }
+                        confirmAction: function() { wifi.connectRemembered(ssid, secure) }
                     })
                 }
 
@@ -213,6 +213,13 @@ Item {
                     wifiKey.ssid = ssid
                     wifiKey.secure = secure
                     wifiKey.open()
+                }
+
+                Connections {
+                    target: wifi
+                    function onPasswordRequested(ssid, secure) {
+                        wifiPage.afterConfirm(ssid, secure)
+                    }
                 }
 
                 Popup {
