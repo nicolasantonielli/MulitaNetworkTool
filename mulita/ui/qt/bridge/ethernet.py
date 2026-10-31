@@ -20,14 +20,16 @@ class InternalEthernetController(TaskController):
     """DHCP o IP fija de la ethernet interna."""
     loaded = pyqtSignal()
 
-    def __init__(self, ctx):
+    def __init__(self, ctx, wifi=False):
         super().__init__(ctx)
+        self._network = ctx.services.wifi if wifi else ctx.services.ethernet
+        self._wifi = wifi
         self._config = EthernetConfig()
         ctx.services.settings.subscribe(lambda _settings: self.loaded.emit())
 
     @pyqtProperty(str, notify=loaded)
     def interfaceName(self) -> str:
-        return self._services.ethernet.interface
+        return 'Wi-Fi' if self._wifi else self._network.interface
 
     @pyqtProperty(str, notify=loaded)
     def mode(self) -> str:
@@ -63,15 +65,15 @@ class InternalEthernetController(TaskController):
 
     @pyqtSlot()
     def refresh(self) -> None:
-        self._task(self._services.ethernet.read, self._show)
+        self._task(self._network.read, self._show)
 
     @pyqtSlot(str, str, str, str, str)
     def apply(self, mode: str, address: str, netmask: str, gateway: str, dns: str) -> None:
         if mode == AddressMode.DHCP.value:
-            task = self._services.ethernet.apply_dhcp
+            task = self._network.apply_dhcp
             done = tr('dhcpOn')
         elif mode == AddressMode.ESTATICA.value:
-            task = lambda: self._services.ethernet.apply_static(address, netmask, gateway, dns)
+            task = lambda: self._network.apply_static(address, netmask, gateway, dns)
             done = tr('staticApplied')
         else:
             self._fail(ValidationError(tr('invalidMode', mode=mode)))
@@ -79,7 +81,7 @@ class InternalEthernetController(TaskController):
 
         def ok(config: EthernetConfig) -> None:
             self._show(config)
-            self._ctx.notifier.success(tr('ethInternal'), done)
+            self._ctx.notifier.success(tr('wifiIp' if self._wifi else 'ethInternal'), done)
 
         self._task(task, ok)
 

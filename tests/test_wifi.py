@@ -55,6 +55,42 @@ class WifiRulesTest(unittest.TestCase):
 
 class WifiServiceTest(unittest.TestCase):
 
+    def test_wifi_static_sets_only_active_uuid_and_reactivates(self):
+        script = Script([CommandResult(0, DEVICES), CommandResult(0, 'wifi-uuid\n'),
+                         CommandResult(0), CommandResult(0)])
+        config = service(script).apply_static('192.168.2.10', '255.255.255.0', '192.168.2.1', '8.8.8.8')
+        self.assertEqual(config.prefix, 24)
+        self.assertEqual(script.runs[2], [NM, 'connection', 'modify', 'uuid', 'wifi-uuid',
+            'ipv4.method', 'manual', 'ipv4.addresses', '192.168.2.10/24',
+            'ipv4.gateway', '192.168.2.1', 'ipv4.dns', '8.8.8.8'])
+        self.assertEqual(script.runs[3], [NM, 'connection', 'up', 'uuid', 'wifi-uuid', 'ifname', 'wlan0'])
+
+    def test_wifi_static_validates_before_commands(self):
+        script = Script([])
+        with self.assertRaises(ValidationError):
+            service(script).apply_static('bad', '255.255.255.0')
+        self.assertEqual(script.runs, [])
+
+    def test_wifi_static_requires_connected_profile(self):
+        script = Script([CommandResult(0, DEVICES), CommandResult(0, '--\n')])
+        with self.assertRaises(ValidationError):
+            service(script).apply_static('192.168.2.10', '24')
+        self.assertEqual(len(script.runs), 2)
+
+    def test_wifi_reads_static_profile_by_uuid(self):
+        script = Script([CommandResult(0, DEVICES), CommandResult(0, 'wifi-uuid\n'),
+                         CommandResult(0, 'manual\n192.168.2.10/24\n192.168.2.1\n8.8.8.8\n')])
+        self.assertEqual(service(script).read().address, '192.168.2.10')
+        self.assertEqual(script.runs[-1][-3:], ['show', 'uuid', 'wifi-uuid'])
+
+    def test_wifi_dhcp_clears_static_fields(self):
+        script = Script([CommandResult(0, DEVICES), CommandResult(0, 'wifi-uuid'),
+                         CommandResult(0), CommandResult(0),
+                         CommandResult(0, ''), CommandResult(0, '[]'), CommandResult(0, '[]')])
+        service(script).apply_dhcp()
+        self.assertEqual(script.runs[2], [NM, 'connection', 'modify', 'uuid', 'wifi-uuid',
+            'ipv4.method', 'auto', 'ipv4.addresses', '', 'ipv4.gateway', '', 'ipv4.dns', ''])
+
     def test_reconnect_uses_ssid_and_uuid_instead_of_profile_name(self):
         script = Script([CommandResult(0, DEVICES),
                          CommandResult(0, 'uuid-1:Nombre distinto:wifi\n'),

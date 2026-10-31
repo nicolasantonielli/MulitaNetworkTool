@@ -96,6 +96,7 @@ class QtApplication:
             'system': SystemController(ctx),
             'network': NetworkController(ctx),
             'interna': InternalEthernetController(ctx),
+            'wifiIp': InternalEthernetController(ctx, wifi=True),
             'wifi': WifiController(ctx),
             'capture': CaptureController(ctx),
             'tap': TapController(ctx),

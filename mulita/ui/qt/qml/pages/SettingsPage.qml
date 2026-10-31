@@ -201,6 +201,7 @@ Item {
                 id: wifiPage
 
                 property bool advanced: false
+                property bool ipSettings: false
                 readonly property var saved: {
                     try { return JSON.parse(wifi.savedJson) }
                     catch (e) { return [] }
@@ -330,9 +331,138 @@ Item {
                     z: 20
                 }
 
+            ScrollPage {
+                id: wifiIpPage
+                anchors.fill: parent
+                    TouchButton {
+                        text: i18n.pack.wifiBack
+                        icon: "back"
+                        enabled: !wifiIp.busy
+                        onClicked: { wifiPage.ipSettings = false; wifi.refresh() }
+                    }
+                visible: wifiPage.ipSettings
+
+                function apply() {
+                    wifiIp.apply((wifiStaticSwitch.checked ? "static" : "dhcp"), wifiAddressField.text, wifiMaskField.text, wifiGatewayField.text, wifiDnsField.text)
+                }
+
+                function showStatic(address, netmask, gatewayAddress, dnsAddress) {
+                    if (address)
+                        wifiAddressField.text = address
+                    if (netmask)
+                        wifiMaskField.text = netmask
+                    wifiGatewayField.text = gatewayAddress || ""
+                    wifiDnsField.text = dnsAddress || ""
+                }
+
+                Card {
+                    Layout.fillWidth: true
+                    title: i18n.pack.mode
+                    titleIcon: "wifi"
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: wifiIp.interfaceName + " · " + wifiIp.summary
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontSmall
+                        wrapMode: Text.Wrap
+                    }
+                    Switch {
+                        id: wifiStaticSwitch
+                        Layout.fillWidth: true
+                        implicitHeight: ui.touch
+                        enabled: !wifiIp.busy
+                        checked: wifiIp.mode === "static"
+                        text: checked ? i18n.pack.modeStatic : i18n.pack.modeDhcp
+                        font.pixelSize: ui.fontBody
+                        palette.windowText: ui.text
+                        onToggled: {
+                            if (checked)
+                                wifiIpPage.showStatic(wifiIp.address, wifiIp.netmask, wifiIp.gateway, wifiIp.dns)
+                        }
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: wifiStaticSwitch.checked
+                              ? i18n.pack.modeStaticHint
+                              : i18n.pack.modeDhcpHint
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        wrapMode: Text.Wrap
+                    }
+                }
+
+                Card {
+                    Layout.fillWidth: true
+                    visible: !wifiStaticSwitch.checked
+                    title: i18n.pack.gotAddress
+                    titleIcon: "info"
+
+                    Text { text: i18n.pack.ipAddress; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    SelectableText { text: wifiIp.address || i18n.pack.noAddress }
+                    Text { text: i18n.pack.netmask; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    SelectableText { text: wifiIp.netmask || i18n.pack.noNetmask }
+                    Text { text: i18n.pack.gateway; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    SelectableText { text: wifiIp.gateway || i18n.pack.noGateway }
+                    Text { text: i18n.pack.dns; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    SelectableText { text: wifiIp.dns || i18n.pack.noDns }
+                }
+
+                Card {
+                    Layout.fillWidth: true
+                    visible: wifiStaticSwitch.checked
+                    title: i18n.pack.staticAddress
+                    titleIcon: "settings"
+
+                    Text { text: i18n.pack.ipAddress; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Field { id: wifiAddressField; Layout.fillWidth: true; Component.onCompleted: text = "192.168.1.10" }
+                    Text { text: i18n.pack.netmask; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Field { id: wifiMaskField; Layout.fillWidth: true; Component.onCompleted: text = "255.255.255.0" }
+                    Text { text: i18n.pack.gateway; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Field { id: wifiGatewayField; Layout.fillWidth: true; Component.onCompleted: text = "192.168.1.1" }
+                    Text { text: i18n.pack.dns; color: ui.textMuted; font.pixelSize: ui.fontSmall }
+                    Field { id: wifiDnsField; Layout.fillWidth: true; Component.onCompleted: text = "8.8.8.8" }
+                }
+
+                RowLayout {
+                    BusyIndicator {
+                        running: wifiIp.busy
+                        visible: running
+                        Layout.preferredWidth: ui.touch
+                        Layout.preferredHeight: ui.touch
+                    }
+                    TouchButton {
+                        Layout.fillWidth: true
+                        text: i18n.pack.apply
+                        icon: "check"
+                        kind: "success"
+                        enabled: !wifiIp.busy
+                        onClicked: dialog.ask({
+                            title: i18n.pack.wifiIp,
+                            kind: "warning",
+                            message: wifiStaticSwitch.checked
+                                     ? i18n.pack.assignStatic.replace("{ip}", wifiAddressField.text).replace("{iface}", wifiIp.interfaceName)
+                                     : i18n.pack.assignDhcp.replace("{iface}", wifiIp.interfaceName),
+                            confirmText: i18n.pack.apply,
+                            confirmAction: wifiIpPage.apply
+                        })
+                    }
+                }
+
+                Connections {
+                    target: wifiIp
+                    function onLoaded() {
+                        wifiStaticSwitch.checked = wifiIp.mode === "static"
+                        if (wifiIp.mode !== "static")
+                            return
+                        wifiIpPage.showStatic(wifiIp.address, wifiIp.netmask, wifiIp.gateway, wifiIp.dns)
+                    }
+                }
+            }
+
                 ColumnLayout {
                     anchors.fill: parent
-                    visible: wifiPage.advanced
+                    visible: wifiPage.advanced && !wifiPage.ipSettings
                     spacing: ui.gap
                     RowLayout {
                         Layout.fillWidth: true
@@ -425,7 +555,7 @@ Item {
 
                 ColumnLayout {
                     anchors.fill: parent
-                    visible: !wifiPage.advanced
+                    visible: !wifiPage.advanced && !wifiPage.ipSettings
                     spacing: ui.gap
 
                     RowLayout {
@@ -447,6 +577,12 @@ Item {
                         }
                     }
 
+                    TouchButton {
+                        text: i18n.pack.wifiIp
+                        kind: "neutral"
+                        enabled: !wifi.busy && wifi.activeName !== ""
+                        onClicked: { wifiPage.ipSettings = true; wifiIp.refresh() }
+                    }
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: ui.gap
@@ -553,7 +689,7 @@ Item {
                 id: internaPage
 
                 function apply() {
-                    interna.apply(modeChips.value, ip.text, mask.text, gateway.text, dns.text)
+                    interna.apply((ethernetStaticSwitch.checked ? "static" : "dhcp"), ip.text, mask.text, gateway.text, dns.text)
                 }
 
                 function showStatic(address, netmask, gatewayAddress, dnsAddress) {
@@ -579,24 +715,23 @@ Item {
                         font.pixelSize: ui.fontSmall
                         wrapMode: Text.Wrap
                     }
-                    ChoiceChips {
-                        id: modeChips
+                    Switch {
+                        id: ethernetStaticSwitch
                         Layout.fillWidth: true
+                        implicitHeight: ui.touch
                         enabled: !interna.busy
-                        model: [
-                            { label: i18n.pack.modeDhcp, value: "dhcp" },
-                            { label: i18n.pack.modeStatic, value: "static" }
-                        ]
-                        value: interna.mode
-                        onActivated: {
-                            modeChips.value = value
-                            if (value === "static")
+                        checked: interna.mode === "static"
+                        text: checked ? i18n.pack.modeStatic : i18n.pack.modeDhcp
+                        font.pixelSize: ui.fontBody
+                        palette.windowText: ui.text
+                        onToggled: {
+                            if (checked)
                                 internaPage.showStatic(interna.address, interna.netmask, interna.gateway, interna.dns)
                         }
                     }
                     Text {
                         Layout.fillWidth: true
-                        text: modeChips.value === "static"
+                        text: ethernetStaticSwitch.checked
                               ? i18n.pack.modeStaticHint
                               : i18n.pack.modeDhcpHint
                         color: ui.textMuted
@@ -607,7 +742,7 @@ Item {
 
                 Card {
                     Layout.fillWidth: true
-                    visible: modeChips.value !== "static"
+                    visible: !ethernetStaticSwitch.checked
                     title: i18n.pack.gotAddress
                     titleIcon: "info"
 
@@ -623,7 +758,7 @@ Item {
 
                 Card {
                     Layout.fillWidth: true
-                    visible: modeChips.value === "static"
+                    visible: ethernetStaticSwitch.checked
                     title: i18n.pack.staticAddress
                     titleIcon: "settings"
 
@@ -653,7 +788,7 @@ Item {
                         onClicked: dialog.ask({
                             title: i18n.pack.ethInternal,
                             kind: "warning",
-                            message: modeChips.value === "static"
+                            message: ethernetStaticSwitch.checked
                                      ? i18n.pack.assignStatic.replace("{ip}", ip.text).replace("{iface}", interna.interfaceName)
                                      : i18n.pack.assignDhcp.replace("{iface}", interna.interfaceName),
                             confirmText: i18n.pack.apply,
@@ -665,7 +800,7 @@ Item {
                 Connections {
                     target: interna
                     function onLoaded() {
-                        modeChips.value = interna.mode
+                        ethernetStaticSwitch.checked = interna.mode === "static"
                         if (interna.mode !== "static")
                             return
                         internaPage.showStatic(interna.address, interna.netmask, interna.gateway, interna.dns)

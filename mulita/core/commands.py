@@ -108,6 +108,17 @@ class CommandFactory:
     def wifi_up_uuid(self, uuid: str, interface: str) -> Argv:
         return [self._bin.nmcli, 'connection', 'up', 'uuid', uuid, 'ifname', interface]
 
+    def wifi_ipv4(self, uuid: str) -> Argv:
+        argv = self.ethernet_ipv4(uuid)
+        argv.insert(5, 'uuid')
+        return argv
+
+    def wifi_set_ipv4(self, uuid: str, config=None) -> Argv:
+        argv = (self.set_dhcp(uuid) if config is None else
+                self.set_static(uuid, f'{config.address}/{config.prefix}', config.gateway, config.dns))
+        argv.insert(3, 'uuid')
+        return argv
+
     def wifi_delete_uuid(self, uuid: str) -> Argv:
         return [self._bin.nmcli, 'connection', 'delete', 'uuid', uuid]
 

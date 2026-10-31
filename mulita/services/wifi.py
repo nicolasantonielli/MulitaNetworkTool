@@ -8,8 +8,10 @@ from pathlib import Path, PurePosixPath
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
-from mulita.core.models import WifiLink, WifiNetwork
-from mulita.core.parsers import build_wifi_link, parse_wifi_device, parse_wifi_list, parse_saved_wifi
+from mulita.core.models import AddressMode, EthernetConfig, WifiLink, WifiNetwork
+from mulita.core.parsers import (build_wifi_link, parse_wifi_device, parse_wifi_list, parse_saved_wifi,
+                                parse_nmcli_ipv4, parse_interface_ipv4, parse_default_gateway,
+                                parse_nmcli_device_ipv4)
 from mulita.core.ports import CommandRunner
 from mulita.presentation.i18n import tr
 
@@ -148,6 +150,40 @@ class WifiService:
         if not device:
             raise ValidationError(tr('noWifi'))
         self._checked(self._commands.wifi_disconnect(device), tr('wifiDisconnectFailed'))
+
+    def _ip_profile(self) -> tuple[str, str]:
+        device = self.interface()
+        if not device:
+            raise ValidationError(tr('noWifi'))
+        uuid = self._checked(self._commands.wifi_active_uuid(device), tr('wifiIpFailed')).stdout.strip()
+        if not uuid or uuid == '--':
+            raise ValidationError(tr('wifiIpConnectFirst'))
+        return device, uuid
+
+    def _lease(self, device: str) -> EthernetConfig:
+        reported = parse_nmcli_device_ipv4(self._text(self._commands.ethernet_lease(device)))
+        address, prefix = parse_interface_ipv4(self._text(self._commands.interface_ipv4(device)))
+        gateway = parse_default_gateway(self._text(self._commands.interface_gateway(device)))
+        return EthernetConfig(AddressMode.DHCP, address or reported.address,
+                              prefix if address else reported.prefix, gateway or reported.gateway, reported.dns)
+
+    def read(self) -> EthernetConfig:
+        device, uuid = self._ip_profile()
+        config = parse_nmcli_ipv4(self._checked(self._commands.wifi_ipv4(uuid), tr('wifiIpFailed')).stdout)
+        return self._lease(device) if config.mode is AddressMode.DHCP else config
+
+    def apply_static(self, address: str, netmask: str, gateway: str = '', dns: str = '') -> EthernetConfig:
+        config = validation.static_ethernet(address, netmask, gateway, dns)
+        device, uuid = self._ip_profile()
+        self._checked(self._commands.wifi_set_ipv4(uuid, config), tr('wifiIpFailed'))
+        self._checked(self._commands.wifi_up_uuid(uuid, device), tr('wifiIpFailed'))
+        return config
+
+    def apply_dhcp(self) -> EthernetConfig:
+        device, uuid = self._ip_profile()
+        self._checked(self._commands.wifi_set_ipv4(uuid), tr('wifiIpFailed'))
+        self._checked(self._commands.wifi_up_uuid(uuid, device), tr('wifiIpFailed'))
+        return self._lease(device)
 
     def _checked(self, argv: list[str], message: str):
         result = self._runner.run(argv)
