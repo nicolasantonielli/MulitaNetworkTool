@@ -130,6 +130,15 @@ Item {
                                                              : root.open(modelData.page)
                 }
             }
+            Repeater {
+                model: settings.resizeTiles ? 0 : Math.max(0, 6 - section.group.tiles.length)
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: 1
+                    Layout.preferredHeight: 1
+                }
+            }
         }
     }
 

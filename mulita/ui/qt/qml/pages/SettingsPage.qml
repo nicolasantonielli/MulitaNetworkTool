@@ -105,6 +105,25 @@ Item {
             ScrollPage {
                 Card {
                     Layout.fillWidth: true
+                    title: i18n.pack.resizeTiles
+                    titleIcon: "display"
+                    Switch {
+                        text: i18n.pack.resizeTiles
+                        checked: settings.resizeTiles
+                        onToggled: settings.setResizeTiles(checked)
+                        palette.windowText: ui.text
+                        implicitHeight: ui.touch
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: i18n.pack.resizeTilesHint
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        wrapMode: Text.Wrap
+                    }
+                }
+                Card {
+                    Layout.fillWidth: true
                     title: i18n.pack.displaySize
                     titleIcon: "display"
 

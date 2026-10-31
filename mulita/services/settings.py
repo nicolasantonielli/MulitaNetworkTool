@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from typing import Any, Callable, Optional, Protocol
 
 from mulita.core import settings as rules
@@ -47,6 +48,9 @@ class SettingsService:
 
     def set_scale(self, value: Any) -> Settings:
         return self._commit(rules.with_scale(self._current, value))
+
+    def set_resize_tiles(self, value: bool) -> Settings:
+        return self._commit(replace(self._current, display=replace(self._current.display, resize_tiles=value)))
 
     def backlight_ready(self) -> bool:
         return self._backlight.available()

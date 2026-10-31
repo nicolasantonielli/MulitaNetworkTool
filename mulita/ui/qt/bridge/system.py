@@ -79,6 +79,17 @@ class SettingsController(Controller):
     def uiScale(self) -> float:
         return self._current.display.ui_scale
 
+    @pyqtProperty(bool, notify=changed)
+    def resizeTiles(self) -> bool:
+        return self._current.display.resize_tiles
+
+    @pyqtSlot(bool)
+    def setResizeTiles(self, value: bool) -> None:
+        try:
+            self._services.settings.set_resize_tiles(value)
+        except MulitaError as exc:
+            self._fail(exc)
+
     @pyqtProperty(int, notify=changed)
     def brightness(self) -> int:
         return self._current.brightness

@@ -266,6 +266,8 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('wifiInfo', 'Info Wi-Fi', 'Wi-Fi info'),
     ('wifiForget', 'Olvidar red', 'Forget network'),
     ('wifiAdvanced', 'Avanzado', 'Advanced'),
+    ('resizeTiles', 'Redimensionar cuadros', 'Resize tiles'),
+    ('resizeTilesHint', 'Amplía los cuadros para ocupar la pantalla cuando hay pocos. Desactivado, mantienen el tamaño de una pantalla de seis cuadros.', 'Enlarges tiles to fill the screen when there are fewer. When disabled, tiles keep the size used on a screen with six tiles.'),
     ('wifiBack', 'Volver', 'Back'),
     ('wifiSaved', 'Redes recordadas', 'Saved networks'),
     ('wifiSavedEmpty', 'No hay redes recordadas.', 'No saved networks.'),

@@ -18,6 +18,24 @@ from mulita.services.settings import SettingsService
 
 class DisplayRulesTest(unittest.TestCase):
 
+    def test_tile_resize_defaults_to_enabled_and_ignores_invalid_values(self):
+        for data in ({}, {'resizeTiles': 'false'}, {'resizeTiles': None}):
+            self.assertTrue(rules.settings_from_dict(data).display.resize_tiles)
+
+    def test_tile_resize_setting_survives_save_and_reload(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = JsonSettingsStore(Path(directory) / 'settings.json')
+            service = SettingsService(store)
+            notifications = []
+            service.subscribe(notifications.append)
+            service.set_resize_tiles(False)
+            self.assertFalse(store.load().display.resize_tiles)
+            self.assertEqual(len(notifications), 1)
+            service.set_scale(1.1)
+            self.assertFalse(store.load().display.resize_tiles)
+            service.set_resize_tiles(True)
+            self.assertTrue(store.load().display.resize_tiles)
+
     def test_pixel_density_from_resolution_and_diagonal(self):
         display = DisplaySettings(800, 480, 7)
         self.assertAlmostEqual(display.pixels_per_inch, 133.28, places=2)

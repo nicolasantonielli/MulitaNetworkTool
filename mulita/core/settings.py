@@ -58,6 +58,7 @@ class DisplaySettings:
     diagonal_inches: float = PANEL_DIAGONAL_INCHES
     fullscreen: bool = True
     ui_scale: float = 1.0
+    resize_tiles: bool = True
 
     @property
     def pixels_per_inch(self) -> float:
@@ -86,6 +87,7 @@ class Settings:
         return {
             'theme': self.theme.value,
             'scale': self.display.ui_scale,
+            'resizeTiles': self.display.resize_tiles,
             'language': self.language.value,
             'brightness': self.brightness,
             'homeOrder': {
@@ -212,7 +214,10 @@ def settings_from_dict(data: Mapping[str, Any]) -> Settings:
     except ValidationError:
         level = defaults.brightness
     chosen_language = _stored_language(data.get('language', defaults.language.value))
-    return Settings(display=replace(defaults.display, ui_scale=scale), theme=chosen_theme,
+    resize_tiles = data.get('resizeTiles', defaults.display.resize_tiles)
+    if not isinstance(resize_tiles, bool):
+        resize_tiles = defaults.display.resize_tiles
+    return Settings(display=replace(defaults.display, ui_scale=scale, resize_tiles=resize_tiles), theme=chosen_theme,
                     language=chosen_language, brightness=level,
                     home=home_order_from(data.get('homeOrder')))
 
