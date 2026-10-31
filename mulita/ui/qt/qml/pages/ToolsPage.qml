@@ -558,29 +558,6 @@ Item {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: ui.gap
-                    TouchButton {
-                        text: i18n.pack.wifiDisconnect
-                        kind: "neutral"
-                        enabled: !wifi.busy && wifi.linkName !== ""
-                        onClicked: wifi.disconnect()
-                    }
-                    TouchButton {
-                        text: i18n.pack.wifiForget
-                        kind: "danger"
-                        enabled: !wifi.busy && wifi.linkName !== ""
-                        onClicked: dialog.ask({
-                            title: i18n.pack.wifiForget + " · " + wifi.linkName,
-                            message: i18n.pack.wifiForgetConfirm,
-                            confirmText: i18n.pack.wifiForget,
-                            cancelText: i18n.pack.cancel,
-                            confirmAction: function() { wifi.forget() }
-                        })
-                    }
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
                     Text {
                         Layout.fillWidth: true
                         text: wifi.busy ? i18n.pack.readingLink

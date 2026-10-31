@@ -52,7 +52,7 @@ class WifiController(TaskController):
             self._networks = ()
             self.networksChanged.emit()
             self._ctx.notifier.success('Wi-Fi', tr('wifiForgotten'))
-            self.loadLink()
+            self.refresh()
 
         self._task(self._services.wifi.forget, forgotten)
 
@@ -63,7 +63,7 @@ class WifiController(TaskController):
             self._networks = ()
             self.networksChanged.emit()
             self._ctx.notifier.success('Wi-Fi', tr('wifiDisconnected'))
-            self.loadLink()
+            self.refresh()
 
         self._task(self._services.wifi.disconnect, disconnected)
 
