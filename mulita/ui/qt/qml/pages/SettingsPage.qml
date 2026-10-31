@@ -181,6 +181,12 @@ Item {
             Item {
                 id: wifiPage
 
+                property bool advanced: false
+                readonly property var saved: {
+                    try { return JSON.parse(wifi.savedJson) }
+                    catch (e) { return [] }
+                }
+
                 property string chosen: ""
                 property bool chosenSecure: false
                 readonly property var networks: {
@@ -300,6 +306,100 @@ Item {
 
                 ColumnLayout {
                     anchors.fill: parent
+                    visible: wifiPage.advanced
+                    spacing: ui.gap
+                    RowLayout {
+                        Layout.fillWidth: true
+                        TouchButton {
+                            text: i18n.pack.wifiBack
+                            icon: "back"
+                            kind: "neutral"
+                            enabled: !wifi.busy
+                            onClicked: {
+                                wifiPage.advanced = false
+                                wifi.refresh()
+                            }
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: i18n.pack.wifiAdvanced + " · " + i18n.pack.wifiSaved
+                            color: ui.text
+                            font.pixelSize: ui.fontBody
+                            wrapMode: Text.Wrap
+                        }
+                        IconButton {
+                            icon: "refresh"
+                            enabled: !wifi.busy
+                            onClicked: wifi.loadSaved()
+                        }
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        color: ui.surface
+                        radius: ui.radius
+                        border.color: ui.border
+                        ListView {
+                            id: savedWifiList
+                            anchors.fill: parent
+                            anchors.margins: ui.gap
+                            clip: true
+                            spacing: ui.gap
+                            model: wifiPage.saved
+                            ScrollBar.vertical: ScrollBar {}
+                            delegate: Rectangle {
+                                id: savedWifiRow
+                                readonly property string profileUuid: modelData.uuid
+                                readonly property string profileName: modelData.name
+                                width: savedWifiList.width
+                                height: ui.touch
+                                color: ui.surfaceAlt
+                                radius: ui.radius
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: ui.padding
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: savedWifiRow.profileName
+                                        color: ui.text
+                                        font.pixelSize: ui.fontBody
+                                        elide: Text.ElideRight
+                                    }
+                                    IconButton {
+                                        icon: "trash"
+                                        iconColor: ui.danger
+                                        enabled: !wifi.busy
+                                        onClicked: {
+                                            var uuid = savedWifiRow.profileUuid
+                                            var name = savedWifiRow.profileName
+                                            dialog.ask({
+                                                title: i18n.pack.wifiForget + " · " + name,
+                                                message: i18n.pack.wifiSavedConfirm,
+                                                confirmText: i18n.pack.wifiForget,
+                                                cancelText: i18n.pack.cancel,
+                                                confirmAction: function() { wifi.forgetSaved(uuid) }
+                                            })
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Text {
+                            anchors.centerIn: parent
+                            width: parent.width - ui.padding * 2
+                            visible: wifiPage.saved.length === 0
+                            text: wifi.busy ? i18n.pack.reading : i18n.pack.wifiSavedEmpty
+                            color: ui.textMuted
+                            font.pixelSize: ui.fontBody
+                            horizontalAlignment: Text.AlignHCenter
+                            wrapMode: Text.Wrap
+                        }
+                    }
+                }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    visible: !wifiPage.advanced
                     spacing: ui.gap
 
                     RowLayout {
@@ -331,16 +431,13 @@ Item {
                             onClicked: wifi.disconnect()
                         }
                         TouchButton {
-                            text: i18n.pack.wifiForget
-                            kind: "danger"
-                            enabled: !wifi.busy && wifi.activeName !== ""
-                            onClicked: dialog.ask({
-                                title: i18n.pack.wifiForget + " · " + wifi.activeName,
-                                message: i18n.pack.wifiForgetConfirm,
-                                confirmText: i18n.pack.wifiForget,
-                                cancelText: i18n.pack.cancel,
-                                confirmAction: function() { wifi.forget() }
-                            })
+                            text: i18n.pack.wifiAdvanced
+                            kind: "neutral"
+                            enabled: !wifi.busy
+                            onClicked: {
+                                wifiPage.advanced = true
+                                wifi.loadSaved()
+                            }
                         }
                     }
 

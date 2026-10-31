@@ -9,7 +9,7 @@ from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.models import WifiLink, WifiNetwork
-from mulita.core.parsers import build_wifi_link, parse_wifi_device, parse_wifi_list
+from mulita.core.parsers import build_wifi_link, parse_wifi_device, parse_wifi_list, parse_saved_wifi
 from mulita.core.ports import CommandRunner
 from mulita.presentation.i18n import tr
 
@@ -117,6 +117,15 @@ class WifiService:
         uuid = result.stdout.strip()
         if not uuid or uuid == '--':
             raise ValidationError(tr('noConnection'))
+        self._checked(self._commands.wifi_delete_uuid(uuid), tr('wifiForgetFailed'))
+
+    def saved(self) -> list[dict[str, str]]:
+        result = self._checked(self._commands.wifi_saved(), tr('wifiSavedFailed'))
+        return parse_saved_wifi(result.stdout)
+
+    def forget_saved(self, uuid: str) -> None:
+        if not any(profile['uuid'] == uuid for profile in self.saved()):
+            raise ValidationError(tr('wifiSavedMissing'))
         self._checked(self._commands.wifi_delete_uuid(uuid), tr('wifiForgetFailed'))
 
     def disconnect(self) -> None:

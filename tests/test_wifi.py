@@ -55,6 +55,36 @@ class WifiRulesTest(unittest.TestCase):
 
 class WifiServiceTest(unittest.TestCase):
 
+    def test_saved_lists_only_wifi_and_unescapes_names(self):
+        script = Script([CommandResult(0,
+            'uuid-1:Casa\\:Norte:802-11-wireless\n'
+            'uuid-2:Ethernet:802-3-ethernet\n'
+            'uuid-3:Casa\\\\Sur:wifi\n')])
+        self.assertEqual(service(script).saved(), [
+            {'uuid': 'uuid-1', 'name': 'Casa:Norte'},
+            {'uuid': 'uuid-3', 'name': 'Casa\\Sur'}])
+
+    def test_forget_saved_deletes_selected_profile_without_wifi_device(self):
+        script = Script([CommandResult(0, 'uuid-2:Casa:wifi\nuuid-1:Casa:wifi\n'), CommandResult(0)])
+        service(script).forget_saved('uuid-2')
+        self.assertEqual(script.runs[-1], [NM, 'connection', 'delete', 'uuid', 'uuid-2'])
+
+    def test_forget_saved_rejects_non_wifi_profile(self):
+        script = Script([CommandResult(0, 'uuid-1:Cable:802-3-ethernet\n')])
+        with self.assertRaises(ValidationError):
+            service(script).forget_saved('uuid-1')
+        self.assertEqual(len(script.runs), 1)
+
+    def test_saved_reports_read_failure(self):
+        script = Script([CommandResult(4, '', 'permission denied')])
+        with self.assertRaises(CommandFailedError):
+            service(script).saved()
+
+    def test_forget_saved_reports_delete_failure(self):
+        script = Script([CommandResult(0, 'uuid-1:Casa:wifi\n'), CommandResult(4, '', 'denied')])
+        with self.assertRaises(CommandFailedError):
+            service(script).forget_saved('uuid-1')
+
     def test_disconnect_only_disconnects_wifi_device(self):
         script = Script([CommandResult(0, DEVICES), CommandResult(0)])
         service(script).disconnect()

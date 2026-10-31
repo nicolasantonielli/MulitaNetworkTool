@@ -98,6 +98,9 @@ class CommandFactory:
     def wifi_disconnect(self, interface: str) -> Argv:
         return [self._bin.nmcli, 'device', 'disconnect', interface]
 
+    def wifi_saved(self) -> Argv:
+        return [self._bin.nmcli, '-t', '-f', 'UUID,NAME,TYPE', 'connection', 'show']
+
     def wifi_delete_uuid(self, uuid: str) -> Argv:
         return [self._bin.nmcli, 'connection', 'delete', 'uuid', uuid]
 

@@ -19,6 +19,7 @@ class WifiController(TaskController):
         self._device = ''
         self._networks: tuple[WifiNetwork, ...] = ()
         self._link = WifiLink()
+        self._saved = []
         ctx.services.settings.subscribe(lambda _settings: self.networksChanged.emit())
 
     @pyqtProperty(str, notify=networksChanged)
@@ -45,16 +46,31 @@ class WifiController(TaskController):
     def linkName(self) -> str:
         return self._link.ssid
 
+    @pyqtProperty(str, notify=networksChanged)
+    def savedJson(self) -> str:
+        return json.dumps(self._saved)
+
     @pyqtSlot()
-    def forget(self) -> None:
+    def loadSaved(self) -> None:
+        self._saved = []
+        self.networksChanged.emit()
+        self._task(self._services.wifi.saved, self._show_saved)
+
+    def _show_saved(self, profiles) -> None:
+        self._saved = profiles
+        self.networksChanged.emit()
+
+    @pyqtSlot(str)
+    def forgetSaved(self, uuid: str) -> None:
         def forgotten(_result) -> None:
             self._link = WifiLink()
             self._networks = ()
+            self._saved = [profile for profile in self._saved if profile['uuid'] != uuid]
             self.networksChanged.emit()
             self._ctx.notifier.success('Wi-Fi', tr('wifiForgotten'))
-            self.refresh()
+            self.loadSaved()
 
-        self._task(self._services.wifi.forget, forgotten)
+        self._task(lambda: self._services.wifi.forget_saved(uuid), forgotten)
 
     @pyqtSlot()
     def disconnect(self) -> None:

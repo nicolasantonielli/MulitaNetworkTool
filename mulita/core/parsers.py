@@ -184,6 +184,26 @@ def parse_nmcli_ipv4(text: str) -> EthernetConfig:
     return EthernetConfig(AddressMode.ESTATICA, address, length, gateway, dns)
 
 
+def parse_saved_wifi(text: str) -> list[dict[str, str]]:
+    profiles = []
+    for line in text.splitlines():
+        parts = ['']
+        escaped = False
+        for char in line:
+            if escaped:
+                parts[-1] += char
+                escaped = False
+            elif char == '\\':
+                escaped = True
+            elif char == ':':
+                parts.append('')
+            else:
+                parts[-1] += char
+        if len(parts) == 3 and parts[0] and parts[2] in ('802-11-wireless', 'wifi'):
+            profiles.append({'uuid': parts[0], 'name': parts[1]})
+    return sorted(profiles, key=lambda item: (item['name'].casefold(), item['uuid']))
+
+
 def _nmcli_columns(line: str) -> list[str]:
     escaped = line.replace('\\:', '\x00')
     return [part.replace('\x00', ':') for part in escaped.split(':')]
