@@ -104,6 +104,53 @@ class EthernetCommandsTest(unittest.TestCase):
 
 class EthernetServiceTest(unittest.TestCase):
 
+    def test_vlan_static_creates_tagged_interface_and_saves_ip(self):
+        script = Script([CommandResult(10), CommandResult(0), CommandResult(0), CommandResult(0)])
+        network = service(script)
+        network.apply_with_vlan('static', '10.0.0.2', '24', '', '', True, '100')
+        self.assertEqual(network.interface, 'eth0.100')
+        self.assertEqual(script.runs[1], [NM, 'connection', 'add', 'type', 'vlan',
+            'con-name', 'mulita-interna-vlan', 'ifname', 'eth0.100', 'dev', 'eth0', 'id', '100'])
+        self.assertIn('10.0.0.2/24', script.runs[2])
+        self.assertEqual(script.runs[3][-1], 'mulita-interna-vlan')
+
+    def test_vlan_dhcp_reads_tagged_interface(self):
+        script = Script([CommandResult(0, '100'), CommandResult(0), CommandResult(0),
+                         CommandResult(0), *lease_results()])
+        network = service(script)
+        network.apply_with_vlan('dhcp', '', '', '', '', True, '200')
+        self.assertEqual(network.interface, 'eth0.200')
+        self.assertIn('eth0.200', script.runs[4])
+        self.assertIn('eth0.200', script.runs[5])
+
+    def test_vlan_disable_deletes_only_managed_profile_and_uses_base(self):
+        script = Script([CommandResult(0, '100'), CommandResult(0),
+                         CommandResult(0, 'Wired connection 1'), CommandResult(0), CommandResult(0)])
+        network = service(script)
+        network.apply_with_vlan('static', '10.0.0.2', '24', '', '', False, '')
+        self.assertEqual(network.interface, 'eth0')
+        self.assertEqual(script.runs[1], [NM, 'connection', 'delete', 'id', 'mulita-interna-vlan'])
+        self.assertEqual(script.runs[-1][-1], 'Wired connection 1')
+
+    def test_vlan_invalid_inputs_do_not_run_commands(self):
+        for tag in ('0', '4095', '-1', 'bad', '1.5', ''):
+            script = Script([])
+            with self.assertRaises(ValidationError):
+                service(script).apply_with_vlan('dhcp', '', '', '', '', True, tag)
+            self.assertEqual(script.runs, [])
+
+    def test_vlan_refresh_restores_saved_id_and_config(self):
+        script = Script([CommandResult(0, '123'), CommandResult(0, 'manual\n10.0.0.2/24\n\n\n')])
+        network = service(script)
+        self.assertEqual(network.read_with_vlan().address, '10.0.0.2')
+        self.assertEqual(network.vlan_id, 123)
+
+    def test_vlan_create_failure_stops_before_ip_changes(self):
+        script = Script([CommandResult(10), CommandResult(4, '', 'failed')])
+        with self.assertRaises(CommandFailedError):
+            service(script).apply_with_vlan('dhcp', '', '', '', '', True, '100')
+        self.assertEqual(len(script.runs), 2)
+
     def test_read_uses_the_existing_connection(self):
         script = Script([
             CommandResult(0, 'Wired connection 1\n'),

@@ -62,6 +62,20 @@ class CommandFactory:
     def activate_connection(self, connection: str) -> Argv:
         return [self._bin.nmcli, 'connection', 'up', connection]
 
+    def vlan_info(self, name: str) -> Argv:
+        return [self._bin.nmcli, '-g', 'vlan.id', 'connection', 'show', 'id', name]
+
+    def add_vlan(self, name: str, parent: str, vlan_id: int) -> Argv:
+        return [self._bin.nmcli, 'connection', 'add', 'type', 'vlan', 'con-name', name,
+                'ifname', f'{parent}.{vlan_id}', 'dev', parent, 'id', str(vlan_id)]
+
+    def modify_vlan(self, name: str, parent: str, vlan_id: int) -> Argv:
+        return [self._bin.nmcli, 'connection', 'modify', name, 'vlan.id', str(vlan_id),
+                'vlan.parent', parent, 'connection.interface-name', f'{parent}.{vlan_id}']
+
+    def delete_connection(self, name: str) -> Argv:
+        return [self._bin.nmcli, 'connection', 'delete', 'id', name]
+
     def wifi_devices(self) -> Argv:
         return [self._bin.nmcli, '-t', '-f', 'DEVICE,TYPE', 'device', 'status']
 

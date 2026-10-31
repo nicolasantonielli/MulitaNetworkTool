@@ -85,11 +85,33 @@ Item {
                     title: i18n.pack.language
                     titleIcon: "globe"
 
-                    ChoiceChips {
+                    ComboBox {
+                        id: languageMenu
                         Layout.fillWidth: true
+                        implicitHeight: ui.touch
                         model: settings.languages
-                        value: settings.language
-                        onActivated: settings.setLanguage(value)
+                        textRole: "label"
+                        font.pixelSize: ui.fontBody
+                        palette.button: ui.surfaceAlt
+                        palette.buttonText: ui.text
+                        palette.base: ui.surface
+                        palette.text: ui.text
+                        palette.highlight: ui.primary
+                        palette.highlightedText: ui.onAccent
+                        currentIndex: {
+                            for (var i = 0; i < model.length; ++i)
+                                if (model[i].value === settings.language)
+                                    return i
+                            return -1
+                        }
+                        onActivated: settings.setLanguage(model[index].value)
+                        delegate: ItemDelegate {
+                            width: languageMenu.width
+                            height: ui.touch
+                            text: modelData.label
+                            font.pixelSize: ui.fontBody
+                            highlighted: languageMenu.highlightedIndex === index
+                        }
                     }
                     Text {
                         Layout.fillWidth: true
@@ -689,7 +711,7 @@ Item {
                 id: internaPage
 
                 function apply() {
-                    interna.apply((ethernetStaticSwitch.checked ? "static" : "dhcp"), ip.text, mask.text, gateway.text, dns.text)
+                    interna.applyVlan((ethernetStaticSwitch.checked ? "static" : "dhcp"), ip.text, mask.text, gateway.text, dns.text, vlanSwitch.checked, vlanNumber.text)
                 }
 
                 function showStatic(address, netmask, gatewayAddress, dnsAddress) {
@@ -701,6 +723,44 @@ Item {
                         gateway.text = gatewayAddress
                     if (dnsAddress)
                         dns.text = dnsAddress
+                }
+
+                Card {
+                    Layout.fillWidth: true
+                    title: i18n.pack.vlanTitle
+                    titleIcon: "ethernet"
+                    Switch {
+                        id: vlanSwitch
+                        text: i18n.pack.vlanTitle
+                        checked: interna.vlanId > 0
+                        enabled: !interna.busy
+                        implicitHeight: ui.touch
+                        palette.windowText: ui.text
+                        font.pixelSize: ui.fontBody
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: i18n.pack.vlanNumber
+                        visible: vlanSwitch.checked
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontSmall
+                    }
+                    Field {
+                        id: vlanNumber
+                        Layout.fillWidth: true
+                        visible: vlanSwitch.checked
+                        enabled: !interna.busy
+                        text: interna.vlanId > 0 ? String(interna.vlanId) : "1"
+                        inputMethodHints: Qt.ImhDigitsOnly
+                        validator: IntValidator { bottom: 1; top: 4094 }
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: i18n.pack.vlanHint
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontSmall
+                        wrapMode: Text.Wrap
+                    }
                 }
 
                 Card {
@@ -788,9 +848,9 @@ Item {
                         onClicked: dialog.ask({
                             title: i18n.pack.ethInternal,
                             kind: "warning",
-                            message: ethernetStaticSwitch.checked
+                            message: (vlanSwitch.checked ? i18n.pack.vlanTitle + " " + vlanNumber.text : i18n.pack.vlanUntagged) + "\n\n" + (ethernetStaticSwitch.checked
                                      ? i18n.pack.assignStatic.replace("{ip}", ip.text).replace("{iface}", interna.interfaceName)
-                                     : i18n.pack.assignDhcp.replace("{iface}", interna.interfaceName),
+                                     : i18n.pack.assignDhcp.replace("{iface}", interna.interfaceName)),
                             confirmText: i18n.pack.apply,
                             confirmAction: internaPage.apply
                         })
@@ -800,6 +860,8 @@ Item {
                 Connections {
                     target: interna
                     function onLoaded() {
+                        vlanSwitch.checked = interna.vlanId > 0
+                        vlanNumber.text = interna.vlanId > 0 ? String(interna.vlanId) : "1"
                         ethernetStaticSwitch.checked = interna.mode === "static"
                         if (interna.mode !== "static")
                             return

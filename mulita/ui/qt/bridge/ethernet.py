@@ -65,7 +65,21 @@ class InternalEthernetController(TaskController):
 
     @pyqtSlot()
     def refresh(self) -> None:
-        self._task(self._network.read, self._show)
+        self._task(self._network.read if self._wifi else self._network.read_with_vlan, self._show)
+
+    @pyqtProperty(int, notify=loaded)
+    def vlanId(self) -> int:
+        return 0 if self._wifi else self._network.vlan_id
+
+    @pyqtSlot(str, str, str, str, str, bool, str)
+    def applyVlan(self, mode, address, netmask, gateway, dns, enabled, vlan) -> None:
+        if self._wifi:
+            return
+        def ok(config):
+            self._show(config)
+            self._ctx.notifier.success(tr('ethInternal'), tr('vlanApplied'))
+        self._task(lambda: self._network.apply_with_vlan(
+            mode, address, netmask, gateway, dns, enabled, vlan), ok)
 
     @pyqtSlot(str, str, str, str, str)
     def apply(self, mode: str, address: str, netmask: str, gateway: str, dns: str) -> None:
