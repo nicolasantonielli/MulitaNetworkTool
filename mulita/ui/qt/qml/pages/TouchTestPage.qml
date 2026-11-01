@@ -33,10 +33,14 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         spacing: ui.gap * 0.5
-        IconButton {
+        TouchButton {
             objectName: "touchTestBack"
-            icon: "back"
-            onClicked: root.goBack()
+            text: i18n.pack.stop
+            kind: "danger"
+            onClicked: {
+                touchTest.setActive(false)
+                root.goBack()
+            }
         }
         TouchButton {
             objectName: "touchTestMode"
