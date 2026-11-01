@@ -22,7 +22,7 @@ class TlsService(ProcessSession):
     """Analiza el certificado y la configuracion TLS de un servidor con testssl.sh."""
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
-                 directory: PurePosixPath | Path = PurePosixPath('/root/capturas/tls')):
+                 directory: PurePosixPath | Path = Path.home() / 'capturas' / 'tls'):
         super().__init__(runner, 'El analisis TLS')
         self._commands = commands
         self._directory = Path(directory)

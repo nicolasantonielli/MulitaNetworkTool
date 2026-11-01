@@ -78,9 +78,9 @@ class Outcome:
 class NmapScanService(ProcessSession):
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
-                 directory: PurePosixPath | Path = PurePosixPath('/root/capturas/nmap'),
+                 directory: PurePosixPath | Path = Path.home() / 'capturas' / 'nmap',
                  state_dir: Path | None = None,
-                 capture_dir: PurePosixPath | Path = PurePosixPath('/root/capturas')):
+                 capture_dir: PurePosixPath | Path = Path.home() / 'capturas'):
         super().__init__(runner, 'El escaneo')
         self._commands = commands
         self._directory = Path(directory)

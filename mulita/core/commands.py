@@ -366,8 +366,9 @@ class CommandFactory:
     def hide_keyboard(self) -> Argv:
         return [self._bin.killall, 'onboard']
 
-    def update(self, repository_dir: str, remote: str, branch: str) -> Argv:
-        return [self._bin.git, '-C', repository_dir, 'pull', remote, branch]
+    def update(self, repository_dir: str, remote: str, branch: str, user: str = '') -> Argv:
+        argv = [self._bin.git, '-C', repository_dir, 'pull', remote, branch]
+        return [self._bin.runuser, '-u', user, '--', *argv] if user else argv
 
     def restart_service(self, service_name: str) -> Argv:
         """Fuera del cgroup del servicio: si no, systemd mata el comando al parar la app."""

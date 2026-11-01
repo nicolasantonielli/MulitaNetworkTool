@@ -1,0 +1,104 @@
+import json
+import os
+from pathlib import Path, PurePosixPath
+import tempfile
+import unittest
+from unittest.mock import patch
+
+from mulita.config import load_config, PROJECT_ROOT, Binaries
+from mulita.core.commands import CommandFactory
+from scripts.configure_installation import installation_config, unit_text, write_atomic
+
+
+class InstallationPathsTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.home = self.root / 'user home'
+        self.repo = self.root / 'repository with spaces'
+        self.path = self.root / 'config.json'
+
+    def load(self, data):
+        self.path.write_text(json.dumps(data), encoding='utf-8')
+        with patch.dict(os.environ, {'MULITA_CONFIG': str(self.path)}):
+            return load_config()
+
+    def test_installed_user_paths_ignore_service_home(self):
+        data = installation_config(self.repo, 'nico', self.home, {})
+        with patch('mulita.config.Path.home', return_value=self.root / 'root-user'):
+            config = self.load(data)
+        self.assertEqual(config.capture_dir, self.home / 'capturas')
+        self.assertEqual(config.settings_path, self.home / '.config/mulita/settings.json')
+        self.assertEqual(config.servers_state_dir, self.home / '.config/mulita/servers')
+        self.assertEqual(config.wifi_dir, config.capture_dir / 'wifi')
+        self.assertEqual(config.repository_dir, str(PROJECT_ROOT))
+        self.assertEqual(config.installation_user, 'nico')
+
+    def test_custom_captures_propagate_to_all_tools(self):
+        capture = self.root / 'data'
+        state = self.root / 'private'
+        config = self.load(installation_config(self.repo, 'nico', self.home, {}, capture, state))
+        for field, child in [('trace_dir', 'trazas'), ('ping_dir', 'ping'), ('wifi_dir', 'wifi'),
+                             ('scan_dir', 'escaneo'), ('nmap_dir', 'nmap'), ('tls_dir', 'tls'),
+                             ('discovery_dir', 'descubrimiento'), ('servers_dir', 'servidores'),
+                             ('public_ip_dir', 'internet')]:
+            self.assertEqual(getattr(config, field), capture / child)
+        self.assertEqual(config.settings_path, state / 'settings.json')
+
+    def test_reinstallation_preserves_existing_data_paths(self):
+        capture, state = self.root / 'old data', self.root / 'old state'
+        previous = {'capture_dir': str(capture), 'state_dir': str(state)}
+        data = installation_config(self.repo, 'nico', self.home, previous)
+        self.assertEqual(data['capture_dir'], str(capture))
+        self.assertEqual(data['state_dir'], str(state))
+
+    def test_legacy_data_is_retained_and_can_be_overridden(self):
+        legacy = self.root / 'legacy-root'
+        (legacy / 'capturas').mkdir(parents=True)
+        (legacy / '.config/mulita').mkdir(parents=True)
+        data = installation_config(self.repo, 'nico', self.home, {}, legacy_home=legacy)
+        self.assertEqual(data['capture_dir'], str(legacy / 'capturas'))
+        self.assertEqual(data['state_dir'], str(legacy / '.config/mulita'))
+        data = installation_config(self.repo, 'nico', self.home, {},
+                                   self.root / 'new data', self.root / 'new state', legacy)
+        self.assertEqual(data['capture_dir'], str(self.root / 'new data'))
+
+    def test_invalid_config_does_not_fall_back_to_another_directory(self):
+        for data in ([], {'capture_dir': 'relative'}, {'state_dir': None}):
+            with self.assertRaises(ValueError):
+                self.load(data)
+
+    def test_no_configuration_uses_current_home(self):
+        with patch.dict(os.environ, {'MULITA_CONFIG': str(self.path)}):
+            with self.assertRaises(ValueError):
+                load_config()
+        self.path.write_text('{}', encoding='utf-8')
+        with patch.dict(os.environ, {'MULITA_CONFIG': str(self.path)}), \
+                patch('mulita.config.Path.home', return_value=self.home):
+            config = load_config()
+        self.assertEqual(config.capture_dir, self.home / 'capturas')
+
+    def test_private_state_cannot_be_inside_shared_captures(self):
+        with self.assertRaises(ValueError):
+            installation_config(self.repo, 'nico', self.home, {},
+                                self.root / 'captures', self.root / 'captures/private')
+
+    def test_systemd_paths_are_quoted_and_percent_and_dollars_escaped(self):
+        repo = PurePosixPath('/home/nico/repository with spaces/100% $folder')
+        home = PurePosixPath('/home/nico')
+        text = unit_text(repo, home, PurePosixPath('/etc/mulita/config.json'))
+        self.assertIn('WorkingDirectory="', text)
+        self.assertIn('100%% $$folder', text)
+        self.assertIn('Environment="HOME=' + str(home) + '"', text)
+        self.assertIn('Environment="MULITA_CONFIG=', text)
+
+    def test_atomic_config_write(self):
+        write_atomic(self.path, '{"user": "nico"}\n')
+        self.assertEqual(json.loads(self.path.read_text())['user'], 'nico')
+        self.assertEqual(list(self.root.glob('.mulita-*')), [])
+
+    def test_update_can_run_as_repository_owner(self):
+        command = CommandFactory(Binaries()).update(str(self.repo), 'origin', 'v3', 'nico')
+        self.assertEqual(command[:4], ['/usr/sbin/runuser', '-u', 'nico', '--'])
+        self.assertEqual(command[4:], ['/usr/bin/git', '-C', str(self.repo), 'pull', 'origin', 'v3'])

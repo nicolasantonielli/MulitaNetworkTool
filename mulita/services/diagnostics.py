@@ -21,7 +21,7 @@ _CSV_HEADER = ('Salto', 'Direccion', 'Perdida', 'Envios', 'Ultimo', 'Media', 'Me
 class TraceService:
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory, cycles: int,
-                 directory: PurePosixPath | Path = PurePosixPath('/root/capturas/trazas')):
+                 directory: PurePosixPath | Path = Path.home() / 'capturas' / 'trazas'):
         self._runner = runner
         self._commands = commands
         self._cycles = cycles
@@ -101,7 +101,7 @@ def _write_statics(path: Path, summary: PingSummary) -> None:
 class PingService(ProcessSession):
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
-                 directory: PurePosixPath | Path = PurePosixPath('/root/capturas/ping')):
+                 directory: PurePosixPath | Path = Path.home() / 'capturas' / 'ping'):
         super().__init__(runner, 'El ping')
         self._commands = commands
         self._directory = Path(directory)
@@ -161,7 +161,7 @@ class PingService(ProcessSession):
 class PortScanService:
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
-                 directory: PurePosixPath | Path = PurePosixPath('/root/capturas/escaneo')):
+                 directory: PurePosixPath | Path = Path.home() / 'capturas' / 'escaneo'):
         self._runner = runner
         self._commands = commands
         self._directory = Path(directory)
@@ -212,7 +212,7 @@ class PortScanService:
 class DiscoveryService(ProcessSession):
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
-                 directory: PurePosixPath | Path = PurePosixPath('/root/capturas/descubrimiento')):
+                 directory: PurePosixPath | Path = Path.home() / 'capturas' / 'descubrimiento'):
         super().__init__(runner, 'El descubrimiento')
         self._commands = commands
         self._directory = Path(directory)

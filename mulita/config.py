@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import sys
 from dataclasses import dataclass, field
@@ -45,6 +46,7 @@ class Binaries:
     userdel: str = '/usr/sbin/userdel'
     chpasswd: str = '/usr/sbin/chpasswd'
     chown: str = '/usr/bin/chown'
+    runuser: str = '/usr/sbin/runuser'
     python: str = sys.executable or 'python3'
     onboard: str = 'onboard'
     killall: str = 'killall'
@@ -76,26 +78,27 @@ class AppConfig:
     themes: tuple[str, ...] = (
         'cosmo', 'darkly', 'pulse', 'lumen', 'litera',
         'journal', 'solar', 'superhero', 'vapor', 'cyborg')
-    capture_dir: PurePosixPath = PurePosixPath('/root/capturas')
+    capture_dir: PurePosixPath = Path.home() / 'capturas'
     default_capture_name: str = 'prueba'
-    trace_dir: PurePosixPath = PurePosixPath('/root/capturas/trazas')
-    ping_dir: PurePosixPath = PurePosixPath('/root/capturas/ping')
-    wifi_dir: PurePosixPath = PurePosixPath('/root/capturas/wifi')
-    scan_dir: PurePosixPath = PurePosixPath('/root/capturas/escaneo')
-    nmap_dir: PurePosixPath = PurePosixPath('/root/capturas/nmap')
-    discovery_dir: PurePosixPath = PurePosixPath('/root/capturas/descubrimiento')
-    tls_dir: PurePosixPath = PurePosixPath('/root/capturas/tls')
+    trace_dir: PurePosixPath = Path.home() / 'capturas' / 'trazas'
+    ping_dir: PurePosixPath = Path.home() / 'capturas' / 'ping'
+    wifi_dir: PurePosixPath = Path.home() / 'capturas' / 'wifi'
+    scan_dir: PurePosixPath = Path.home() / 'capturas' / 'escaneo'
+    nmap_dir: PurePosixPath = Path.home() / 'capturas' / 'nmap'
+    discovery_dir: PurePosixPath = Path.home() / 'capturas' / 'descubrimiento'
+    tls_dir: PurePosixPath = Path.home() / 'capturas' / 'tls'
     # Archivos que ve el tecnico: carpeta del TFTP, carpeta del servidor web y registros.
-    servers_dir: PurePosixPath = PurePosixPath('/root/capturas/servidores')
+    servers_dir: PurePosixPath = Path.home() / 'capturas' / 'servidores'
     # Claves, certificados y estado interno. Fuera de las capturas para que no se compartan.
     servers_state_dir: Path = Path.home() / '.config' / 'mulita' / 'servers'
     trace_cycles: int = 6
     public_ip_url: str = 'https://ipwho.is/'
     public_ip_timeout: int = 10
-    public_ip_dir: PurePosixPath = PurePosixPath('/root/capturas/internet')
+    public_ip_dir: PurePosixPath = Path.home() / 'capturas' / 'internet'
     mac_vendor_url: str = 'https://api.macvendors.com'
     mac_vendor_timeout: int = 10
-    repository_dir: str = '/root/repositorio/MulitaNetworkTool'
+    repository_dir: str = str(PROJECT_ROOT)
+    installation_user: str = ''
     # Puerto de la red interna. La IP se aplica con NetworkManager.
     internal_interface: str = 'eth0'
     internal_connection: str = 'mulita-interna'
@@ -112,5 +115,41 @@ def load_config(argv: Sequence[str] = ()) -> AppConfig:
     `--no-keyboard` desactiva el teclado virtual integrado."""
     test_mode = TEST or '--test' in argv or os.environ.get('MULITA_TEST') == '1'
     toolkit = Toolkit.TK if '--tk' in argv else Toolkit.QT
-    return AppConfig(test_mode=test_mode, toolkit=toolkit,
+    paths = _installation_paths()
+    return AppConfig(**paths, test_mode=test_mode, toolkit=toolkit,
                      virtual_keyboard='--no-keyboard' not in argv)
+
+
+def _installation_paths() -> dict:
+    """Las rutas instaladas no dependen del HOME del servicio root."""
+    configured = os.environ.get('MULITA_CONFIG')
+    path = Path(configured) if configured else Path('/etc/mulita/config.json')
+    data = {}
+    if configured or os.name == 'posix':
+        try:
+            data = json.loads(path.read_text(encoding='utf-8'))
+        except FileNotFoundError:
+            if configured:
+                raise ValueError(f'No existe la configuración de Mulita: {path}')
+        except (OSError, ValueError) as exc:
+            raise ValueError(f'No se pudo leer la configuración de Mulita: {path}') from exc
+    if not isinstance(data, dict):
+        raise ValueError(f'Configuración de Mulita inválida: {path}')
+    user = data.get('user', '')
+    if not isinstance(user, str) or user.startswith('-') or any(char in user for char in '\n\r\x00'):
+        raise ValueError(f'Usuario de instalación inválido en {path}')
+    def directory(key, default):
+        value = data.get(key, str(default))
+        if not isinstance(value, str) or not Path(value).is_absolute():
+            raise ValueError(f'La ruta {key} debe ser absoluta en {path}')
+        return Path(value)
+    home = directory('user_home', Path.home())
+    captures = directory('capture_dir', home / 'capturas')
+    state = directory('state_dir', home / '.config' / 'mulita')
+    return dict(capture_dir=captures, trace_dir=captures / 'trazas',
+                ping_dir=captures / 'ping', wifi_dir=captures / 'wifi',
+                scan_dir=captures / 'escaneo', nmap_dir=captures / 'nmap',
+                discovery_dir=captures / 'descubrimiento', tls_dir=captures / 'tls',
+                servers_dir=captures / 'servidores', public_ip_dir=captures / 'internet',
+                settings_path=state / 'settings.json', servers_state_dir=state / 'servers',
+                repository_dir=str(PROJECT_ROOT), installation_user=user)

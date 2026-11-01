@@ -130,7 +130,7 @@ class SpeedTestService:
 class PublicIpService:
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory, url: str, timeout: int,
-                 directory: PurePosixPath | Path = PurePosixPath('/root/capturas/internet')):
+                 directory: PurePosixPath | Path = Path.home() / 'capturas' / 'internet'):
         self._runner = runner
         self._commands = commands
         self._url = url

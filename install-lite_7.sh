@@ -130,7 +130,7 @@ if [[ "$missing" -ne 0 ]]; then
   exit 1
 fi
 
-target_user="${SUDO_USER:-$USER}"
+target_user="${SUDO_USER:-$(id -un)}"
 if [[ -n "$target_user" && "$target_user" != "root" ]]; then
   as_root usermod -aG video,render "$target_user"
 fi
@@ -260,38 +260,8 @@ configure_boot() {
 configure_boot
 
 echo "Activando el arranque al boot..."
-unit="$(mktemp)"
-cat > "$unit" <<EOF
-[Unit]
-Description=Mulita Network Tool
-After=systemd-user-sessions.service systemd-udev-trigger.service
-Conflicts=getty@tty1.service
-Before=getty@tty1.service
-
-[Service]
-Type=simple
-WorkingDirectory=$ROOT
-Environment=QT_QPA_PLATFORM=eglfs
-Environment=QT_QPA_EGLFS_INTEGRATION=eglfs_kms
-Environment=HOME=/root
-ExecStart=$ROOT/.venv/bin/python main.py
-Restart=always
-RestartSec=3
-StandardInput=tty
-StandardOutput=journal
-StandardError=journal
-TTYPath=/dev/tty1
-TTYReset=yes
-TTYVHangup=yes
-TTYVTDisallocate=yes
-KillSignal=SIGTERM
-TimeoutStopSec=15
-
-[Install]
-WantedBy=multi-user.target
-EOF
-as_root cp "$unit" /etc/systemd/system/mulita.service
-rm -f "$unit"
+as_root python3 "$ROOT/scripts/configure_installation.py" \
+  --repository "$ROOT" --user "$target_user" "$@"
 as_root systemctl daemon-reload
 # tty1 lo usa la aplicacion. No se enmascara getty: tty3 sigue permitiendo entrar
 # con teclado si la aplicacion no abre. Enmascararlo deja la pantalla negra y sin login.

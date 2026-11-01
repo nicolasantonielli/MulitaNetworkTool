@@ -69,7 +69,7 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
         files=CaptureFilesService(
             config.capture_dir, lambda: capture.is_running, lambda: tap.is_running, runner, commands),
         maintenance=MaintenanceService(runner, commands, config.repository_dir, config.service_name,
-                                   config.update_remote, config.update_branch),
+                                   config.update_remote, config.update_branch, config.installation_user),
         keyboard=KeyboardService(runner, commands),
         share=ShareService(),
         settings=SettingsService(settings_store or JsonSettingsStore(config.settings_path)),

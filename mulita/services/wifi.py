@@ -20,7 +20,7 @@ class WifiService:
     """Busca redes y se conecta con NetworkManager."""
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
-                 directory: PurePosixPath | Path = PurePosixPath('/root/capturas/wifi')):
+                 directory: PurePosixPath | Path = Path.home() / 'capturas' / 'wifi'):
         self._runner = runner
         self._commands = commands
         self._directory = Path(directory)

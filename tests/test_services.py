@@ -44,7 +44,7 @@ class SessionServicesTest(unittest.TestCase):
         services.capture.start('eth0', 'in', 'captura', on_exit=exits.append)
 
         self.assertTrue(services.capture.is_running)
-        self.assertEqual(runner.starts[-1][-1], '/root/capturas/captura.pcap')
+        self.assertEqual(runner.starts[-1][-1], str(AppConfig().capture_dir / 'captura.pcap'))
         with self.assertRaises(AlreadyRunningError):
             services.capture.start('eth0', 'in', 'otra')
 
@@ -95,7 +95,7 @@ class SessionServicesTest(unittest.TestCase):
         name = services.tap.start(TapConfig('eth0', 'eth1', 'eth2'), 'sesion')
         self.assertEqual(name, 'sesion.pcap')
         self.assertEqual(runner.starts[-1], [
-            '/bin/tcpdump', '-Q', 'inout', '-i', 'br-mulita', '-w', '/root/capturas/tap/sesion.pcap'])
+            '/bin/tcpdump', '-Q', 'inout', '-i', 'br-mulita', '-w', str(AppConfig().capture_dir / 'tap' / 'sesion.pcap')])
         commands = [' '.join(argv) for argv in runner.runs]
         self.assertIn('/usr/bin/ip link add name br-mulita type bridge', commands)
         self.assertIn('/usr/bin/ip link set dev eth0 master br-mulita', commands)
@@ -303,7 +303,7 @@ class BlockingServicesTest(unittest.TestCase):
         runner = FakeRunner()
         services_with(runner).maintenance.update()
         self.assertEqual(runner.runs[-1],
-                         ['/usr/bin/git', '-C', '/root/repositorio/MulitaNetworkTool', 'pull', 'origin', 'v3'])
+                         ['/usr/bin/git', '-C', AppConfig().repository_dir, 'pull', 'origin', 'v3'])
 
     def test_restart_uses_systemd_when_it_is_the_service(self):
         runner = FakeRunner()

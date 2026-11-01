@@ -1,5 +1,29 @@
 # Mulita Network Tool
 
+## Usuario y rutas de instalación
+
+Ambos instaladores detectan el usuario (`SUDO_USER` al usar sudo, o el usuario
+actual) y la ubicación real del repositorio. Guardan las rutas en
+`/etc/mulita/config.json` y generan el servicio con esas ubicaciones.
+El servicio conserva los permisos root necesarios para las herramientas de red;
+las rutas de datos no dependen del HOME de root. Las actualizaciones se ejecutan
+como el usuario de instalación sobre el repositorio que ejecuta la app.
+
+En una instalación nueva las capturas van a `<home del usuario>/capturas` y el
+estado privado (preferencias, certificados y claves) a
+`<home del usuario>/.config/mulita`. Las reinstalaciones conservan las rutas ya
+guardadas. Si se detectan las carpetas anteriores en el home de root, se siguen
+usando: no se mueven ni eliminan datos automáticamente.
+
+Para elegir otras ubicaciones se pueden pasar `--capture-dir /ruta/capturas`
+y `--state-dir /ruta/privada` a cualquiera de los instaladores. Las carpetas
+deben ser absolutas y estar separadas para evitar compartir el estado privado.
+Elegir otra ubicación no copia los archivos anteriores.
+
+`run.sh` solo inicia la app. Para una configuración alternativa se puede usar
+`MULITA_CONFIG=/ruta/config.json bash run.sh`. Si se mueve el repositorio,
+volver a ejecutar el instalador actualiza la ruta del servicio.
+
 ## Instalación con pantalla Waveshare de 7 pulgadas
 
 Para el panel `7_0_inchH` conectado a **DSI1**, ejecutar

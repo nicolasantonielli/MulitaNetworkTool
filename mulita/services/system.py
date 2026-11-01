@@ -18,16 +18,18 @@ class MaintenanceService:
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
                  repository_dir: str, service_name: str,
-                 update_remote: str = 'origin', update_branch: str = 'v3'):
+                 update_remote: str = 'origin', update_branch: str = 'v3', installation_user: str = ''):
         self._runner = runner
         self._commands = commands
         self._repository_dir = repository_dir
         self._service_name = service_name
         self._update_remote = update_remote
         self._update_branch = update_branch
+        self._installation_user = installation_user
 
     def update(self) -> CommandResult:
-        argv = self._commands.update(self._repository_dir, self._update_remote, self._update_branch)
+        user = (self._installation_user if hasattr(os, 'geteuid') and os.geteuid() == 0 else '')
+        argv = self._commands.update(self._repository_dir, self._update_remote, self._update_branch, user)
         return self._checked(argv, 'No se pudo actualizar')
 
     def reset(self) -> CommandResult | None:
