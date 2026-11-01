@@ -18,7 +18,7 @@ Item {
         SideNav {
             id: nav
             objectName: "settingsNav"
-            visible: currentIndex !== 5 && currentIndex !== 6
+            visible: currentIndex !== 6 && currentIndex !== 7
             Layout.preferredWidth: Math.round(root.width * 0.27)
             Layout.fillHeight: true
             onCurrentIndexChanged: {
@@ -32,7 +32,8 @@ Item {
                 { label: i18n.pack.navDisplay, icon: "display" },
                 { label: i18n.pack.navWifi, icon: "wifi" },
                 { label: i18n.pack.navEthIn, icon: "ethernet" },
-                { label: i18n.pack.navMaint, icon: "wrench" }
+                { label: i18n.pack.navMaint, icon: "wrench" },
+                { label: i18n.pack.navInterface, icon: "settings" }
             ]
         }
 
@@ -60,26 +61,7 @@ Item {
                         font.pixelSize: ui.fontBody
                     }
                 }
-                Card {
-                    Layout.fillWidth: true
-                    title: i18n.pack.tileOrderTitle
-                    titleIcon: "display"
 
-                    Text {
-                        Layout.fillWidth: true
-                        text: i18n.pack.tileOrderHint
-                        color: ui.textMuted
-                        font.pixelSize: ui.fontBody
-                        wrapMode: Text.Wrap
-                    }
-                    TouchButton {
-                        Layout.fillWidth: true
-                        text: i18n.pack.tileOrderOpen
-                        icon: "play"
-                        kind: "neutral"
-                        onClicked: nav.currentIndex = 6
-                    }
-                }
                 Card {
                     Layout.fillWidth: true
                     title: i18n.pack.language
@@ -125,25 +107,7 @@ Item {
 
             // Pantalla
             ScrollPage {
-                Card {
-                    Layout.fillWidth: true
-                    title: i18n.pack.resizeTiles
-                    titleIcon: "display"
-                    Switch {
-                        text: i18n.pack.resizeTiles
-                        checked: settings.resizeTiles
-                        onToggled: settings.setResizeTiles(checked)
-                        palette.windowText: ui.text
-                        implicitHeight: ui.touch
-                    }
-                    Text {
-                        Layout.fillWidth: true
-                        text: i18n.pack.resizeTilesHint
-                        color: ui.textMuted
-                        font.pixelSize: ui.fontBody
-                        wrapMode: Text.Wrap
-                    }
-                }
+
                 Card {
                     Layout.fillWidth: true
                     title: i18n.pack.displaySize
@@ -191,18 +155,7 @@ Item {
                         onValueChanged: settings.setBrightness(value)
                     }
                 }
-                Card {
-                    Layout.fillWidth: true
-                    title: i18n.pack.theme
-                    titleIcon: "theme"
 
-                    ChoiceChips {
-                        Layout.fillWidth: true
-                        model: settings.themes
-                        value: settings.theme
-                        onActivated: settings.setTheme(value)
-                    }
-                }
                 Card {
                     Layout.fillWidth: true
                     title: i18n.pack.touchTest
@@ -213,7 +166,7 @@ Item {
                         text: i18n.pack.start
                         icon: "play"
                         kind: "neutral"
-                        onClicked: nav.currentIndex = 5
+                        onClicked: nav.currentIndex = 6
                     }
                 }
             }
@@ -933,8 +886,63 @@ Item {
                 }
             }
 
+            // Interfaz
+            ScrollPage {
+                Card {
+                    Layout.fillWidth: true
+                    title: i18n.pack.tileOrderTitle
+                    titleIcon: "display"
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: i18n.pack.tileOrderHint
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        wrapMode: Text.Wrap
+                    }
+                    TouchButton {
+                        Layout.fillWidth: true
+                        text: i18n.pack.tileOrderOpen
+                        icon: "play"
+                        kind: "neutral"
+                        onClicked: nav.currentIndex = 7
+                    }
+                }
+                Card {
+                    Layout.fillWidth: true
+                    title: i18n.pack.theme
+                    titleIcon: "theme"
+
+                    ChoiceChips {
+                        Layout.fillWidth: true
+                        model: settings.themes
+                        value: settings.theme
+                        onActivated: settings.setTheme(value)
+                    }
+                }
+                Card {
+                    Layout.fillWidth: true
+                    title: i18n.pack.resizeTiles
+                    titleIcon: "display"
+                    Switch {
+                        text: i18n.pack.resizeTiles
+                        checked: settings.resizeTiles
+                        onToggled: settings.setResizeTiles(checked)
+                        palette.windowText: ui.text
+                        implicitHeight: ui.touch
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: i18n.pack.resizeTilesHint
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontBody
+                        wrapMode: Text.Wrap
+                    }
+                }
+            }
+
             TouchTestPage { onGoBack: nav.currentIndex = 1 }
-            TileOrderPage { onGoBack: nav.currentIndex = 0 }
+            TileOrderPage { onGoBack: nav.currentIndex = 5 }
         }
     }
 }

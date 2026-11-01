@@ -369,6 +369,7 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('apply', 'Aplicar', 'Apply'),
     ('copySuffix', '-copia', '-copy'),
     ('navGeneral', 'General', 'General'),
+    ('navInterface', 'Interfaz', 'Interface'),
     ('tileOrderTitle', 'Orden de los cuadros', 'Tile order'),
     ('tileOrderHint', 'Arrastrá un cuadro para cambiarlo de lugar. Cada pantalla lleva de 1 a 6. El más del último separador agrega una pantalla.', 'Drag a tile to move it. Each screen holds 1 to 6. The plus on the last divider adds a screen.'),
     ('tileOrderAdd', 'Agregar pantalla', 'Add screen'),
