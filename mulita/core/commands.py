@@ -76,6 +76,12 @@ class CommandFactory:
     def delete_connection(self, name: str) -> Argv:
         return [self._bin.nmcli, 'connection', 'delete', 'id', name]
 
+    def detailed_links(self) -> Argv:
+        return [self._bin.ip, '-j', '-d', 'link', 'show']
+
+    def delete_link(self, interface: str) -> Argv:
+        return [self._bin.ip, 'link', 'delete', 'dev', interface]
+
     def wifi_devices(self) -> Argv:
         return [self._bin.nmcli, '-t', '-f', 'DEVICE,TYPE', 'device', 'status']
 

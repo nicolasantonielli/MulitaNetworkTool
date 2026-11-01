@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
@@ -48,6 +50,27 @@ class EthernetService:
         self._vlan_id = self._stored_vlan()
         return self.read()
 
+    def _remove_tagged_interfaces(self) -> None:
+        result = self._checked(self._commands.detailed_links(), tr('vlanFailed'))
+        try:
+            links = json.loads(result.stdout)
+            if not isinstance(links, list) or any(not isinstance(link, dict) for link in links):
+                raise ValueError('Invalid link list')
+        except (ValueError, TypeError) as exc:
+            raise CommandFailedError(tr('vlanFailed')) from exc
+        parent_index = next((link.get('ifindex') for link in links
+                             if link.get('ifname') == self._interface), None)
+        for link in links:
+            if (link.get('linkinfo') or {}).get('info_kind') != 'vlan':
+                continue
+            if not ((parent_index is not None and link.get('link_index') == parent_index)
+                    or link.get('link') == self._interface):
+                continue
+            name = link.get('ifname')
+            if not isinstance(name, str) or not name or name == self._interface:
+                raise CommandFailedError(tr('vlanFailed'))
+            self._checked(self._commands.delete_link(name), tr('vlanFailed'))
+
     def apply_with_vlan(self, mode: str, address: str, netmask: str, gateway: str,
                         dns: str, enabled: bool, vlan: str) -> EthernetConfig:
         if mode not in ('dhcp', 'static'):
@@ -67,6 +90,7 @@ class EthernetService:
         else:
             if existing:
                 self._checked(self._commands.delete_connection(self._vlan_name), tr('vlanFailed'))
+            self._remove_tagged_interfaces()
             self._vlan_id = 0
         if config:
             return self.apply_static(address, netmask, gateway, dns)

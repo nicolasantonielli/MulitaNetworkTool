@@ -1,4 +1,5 @@
 import unittest
+import json
 
 from mulita.config import Binaries
 from mulita.core import validation
@@ -104,6 +105,38 @@ class EthernetCommandsTest(unittest.TestCase):
 
 class EthernetServiceTest(unittest.TestCase):
 
+    def test_disable_removes_orphan_vlans_only_on_physical_ethernet(self):
+        links = [
+            {'ifindex': 2, 'ifname': 'eth0'},
+            {'ifindex': 3, 'ifname': 'eth1'},
+            {'ifname': 'eth0.100', 'link_index': 2, 'linkinfo': {'info_kind': 'vlan'}},
+            {'ifname': 'old-tag', 'link_index': 2, 'linkinfo': {'info_kind': 'vlan'}},
+            {'ifname': 'eth1.100', 'link_index': 3, 'linkinfo': {'info_kind': 'vlan'}},
+            {'ifname': 'macvlan0', 'link_index': 2, 'linkinfo': {'info_kind': 'macvlan'}}]
+        script = Script([CommandResult(10), CommandResult(0, json.dumps(links)),
+                         CommandResult(0), CommandResult(0),
+                         CommandResult(0, 'Wired connection 1'), CommandResult(0), CommandResult(0)])
+        service(script).apply_with_vlan('static', '10.0.0.2', '24', '', '', False, '')
+        deletes = [run for run in script.runs if run[1:3] == ['link', 'delete']]
+        self.assertEqual(deletes, [
+            ['/usr/bin/ip', 'link', 'delete', 'dev', 'eth0.100'],
+            ['/usr/bin/ip', 'link', 'delete', 'dev', 'old-tag']])
+        self.assertEqual(script.runs[-1][-1], 'Wired connection 1')
+
+    def test_disable_reports_interface_delete_failure(self):
+        links = [{'ifname': 'eth0.100', 'link': 'eth0', 'linkinfo': {'info_kind': 'vlan'}}]
+        script = Script([CommandResult(10), CommandResult(0, json.dumps(links)),
+                         CommandResult(1, '', 'Operation not permitted')])
+        with self.assertRaises(CommandFailedError):
+            service(script).apply_with_vlan('dhcp', '', '', '', '', False, '')
+        self.assertEqual(len(script.runs), 3)
+
+    def test_disable_reports_invalid_interface_list(self):
+        script = Script([CommandResult(10), CommandResult(0, 'invalid')])
+        with self.assertRaises(CommandFailedError):
+            service(script).apply_with_vlan('dhcp', '', '', '', '', False, '')
+        self.assertEqual(len(script.runs), 2)
+
     def test_vlan_static_creates_tagged_interface_and_saves_ip(self):
         script = Script([CommandResult(10), CommandResult(0), CommandResult(0), CommandResult(0)])
         network = service(script)
@@ -125,6 +158,7 @@ class EthernetServiceTest(unittest.TestCase):
 
     def test_vlan_disable_deletes_only_managed_profile_and_uses_base(self):
         script = Script([CommandResult(0, '100'), CommandResult(0),
+                         CommandResult(0, '[]'),
                          CommandResult(0, 'Wired connection 1'), CommandResult(0), CommandResult(0)])
         network = service(script)
         network.apply_with_vlan('static', '10.0.0.2', '24', '', '', False, '')
