@@ -107,6 +107,30 @@ Item {
 
             // Pantalla
             ScrollPage {
+                Card {
+                    Layout.fillWidth: true
+                    title: i18n.pack.rotation
+                    titleIcon: "display"
+                    ChoiceChips {
+                        Layout.fillWidth: true
+                        model: [
+                            { label: "0°", value: "0" },
+                            { label: "90°", value: "90" },
+                            { label: "180°", value: "180" },
+                            { label: "270°", value: "270" }
+                        ]
+                        value: String(settings.rotation)
+                        onActivated: settings.setRotation(Number(value))
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: i18n.pack.rotationHint
+                        color: ui.textMuted
+                        font.pixelSize: ui.fontSmall
+                        wrapMode: Text.Wrap
+                    }
+                }
+
 
                 Card {
                     Layout.fillWidth: true

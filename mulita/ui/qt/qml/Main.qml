@@ -55,7 +55,7 @@ ApplicationWindow {
         if (!keyboard.item)
             return
         var top = keyboard.item.active
-        var next = top ? Overlay.overlay : contentItem
+        var next = top ? Overlay.overlay : scene
         if (keyboard.parent !== next)
             keyboard.parent = next
         // El aviso modal queda cerca de 100000. El teclado tiene que quedar encima
@@ -76,87 +76,108 @@ ApplicationWindow {
     Material.background: ui.surface
     Material.foreground: ui.text
 
-    header: AppHeader {
-        title: window.pages[window.currentPage].title
-        showBack: window.currentPage !== 0
-        showShare: window.pages[window.currentPage].share
-        onBack: window.navigate(0)
-        onShare: system.share(title)
-    }
+    RotatedSurface {
+        id: scene
+        objectName: "rotatedScene"
+        angle: ui.rotation
 
-    Item {
-        id: viewport
-        anchors.fill: parent
-        clip: true
+        AppHeader {
+            id: appHeader
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            title: window.pages[window.currentPage].title
+            showBack: window.currentPage !== 0
+            showShare: window.pages[window.currentPage].share
+            onBack: window.navigate(0)
+            onShare: system.share(title)
+        }
 
-        StackLayout {
-            id: stack
-            width: parent.width
-            height: parent.height
-            y: -window.contentShift
-            currentIndex: window.currentPage
+        Item {
+            id: viewport
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: appHeader.bottom
+            anchors.bottom: parent.bottom
+            clip: true
 
-            Behavior on y { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+            StackLayout {
+                id: stack
+                width: parent.width
+                height: parent.height
+                y: -window.contentShift
+                currentIndex: window.currentPage
 
-            HomePage {
-                cyberTools: window.cyberTools
-                onOpen: window.navigate(page)
-                onOpenTool: {
-                    window.cyberTool = tool
-                    window.navigate(window.cyberPage)
+                Behavior on y { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+
+                HomePage {
+                    cyberTools: window.cyberTools
+                    onOpen: window.navigate(page)
+                    onOpenTool: {
+                        window.cyberTool = tool
+                        window.navigate(window.cyberPage)
+                    }
                 }
+                CapturePage { }
+                TracesPage { }
+                TapPage { }
+                ScanPage { }
+                ToolsPage { }
+                SettingsPage { onGoHome: window.navigate(0) }
+                CyberPage { tool: window.cyberTools[window.cyberTool] }
+                ServersPage { }
+                TlsPage { }
+                NmapPage { }
+                SwitchPortPage { }
+
+                onCurrentIndexChanged: pageFade.restart()
             }
-            CapturePage { }
-            TracesPage { }
-            TapPage { }
-            ScanPage { }
-            ToolsPage { }
-            SettingsPage { onGoHome: window.navigate(0) }
-            CyberPage { tool: window.cyberTools[window.cyberTool] }
-            ServersPage { }
-            TlsPage { }
-            NmapPage { }
-            SwitchPortPage { }
 
-            onCurrentIndexChanged: pageFade.restart()
+            NumberAnimation {
+                id: pageFade
+                target: stack
+                property: "opacity"
+                from: 0.35
+                to: 1
+                duration: 160
+                easing.type: Easing.OutCubic
+            }
         }
 
-        NumberAnimation {
-            id: pageFade
-            target: stack
-            property: "opacity"
-            from: 0.35
-            to: 1
-            duration: 160
-            easing.type: Easing.OutCubic
+        Toast { }
+        CopyMenu { }
+
+        Timer {
+            interval: 15000
+            repeat: true
+            running: true
+            triggeredOnStart: true
+            onTriggered: network.refresh()
         }
-    }
 
-    Toast { }
-    CopyMenu { }
-
-    Timer {
-        interval: 15000
-        repeat: true
-        running: true
-        triggeredOnStart: true
-        onTriggered: network.refresh()
-    }
-
-    Loader {
-        id: keyboard
-        z: 100
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        source: ui.virtualKeyboard ? "components/KeyboardPanel.qml" : ""
-        onStatusChanged: {
-            if (status === Loader.Error)
-                console.warn("Teclado virtual no disponible")
-            if (status === Loader.Ready)
-                window.placeKeyboard()
+        Loader {
+            id: keyboard
+            z: 100
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            source: ui.virtualKeyboard ? "components/KeyboardPanel.qml" : ""
+            onStatusChanged: {
+                if (status === Loader.Error)
+                    console.warn("Teclado virtual no disponible")
+                if (status === Loader.Ready)
+                    window.placeKeyboard()
+            }
         }
-    }
+
+    } // scene
+
+    // Los dialogos y el teclado usan otra capa que debe seguir el mismo giro.
+    Binding { target: window.Overlay.overlay; property: "rotation"; value: ui.rotation }
+    Binding { target: window.Overlay.overlay; property: "width"; value: scene.width }
+    Binding { target: window.Overlay.overlay; property: "height"; value: scene.height }
+    Binding { target: window.Overlay.overlay; property: "x"; value: scene.x }
+    Binding { target: window.Overlay.overlay; property: "y"; value: scene.y }
 
     Connections {
         target: keyboard.item

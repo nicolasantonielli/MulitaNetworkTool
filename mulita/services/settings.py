@@ -5,7 +5,7 @@ from dataclasses import replace
 from typing import Any, Callable, Optional, Protocol
 
 from mulita.core import settings as rules
-from mulita.core.errors import MulitaError
+from mulita.core.errors import MulitaError, ValidationError
 from mulita.core.ports import SettingsStore
 from mulita.core.settings import Settings
 from mulita.adapters.backlight import PanelBacklight
@@ -51,6 +51,11 @@ class SettingsService:
 
     def set_resize_tiles(self, value: bool) -> Settings:
         return self._commit(replace(self._current, display=replace(self._current.display, resize_tiles=value)))
+
+    def set_rotation(self, angle: int) -> Settings:
+        if type(angle) is not int or angle not in (0, 90, 180, 270):
+            raise ValidationError(i18n.tr('rotationInvalid'))
+        return self._commit(replace(self._current, display=replace(self._current.display, rotation=angle)))
 
     def backlight_ready(self) -> bool:
         return self._backlight.available()

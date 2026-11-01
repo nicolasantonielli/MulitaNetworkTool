@@ -79,6 +79,17 @@ class SettingsController(Controller):
     def uiScale(self) -> float:
         return self._current.display.ui_scale
 
+    @pyqtProperty(int, notify=changed)
+    def rotation(self) -> int:
+        return self._current.display.rotation
+
+    @pyqtSlot(int)
+    def setRotation(self, angle: int) -> None:
+        try:
+            self._services.settings.set_rotation(angle)
+        except MulitaError as exc:
+            self._fail(exc)
+
     @pyqtProperty(bool, notify=changed)
     def resizeTiles(self) -> bool:
         return self._current.display.resize_tiles
@@ -219,6 +230,10 @@ class Appearance(Controller):
     @pyqtProperty(int, notify=changed)
     def windowHeight(self) -> int:
         return self._settings.display.height
+
+    @pyqtProperty(int, notify=changed)
+    def rotation(self) -> int:
+        return self._settings.display.rotation
 
     @pyqtProperty(bool, notify=changed)
     def fullscreen(self) -> bool:
