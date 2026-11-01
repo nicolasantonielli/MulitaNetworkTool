@@ -1,5 +1,19 @@
 # Mulita Network Tool
 
+## Instalación con pantalla Waveshare de 7 pulgadas
+
+Para el panel `7_0_inchH` conectado a **DSI1**, ejecutar
+`bash install-lite_7.sh` y luego `sudo reboot`. Instala las mismas dependencias
+y el mismo servicio de arranque automático que `install-lite.sh`, usando
+`dtoverlay=vc4-kms-v3d` y
+`dtoverlay=vc4-kms-dsi-waveshare-panel,7_0_inchH`.
+Verifica que existan los overlays, respalda `config.txt` en
+`config.txt.mulita-bak` y reemplaza la configuración del panel anterior.
+La alternativa para DSI0 queda comentada en el archivo de arranque.
+
+Para iniciar manualmente, usar `bash run.sh`. Este script solo inicia la app;
+la instalación y configuración de pantalla se hacen con el instalador elegido.
+
 ## Puerto de switch
 
 El cuadro **Puerto de switch** identifica el vecino conectado mediante anuncios

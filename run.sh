@@ -6,7 +6,7 @@
 # con --system-site-packages.
 #
 # Uso, en el equipo:
-#   bash install-lite.sh
+#   bash install-lite.sh  # o install-lite_7.sh, una sola vez
 #   bash run.sh
 #   bash run.sh --tk
 
@@ -19,7 +19,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
-bash "$ROOT/install-lite.sh"
+if [[ ! -x "$ROOT/.venv/bin/python" ]]; then
+  echo "Falta el entorno virtual. Ejecuta install-lite.sh o install-lite_7.sh antes de iniciar Mulita." >&2
+  exit 1
+fi
 
 if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
   if [[ -S /tmp/.X11-unix/X0 ]]; then

@@ -54,9 +54,9 @@ def configure_text(text: str) -> str:
     return '\n'.join(lines).rstrip() + '\n\n' + '\n'.join((BEGIN, *SETTINGS, END)) + '\n'
 
 
-def configure_file(path: Path) -> bool:
+def configure_file(path: Path, transform=configure_text) -> bool:
     original = path.read_text(encoding='utf-8')
-    updated = configure_text(original)
+    updated = transform(original)
     if updated == original:
         return False
     backup = path.with_name(path.name + '.mulita-bak')
