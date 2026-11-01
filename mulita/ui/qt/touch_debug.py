@@ -60,17 +60,37 @@ def log_input_devices() -> None:
 
 
 def real_mouse_names(text: str) -> list[str]:
-    """Mouses de puntero. El ft5x06 tambien tiene un nodo mouse y no cuenta."""
+    """Excluye paneles tactiles aunque el kernel les asigne un nodo mouse."""
     found = []
-    name = ''
-    for line in text.splitlines():
-        if line.startswith('N: Name='):
-            name = line.split('=', 1)[1].strip().strip('"')
-        elif line.startswith('H: Handlers=') and name:
-            handlers = line.split('=', 1)[1].split()
-            if any(handler.startswith('mouse') for handler in handlers) and 'ft5x06' not in name.lower():
-                found.append(name)
-            name = ''
+    for block in text.strip().split('\n\n'):
+        fields = {}
+        for line in block.splitlines():
+            if '=' in line:
+                key, value = line.split('=', 1)
+                fields[key.strip()] = value.strip()
+        name = fields.get('N: Name', '').strip('"')
+        handlers = fields.get('H: Handlers', '').split()
+        if not name or not any(handler.startswith('mouse') for handler in handlers):
+            continue
+        # PROP es una mascara de bits. DIRECT identifica pantallas tactiles.
+        try:
+            direct = int(fields.get('B: PROP', '0').split()[-1], 16) & 2
+        except (ValueError, IndexError):
+            direct = 0
+        lower = name.lower()
+        if direct or any(token in lower for token in (
+                'ft5x06', 'touchscreen', 'touch screen', 'goodix', 'egalax', 'ili210', 'ilitek')):
+            continue
+        # Un mouse mueve ejes relativos X/Y; el panel suele reportar solo ABS.
+        if 'B: EV' in fields and 'B: REL' not in fields:
+            continue
+        if 'B: REL' in fields:
+            try:
+                if int(fields['B: REL'].split()[-1], 16) & 3 != 3:
+                    continue
+            except (ValueError, IndexError):
+                continue
+        found.append(name)
     return found
 
 

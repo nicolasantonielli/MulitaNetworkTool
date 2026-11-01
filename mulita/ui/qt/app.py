@@ -66,11 +66,10 @@ class QtApplication:
         self.app.setApplicationName('Mulita')
         log_input_devices()
         self._pointer_cursor = False
-        # En el escritorio el cursor lo maneja el sistema. En la Pi, sin DISPLAY, el dedo no debe dibujar una flecha.
+        # Linux tambien puede correr con escritorio: DISPLAY no indica que haya mouse.
         self._cursor_follows_mouse = (
             Path('/proc/bus/input/devices').exists()
-            and not os.environ.get('DISPLAY')
-            and not os.environ.get('WAYLAND_DISPLAY'))
+            and not config.test_mode)
         if self._cursor_follows_mouse:
             self.app.setOverrideCursor(QCursor(Qt.BlankCursor))
             self._cursor_timer = QTimer(self.app)
@@ -142,11 +141,15 @@ class QtApplication:
 
         names = connected_mice()
         present = bool(names)
-        if present == self._pointer_cursor:
+        shape = Qt.ArrowCursor if present else Qt.BlankCursor
+        current = self.app.overrideCursor()
+        if present == self._pointer_cursor and current is not None and current.shape() == shape:
             return
         self._pointer_cursor = present
-        shape = Qt.ArrowCursor if present else Qt.BlankCursor
-        self.app.changeOverrideCursor(QCursor(shape))
+        if current is None:
+            self.app.setOverrideCursor(QCursor(shape))
+        else:
+            self.app.changeOverrideCursor(QCursor(shape))
         if present:
             log.info('mouse conectado (%s), cursor visible', ', '.join(names))
         else:
