@@ -47,7 +47,12 @@ def quoted(value: str, executable: bool = False) -> str:
 
 
 def unit_text(repository: Path, home: Path, config: Path) -> str:
-    return UNIT.format(repository=quoted(str(repository)), home=quoted('HOME=' + str(home)),
+    directory = str(repository)
+    if any(char in directory for char in ('\n', '\r', '\x00')):
+        raise ValueError('Ruta con caracteres de control')
+    # WorkingDirectory consume la ruta completa, no una lista de palabras.
+    # A diferencia de ExecStart/Environment, no quita comillas delimitadoras.
+    return UNIT.format(repository=directory.replace('%', '%%'), home=quoted('HOME=' + str(home)),
                        config=quoted('MULITA_CONFIG=' + str(config)),
                        python=quoted(str(repository / '.venv/bin/python'), True))
 

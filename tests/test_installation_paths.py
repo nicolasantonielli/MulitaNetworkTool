@@ -84,14 +84,22 @@ class InstallationPathsTest(unittest.TestCase):
             installation_config(self.repo, 'nico', self.home, {},
                                 self.root / 'captures', self.root / 'captures/private')
 
-    def test_systemd_paths_are_quoted_and_percent_and_dollars_escaped(self):
+    def test_systemd_directory_is_unquoted_while_exec_and_environment_are_quoted(self):
         repo = PurePosixPath('/home/nico/repository with spaces/100% $folder')
         home = PurePosixPath('/home/nico')
         text = unit_text(repo, home, PurePosixPath('/etc/mulita/config.json'))
-        self.assertIn('WorkingDirectory="', text)
+        self.assertIn('WorkingDirectory=/home/nico/repository with spaces/100%% $folder\n', text)
+        self.assertNotIn('WorkingDirectory="', text)
         self.assertIn('100%% $$folder', text)
         self.assertIn('Environment="HOME=' + str(home) + '"', text)
         self.assertIn('Environment="MULITA_CONFIG=', text)
+
+    def test_working_directory_regression_for_reported_installation(self):
+        text = unit_text(PurePosixPath('/home/nico/MulitaNetworkTool'),
+                         PurePosixPath('/home/nico'), PurePosixPath('/etc/mulita/config.json'))
+        line = next(line for line in text.splitlines() if line.startswith('WorkingDirectory='))
+        self.assertEqual(line, 'WorkingDirectory=/home/nico/MulitaNetworkTool')
+        self.assertIn('ExecStart="/home/nico/MulitaNetworkTool/.venv/bin/python" main.py', text)
 
     def test_atomic_config_write(self):
         write_atomic(self.path, '{"user": "nico"}\n')

@@ -172,12 +172,10 @@ ApplicationWindow {
 
     } // scene
 
-    // Los dialogos y el teclado usan otra capa que debe seguir el mismo giro.
-    Binding { target: window.Overlay.overlay; property: "rotation"; value: ui.rotation }
-    Binding { target: window.Overlay.overlay; property: "width"; value: scene.width }
-    Binding { target: window.Overlay.overlay; property: "height"; value: scene.height }
-    Binding { target: window.Overlay.overlay; property: "x"; value: scene.x }
-    Binding { target: window.Overlay.overlay; property: "y"; value: scene.y }
+    OverlayRotation {
+        overlay: window.Overlay.overlay
+        surface: scene
+    }
 
     Connections {
         target: keyboard.item

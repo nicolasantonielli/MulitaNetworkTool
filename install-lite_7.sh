@@ -262,6 +262,7 @@ configure_boot
 echo "Activando el arranque al boot..."
 as_root python3 "$ROOT/scripts/configure_installation.py" \
   --repository "$ROOT" --user "$target_user" "$@"
+as_root systemd-analyze verify /etc/systemd/system/mulita.service
 as_root systemctl daemon-reload
 # tty1 lo usa la aplicacion. No se enmascara getty: tty3 sigue permitiendo entrar
 # con teclado si la aplicacion no abre. Enmascararlo deja la pantalla negra y sin login.
