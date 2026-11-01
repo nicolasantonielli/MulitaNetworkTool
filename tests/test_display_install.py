@@ -31,7 +31,7 @@ class DisplayInstallTest(unittest.TestCase):
                      'disable_fw_kms_setup=1', '[cm4]\notg_mode=1',
                      '[cm5]\ndtoverlay=dwc2,dr_mode=host', '[pi5]\ndtoverlay=nospi10'):
             self.assertIn(line, updated)
-        self.assertIn('[all]\ndisplay_auto_detect=0\n'
+        self.assertIn('[all]\ndisplay_auto_detect=0\ndtoverlay=vc4-kms-v3d\n'
                       'dtoverlay=vc4-kms-dsi-7inch,disable_touch\n'
                       'dtoverlay=rpi-ft5406\ndisable_touchscreen=0\ndisable_splash=1', updated)
         self.assertNotIn('\ndisplay_auto_detect=1\n', updated)

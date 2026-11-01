@@ -8,6 +8,17 @@ from tests.test_display_install import ORIGINAL
 
 
 class SevenInchInstallTest(unittest.TestCase):
+    def test_switching_back_to_five_replaces_waveshare_and_is_repeatable(self):
+        seven = configure_text(ORIGINAL)
+        five = configure_five(seven)
+        active = [line for line in five.splitlines() if not line.startswith('#')]
+        self.assertIn('dtoverlay=vc4-kms-v3d', active)
+        self.assertIn('dtoverlay=vc4-kms-dsi-7inch,disable_touch', active)
+        self.assertIn('dtoverlay=rpi-ft5406', active)
+        self.assertNotIn('dtoverlay=vc4-kms-dsi-waveshare-panel,7_0_inchH', active)
+        self.assertEqual(configure_five(five), five)
+        self.assertEqual(configure_text(configure_text(five)), configure_text(five))
+
     def test_applies_dsi1_and_preserves_other_hardware(self):
         updated = configure_text(ORIGINAL)
         self.assertIn('dtoverlay=vc4-kms-dsi-waveshare-panel,7_0_inchH\n', updated)
@@ -49,7 +60,7 @@ class SevenInchInstallTest(unittest.TestCase):
 
     def test_installer_uses_seven_inch_helper_and_lf(self):
         root = Path(__file__).resolve().parents[1]
-        script = (root / 'install-lite_7.sh').read_bytes()
+        script = (root / 'install-lite.sh').read_bytes()
         self.assertNotIn(b'\r', script)
         self.assertIn(b'scripts/configure_display_7.py', script)
-        self.assertIn(b'for overlay in vc4-kms-v3d vc4-kms-dsi-waveshare-panel;', script)
+        self.assertIn(b'DISPLAY_OVERLAYS=(vc4-kms-v3d vc4-kms-dsi-waveshare-panel)', script)

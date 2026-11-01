@@ -13,6 +13,7 @@ END = '# mulita-btt-pitft50-v1 end'
 SETTINGS = (
     '[all]',
     'display_auto_detect=0',
+    'dtoverlay=vc4-kms-v3d',
     'dtoverlay=vc4-kms-dsi-7inch,disable_touch',
     'dtoverlay=rpi-ft5406',
     'disable_touchscreen=0',
@@ -22,20 +23,21 @@ SETTINGS = (
 
 def configure_text(text: str) -> str:
     lines = []
-    in_block = False
+    block_end = None
+    blocks = {BEGIN: END, '# mulita-waveshare-7 begin': '# mulita-waveshare-7 end'}
     for line in text.splitlines():
         stripped = line.strip()
-        if stripped == BEGIN:
-            if in_block:
+        if stripped in blocks:
+            if block_end:
                 raise ValueError('Bloque tactil de Mulita anidado')
-            in_block = True
+            block_end = blocks[stripped]
             continue
-        if stripped == END:
-            if not in_block:
+        if stripped in blocks.values():
+            if stripped != block_end:
                 raise ValueError('Fin de bloque tactil de Mulita sin inicio')
-            in_block = False
+            block_end = None
             continue
-        if in_block:
+        if block_end:
             continue
         if stripped == '# mulita-kiosk':
             continue
@@ -44,12 +46,13 @@ def configure_text(text: str) -> str:
         value = value.split('#', 1)[0].strip()
         replaced = key in ('display_auto_detect', 'disable_touchscreen', 'disable_splash')
         replaced |= key == 'dtoverlay' and value.split(',', 1)[0].strip() in (
-            'vc4-kms-dsi-7inch', 'rpi-ft5406')
+            'vc4-kms-v3d', 'vc4-fkms-v3d', 'vc4-kms-dsi-7inch',
+            'rpi-ft5406', 'vc4-kms-dsi-waveshare-panel')
         if separator and replaced:
             lines.append('# mulita reemplaza: ' + stripped)
         else:
             lines.append(line)
-    if in_block:
+    if block_end:
         raise ValueError('Bloque tactil de Mulita sin cierre; no se modifico config.txt')
     return '\n'.join(lines).rstrip() + '\n\n' + '\n'.join((BEGIN, *SETTINGS, END)) + '\n'
 

@@ -1,12 +1,12 @@
 #!/bin/sh
 # Arranca Mulita en un entorno virtual.
 #
-# En Raspberry Pi OS Lite, install-lite.sh instala Qt, el teclado virtual
-# y las herramientas de red. PyQt5 entra por apt; el entorno virtual lo ve
-# con --system-site-packages.
+# En Raspberry Pi OS Lite, install-lite.sh instala Qt y las herramientas de red.
+# PyQt5 se instala mediante APT y se utiliza desde el entorno virtual con
+# --system-site-packages. El teclado integrado se implementa en QML.
 #
 # Uso, en el equipo:
-#   bash install-lite.sh  # o install-lite_7.sh, una sola vez
+#   bash install-lite.sh 5  # o 7, según el panel instalado
 #   bash run.sh
 #   bash run.sh --tk
 
@@ -20,7 +20,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
 if [[ ! -x "$ROOT/.venv/bin/python" ]]; then
-  echo "Falta el entorno virtual. Ejecuta install-lite.sh o install-lite_7.sh antes de iniciar Mulita." >&2
+  echo "Falta el entorno virtual. Ejecute bash install-lite.sh 5 o bash install-lite.sh 7 antes de iniciar Mulita." >&2
   exit 1
 fi
 
