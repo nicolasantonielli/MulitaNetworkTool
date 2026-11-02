@@ -133,6 +133,15 @@ Las evidencias siguientes corresponden a la revisión original.
 
 ### A5. La configuración QML mezcla funciones independientes y duplica formularios IPv4
 
+**Corregido el 2 de noviembre de 2026.** La página principal coordina seis
+componentes de configuración separados. La navegación y los retornos utilizan
+identificadores de página, con el orden definido en un único catálogo.
+`IPv4Form.qml` concentra carga, limpieza y confirmación de los datos IPv4 de
+Ethernet y Wi-Fi; puerta de enlace y DNS vacíos siempre borran valores anteriores.
+Compilación QML, arranque Qt sin pantalla y tres pruebas de formulario/controladores
+aprobados. Persisten los avisos de geometría QML ya registrados en A1.
+Las evidencias siguientes corresponden a la revisión original.
+
 **Prioridad:** media para la mantenibilidad.
 
 **Evidencias:** [`SettingsPage.qml`](../mulita/ui/qt/qml/pages/SettingsPage.qml) tiene 972 líneas. Contiene configuración general, pantalla, descubrimiento Wi-Fi, ingreso de contraseñas, perfiles guardados, dos formularios IPv4, VLAN, mantenimiento, navegación del test táctil y orden de cuadros. La sección IPv4 de Wi-Fi comienza alrededor de la línea 334 y Ethernet alrededor de la 688. La navegación depende de índices numéricos, incluidas las comprobaciones de las líneas 25–28 y los destinos de retorno de las líneas 968–969.
