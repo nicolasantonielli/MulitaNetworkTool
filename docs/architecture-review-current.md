@@ -279,3 +279,5 @@ El análisis anterior describe be15570; las correcciones siguientes se verificar
 - **R5 · 3.1.6:** Exportacion Ping preparada en temporales y publicada sin sobrescribir, con rollback ante fallos; permite reintento. No garantiza atomicidad conjunta ante corte de energia. 43 pruebas aprobadas.
 
 - **R6 · 3.1.7:** Repositorios de perfiles e historial Nmap separados, preparador SFTP con limpieza explicita, analizadores por formato y constructor independiente de ServerCommands. API compatible; suite completa de 454 pruebas aprobada.
+
+- **R7 · 3.1.8:** Menu y componentes generados desde descriptores unicos. Prueba de navegacion completa, orden invertido, retornos auxiliares e idioma sin recreacion. Validacion final: 455 pruebas aprobadas y compilacion QML correcta; persisten advertencias de geometria QML preexistentes. Sin prueba de hardware real.

@@ -6,14 +6,45 @@ import "../components"
 Item {
     id: root
 
+    objectName: "settingsPage"
     signal goHome()
-    readonly property var pages: ["general", "display", "wifi", "ethernet", "maintenance", "interface", "touch", "tiles"]
+    property var pages: [
+        { id: "general", label: "navGeneral", icon: "info", component: generalPage },
+        { id: "display", label: "navDisplay", icon: "display", component: displayPage },
+        { id: "wifi", label: "navWifi", icon: "wifi", component: wifiPage },
+        { id: "ethernet", label: "navEthIn", icon: "ethernet", component: ethernetPage },
+        { id: "maintenance", label: "navMaint", icon: "wrench", component: maintenancePage },
+        { id: "interface", label: "navInterface", icon: "settings", component: interfacePage },
+        { id: "touch", component: touchPage },
+        { id: "tiles", component: tilesPage }
+    ]
+    readonly property var menuPages: pages.filter(function(page) { return !!page.label })
     property string currentPage: "general"
-    function navigate(page) {
-        currentPage = page
-        var index = pages.indexOf(page)
-        if (index < nav.items.length) nav.currentIndex = index
+    function pageIndex(page) {
+        for (var i = 0; i < pages.length; i++) if (pages[i].id === page) return i
+        return -1
     }
+    function navigate(page) {
+        if (pageIndex(page) < 0) return
+        currentPage = page
+        for (var i = 0; i < menuPages.length; i++) {
+            if (menuPages[i].id === page) { nav.currentIndex = i; break }
+        }
+    }
+    onCurrentPageChanged: {
+        if (currentPage === "wifi" && !wifi.busy) wifi.refresh()
+        if (currentPage === "ethernet" && !interna.busy) interna.refresh()
+    }
+    onPagesChanged: navigate(currentPage)
+
+    Component { id: generalPage; SettingsGeneralPage { objectName: "general" } }
+    Component { id: displayPage; SettingsDisplayPage { objectName: "display"; onOpenTouchTest: root.navigate("touch") } }
+    Component { id: wifiPage; SettingsWifiPage { objectName: "wifi"; dialog: confirmationDialog } }
+    Component { id: ethernetPage; SettingsEthernetPage { objectName: "ethernet"; dialog: confirmationDialog } }
+    Component { id: maintenancePage; SettingsMaintenancePage { objectName: "maintenance"; dialog: confirmationDialog } }
+    Component { id: interfacePage; SettingsInterfacePage { objectName: "interface"; onOpenTileOrder: root.navigate("tiles") } }
+    Component { id: touchPage; TouchTestPage { objectName: "touch"; onGoBack: root.navigate("display") } }
+    Component { id: tilesPage; TileOrderPage { objectName: "tiles"; onGoBack: root.navigate("interface") } }
 
     ConfirmDialog { id: confirmationDialog }
 
@@ -29,35 +60,29 @@ Item {
             Layout.preferredWidth: Math.round(root.width * 0.27)
             Layout.fillHeight: true
             onCurrentIndexChanged: {
-                root.currentPage = root.pages[currentIndex]
-                if (root.currentPage === "wifi" && !wifi.busy)
-                    wifi.refresh()
-                if (root.currentPage === "ethernet" && !interna.busy)
-                    interna.refresh()
+                if (currentIndex >= 0 && currentIndex < root.menuPages.length)
+                    root.navigate(root.menuPages[currentIndex].id)
             }
-            items: [
-                { label: i18n.pack.navGeneral, icon: "info" },
-                { label: i18n.pack.navDisplay, icon: "display" },
-                { label: i18n.pack.navWifi, icon: "wifi" },
-                { label: i18n.pack.navEthIn, icon: "ethernet" },
-                { label: i18n.pack.navMaint, icon: "wrench" },
-                { label: i18n.pack.navInterface, icon: "settings" }
-            ]
+            items: root.menuPages.map(function(page) {
+                return { label: i18n.pack[page.label], icon: page.icon }
+            })
         }
 
         StackLayout {
+            id: pageStack
+            objectName: "settingsStack"
             Layout.fillWidth: true
             Layout.fillHeight: true
-            currentIndex: root.pages.indexOf(root.currentPage)
+            currentIndex: root.pageIndex(root.currentPage)
 
-            SettingsGeneralPage {}
-            SettingsDisplayPage { onOpenTouchTest: root.navigate("touch") }
-            SettingsWifiPage { dialog: confirmationDialog }
-            SettingsEthernetPage { dialog: confirmationDialog }
-            SettingsMaintenancePage { dialog: confirmationDialog }
-            SettingsInterfacePage { onOpenTileOrder: root.navigate("tiles") }
-            TouchTestPage { onGoBack: root.navigate("display") }
-            TileOrderPage { onGoBack: root.navigate("interface") }
+            Repeater {
+                id: pageRepeater
+                model: root.pages
+                Loader {
+                    objectName: "settings-loader-" + modelData.id
+                    sourceComponent: modelData.component
+                }
+            }
         }
     }
 }
