@@ -368,6 +368,14 @@ ColumnLayout {
                                 // Al bajar, el hueco queda después de la fila destino.
                                 var toIndex = line && line.kind === "tile"
                                     ? line.tileIndex + (root.hover > root.dragLine ? 1 : 0) : 0
+                                var toScreen = line ? line.screen : -1
+                                // Al subir sobre un separador, el hueco está antes de él:
+                                // corresponde al final de la pantalla anterior.
+                                if (line && line.kind === "separator"
+                                        && root.hover < root.dragLine && toScreen > 0) {
+                                    toScreen -= 1
+                                    toIndex = root.screens[toScreen].length
+                                }
                                 root.activeDrag = null
                                 root.animateMoves = false
                                 offset = 0
@@ -376,7 +384,7 @@ ColumnLayout {
                                 root.dragId = ""
                                 root.dragging = false
                                 if (line && modelData.kind === "tile") {
-                                    root.moveTile(fromScreen, fromIndex, line.screen, toIndex)
+                                    root.moveTile(fromScreen, fromIndex, toScreen, toIndex)
                                 }
                                 Qt.callLater(function() { root.animateMoves = true })
                             }

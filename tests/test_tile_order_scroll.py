@@ -28,6 +28,10 @@ class TileOrderScrollTest(unittest.TestCase):
             ('down_across_screens', 1, 5, [[1, 2], [3, 0, 4, 5]]),
             ('up_across_screens', 5, 2, [[0, 3, 1, 2], [4, 5]]),
             ('to_separator', 1, 4, [[1, 2], [0, 3, 4, 5]]),
+            ('down_to_other_screen_end', 1, 7, [[1, 2], [3, 4, 5, 0]]),
+            ('up_to_previous_screen_end', 5, 4, [[0, 1, 2, 3], [4, 5]]),
+            ('up_from_middle_to_previous_screen_end', 6, 4, [[0, 1, 2, 4], [3, 5]]),
+            ('up_to_first_separator', 5, 0, [[3, 0, 1, 2], [4, 5]]),
         ]
         for name, start_line, target_line, expected in cases:
             with self.subTest(name=name):

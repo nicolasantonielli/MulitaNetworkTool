@@ -93,6 +93,14 @@ Item {
 
     ListView {
         id: pager
+        objectName: "homePager"
+        currentIndex: 0
+        Component.onCompleted: Qt.callLater(function() {
+            // Abrir siempre la pantalla 1 una vez calculado el tamaño inicial.
+            pager.forceLayout()
+            pager.currentIndex = 0
+            pager.positionViewAtBeginning()
+        })
         anchors.fill: parent
         anchors.margins: ui.padding
         anchors.bottomMargin: root.indicatorHeight
