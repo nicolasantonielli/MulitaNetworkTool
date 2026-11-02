@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
+import QtQuick.Controls 2.15
 import "../components"
 
 Item {
@@ -211,10 +212,6 @@ Item {
                 expand: true
                 spacing: ui.gap
 
-                readonly property var replies: {
-                    try { return JSON.parse(ping.repliesJson) }
-                    catch (e) { return [] }
-                }
                 readonly property var summary: {
                     if (!ping.summaryJson)
                         return null
@@ -324,7 +321,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         width: parent.width - ui.padding * 2
-                        visible: pingPage.replies.length === 0
+                        visible: pingTable.count === 0
                         text: ping.running ? i18n.pack.pingRunning : i18n.pack.pingEmpty
                         color: ui.textMuted
                         font.pixelSize: ui.fontBody
@@ -335,7 +332,7 @@ Item {
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: Math.round(ui.gap * 0.6)
-                        visible: pingPage.replies.length > 0
+                        visible: pingTable.count > 0
                         spacing: Math.round(ui.gap * 0.3)
 
                         Row {
@@ -356,37 +353,46 @@ Item {
                             }
                         }
 
-                        ScrollPage {
+                        ListView {
                             id: pingTable
+                            objectName: "pingTable"
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            clip: true
                             spacing: 1
-                            Repeater {
-                                model: pingPage.replies
-                                delegate: Rectangle {
-                                    id: pingRow
-                                    readonly property var reply: modelData
-                                    Layout.fillWidth: true
-                                    implicitHeight: Math.round(ui.fontSmall * 2.15)
-                                    color: index % 2 === 0 ? "transparent" : ui.surfaceAlt
-                                    Row {
-                                        anchors.fill: parent
-                                        Repeater {
-                                            model: pingPage.columns
-                                            delegate: CopyableCell {
-                                                width: pingPage.columnWidth(modelData.share)
-                                                height: pingRow.height
-                                                text: modelData.key === "status"
-                                                      ? pingPage.statusText(pingRow.reply)
-                                                      : (pingRow.reply[modelData.key] === undefined
-                                                         ? "" : String(pingRow.reply[modelData.key]))
-                                                color: pingRow.reply.status === "fail" ? ui.danger
-                                                       : pingRow.reply.status === "dup" ? ui.warning : ui.text
-                                                font.pixelSize: ui.fontSmall
-                                                font.family: ui.monoFamily
-                                                verticalAlignment: Text.AlignVCenter
-                                                elide: Text.ElideRight
-                                                horizontalAlignment: modelData.key === "source"
-                                                                      ? Text.AlignLeft : Text.AlignHCenter
-                                            }
+                            boundsBehavior: Flickable.StopAtBounds
+                            readonly property real viewportWidth: width - pingScroll.width - ui.gap
+                            ScrollBar.vertical: ScrollBar {
+                                id: pingScroll
+                                width: Math.round(ui.mm * 4)
+                                policy: ScrollBar.AlwaysOn
+                            }
+                            model: ping.repliesModel
+                            delegate: Rectangle {
+                                id: pingRow
+                                readonly property var reply: replyData
+                                width: pingTable.viewportWidth
+                                height: Math.round(ui.fontSmall * 2.15)
+                                color: index % 2 === 0 ? "transparent" : ui.surfaceAlt
+                                Row {
+                                    anchors.fill: parent
+                                    Repeater {
+                                        model: pingPage.columns
+                                        delegate: CopyableCell {
+                                            width: pingPage.columnWidth(modelData.share)
+                                            height: pingRow.height
+                                            text: modelData.key === "status"
+                                                  ? pingPage.statusText(pingRow.reply)
+                                                  : (pingRow.reply[modelData.key] === undefined
+                                                     ? "" : String(pingRow.reply[modelData.key]))
+                                            color: pingRow.reply.status === "fail" ? ui.danger
+                                                   : pingRow.reply.status === "dup" ? ui.warning : ui.text
+                                            font.pixelSize: ui.fontSmall
+                                            font.family: ui.monoFamily
+                                            verticalAlignment: Text.AlignVCenter
+                                            elide: Text.ElideRight
+                                            horizontalAlignment: modelData.key === "source"
+                                                                  ? Text.AlignLeft : Text.AlignHCenter
                                         }
                                     }
                                 }
@@ -463,7 +469,7 @@ Item {
                     TouchButton {
                         text: i18n.pack.clear
                         kind: "neutral"
-                        enabled: !ping.running && (pingPage.replies.length > 0
+                        enabled: !ping.running && (pingTable.count > 0
                                  || (pingPage.summary && pingPage.summary.ready))
                         onClicked: ping.clear()
                     }
@@ -471,7 +477,7 @@ Item {
                         text: i18n.pack.save
                         icon: "file"
                         kind: "success"
-                        enabled: !ping.running && (pingPage.replies.length > 0
+                        enabled: !ping.running && (pingTable.count > 0
                                  || (pingPage.summary && pingPage.summary.ready))
                         onClicked: ping.save(pingFile.text)
                     }

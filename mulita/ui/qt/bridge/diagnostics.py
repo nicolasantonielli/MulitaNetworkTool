@@ -10,7 +10,8 @@ if TYPE_CHECKING:
 
 from collections import deque
 
-from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import (QAbstractListModel, QModelIndex, Qt,
+                          pyqtProperty, pyqtSignal, pyqtSlot)
 
 from mulita.core.errors import MulitaError
 from mulita.core.models import PING_COUNT, PING_INTERVAL, PING_SIZE, PingSummary, Range
@@ -71,6 +72,38 @@ class TraceController(TaskController):
         self._ctx.notifier.success(self._tr('tracesTitle'), name)
 
 
+class PingReplyModel(QAbstractListModel):
+    """Newest first in QML, append-only storage for constant-time updates."""
+    ReplyRole = Qt.UserRole + 1
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.replies = []
+
+    def roleNames(self):
+        return {self.ReplyRole: b'replyData'}
+
+    def rowCount(self, parent=QModelIndex()):
+        return 0 if parent.isValid() else len(self.replies)
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role != self.ReplyRole or not index.isValid() or not 0 <= index.row() < len(self.replies):
+            return None
+        item = self.replies[-1 - index.row()]
+        return {key: getattr(item, key) for key in
+                ('seq', 'source', 'ttl', 'time', 'status', 'detail')}
+
+    def append(self, reply):
+        self.beginInsertRows(QModelIndex(), 0, 0)
+        self.replies.append(reply)
+        self.endInsertRows()
+
+    def clear(self):
+        self.beginResetModel()
+        self.replies.clear()
+        self.endResetModel()
+
+
 class PingController(SessionController):
     repliesChanged = pyqtSignal()
     summaryChanged = pyqtSignal()
@@ -78,13 +111,18 @@ class PingController(SessionController):
     def __init__(self, ctx: BridgeContext, ping: PingService):
         super().__init__(ctx, ping)
         self._ping = ping
-        self._replies: tuple = ()
+        self._reply_model = PingReplyModel(self)
+        self._replies = self._reply_model.replies
         self._summary = PingSummary()
         self._pending = ''
 
     @pyqtProperty('QVariantMap', constant=True)
     def limits(self) -> dict:
         return {'count': _limits(PING_COUNT), 'interval': _limits(PING_INTERVAL), 'size': _limits(PING_SIZE)}
+
+    @pyqtProperty(QAbstractListModel, constant=True)
+    def repliesModel(self):
+        return self._reply_model
 
     @pyqtProperty(str, notify=repliesChanged)
     def repliesJson(self) -> str:
@@ -117,7 +155,9 @@ class PingController(SessionController):
 
     @pyqtSlot(str, float, float, float, result=bool)
     def start(self, target: str, count: float, interval: float, size: float) -> bool:
-        self._replies = ()
+        if self._running or self._session.is_running:
+            return False
+        self._reply_model.clear()
         self._summary = PingSummary()
         self._pending = ''
         self.repliesChanged.emit()
@@ -128,7 +168,7 @@ class PingController(SessionController):
     def clear(self) -> None:
         if self._running:
             return
-        self._replies = ()
+        self._reply_model.clear()
         self._summary = PingSummary()
         self._pending = ''
         self.repliesChanged.emit()
@@ -138,7 +178,7 @@ class PingController(SessionController):
     def save(self, filename: str) -> None:
         if self._running:
             return
-        replies, summary = self._replies, self._summary
+        replies, summary = tuple(self._replies), self._summary
         def saved(name):
             statics = name[:-4] + '.statics.csv' if name.endswith('.csv') else name
             self._ctx.notifier.success(self._tr('pingTitle'), self._tr('pingSaved', table=name, statics=statics))
@@ -163,7 +203,7 @@ class PingController(SessionController):
         reply, summary = read_ping_line(line, self._summary)
         self._summary = summary
         if reply is not None:
-            self._replies = (*self._replies, reply)
+            self._reply_model.append(reply)
 
     def _rejected(self, error: MulitaError) -> None:
         self._fail(error)
