@@ -431,7 +431,7 @@ class ProfilePersistenceTest(unittest.TestCase):
             service = NmapScanService(FakeRunner(), CommandFactory(Binaries()), state_dir=Path(folder))
             service.save_user('', 'Original', '', '-sT')
             original = (Path(folder) / 'profiles.json').read_bytes()
-            with patch('mulita.services.nmapscan.os.replace', side_effect=OSError('disk full')):
+            with patch('mulita.services.nmap_profiles.os.replace', side_effect=OSError('disk full')):
                 with self.assertRaises(PersistenceError):
                     service.save_user('', 'New', '', '-sT')
             self.assertEqual((Path(folder) / 'profiles.json').read_bytes(), original)

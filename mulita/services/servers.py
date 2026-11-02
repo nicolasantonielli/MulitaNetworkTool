@@ -4,7 +4,6 @@ import csv
 import ipaddress
 import os
 import secrets
-from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Callable, Mapping, Optional
 
@@ -17,20 +16,14 @@ from mulita.core.servers import KINDS, NO, YES, kind_by_id
 from mulita.core.messages import message
 from mulita.services.base import ProcessSession
 
-USER_MARK = 'Mulita SFTP temporal'
-UPLOADS = 'respaldos'
+from mulita.services.server_plan import ServerPlan as _Plan
+from mulita.services.sftp_provisioning import SftpProvisioner, USER_MARK
 PASSWORD_ALPHABET = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 PASSWORD_LENGTH = 8
 
 
 def suggest_password() -> str:
     return ''.join(secrets.choice(PASSWORD_ALPHABET) for _ in range(PASSWORD_LENGTH))
-
-
-@dataclass
-class _Plan:
-    argv: list[str]
-    cleanup: Optional[Callable[[], None]] = None
 
 
 class _Session(ProcessSession):
@@ -52,6 +45,7 @@ class ServerService:
         self._capture_dir = capture_dir
         # En Windows las rutas /root no existen: no se crean carpetas fuera de la Pi.
         self._posix = os.name == 'posix' if posix is None else posix
+        self._sftp_provisioner = SftpProvisioner(runner, commands, self._state_dir, capture_dir, self._posix)
         self._sessions = {kind.id: _Session(runner, kind.title) for kind in KINDS}
         self._cleanups: dict[str, Callable[[], None]] = {}
         self._builders: dict[str, Callable[[Mapping[str, str]], _Plan]] = {
@@ -170,6 +164,13 @@ class ServerService:
 
     # --- Servidores ---------------------------------------------------------------------
 
+    def _sftp(self, values: Mapping[str, str]) -> _Plan:
+        _name, address, _prefix = self._interface(values, required=False)
+        return self._sftp_provisioner.prepare(
+            validation.system_user(values.get('user', '')),
+            validation.temporary_password(values.get('password', '')),
+            self._flag(values, 'writable'), self._port(values), address)
+
     def _iperf(self, values: Mapping[str, str]) -> _Plan:
         _name, address, _prefix = self._interface(values, required=False)
         return _Plan(self._commands.iperf_server(self._port(values), address, self._flag(values, 'once')))
@@ -237,73 +238,6 @@ class ServerService:
         return _Plan(self._commands.dhcp_server(
             name, first, last, str(network.netmask), hours, gateway, dns,
             str(folder / 'dnsmasq.leases'), str(folder / 'dnsmasq.pid')))
-
-    def _sftp(self, values: Mapping[str, str]) -> _Plan:
-        _name, address, _prefix = self._interface(values, required=False)
-        port = self._port(values)
-        user = validation.system_user(values.get('user', ''))
-        password = validation.temporary_password(values.get('password', ''))
-        writable = self._flag(values, 'writable')
-
-        entry = self._runner.run(self._commands.user_entry(user))
-        if entry.ok and entry.stdout.strip():
-            if USER_MARK not in entry.stdout:
-                raise ValidationError(message('sftpUserTaken', user=user))
-        else:
-            self._must(self._commands.user_add(user, USER_MARK))
-
-        uploads = PurePosixPath(self._capture_dir) / UPLOADS
-
-        def cleanup() -> None:
-            # Las subidas quedan a nombre de root: un usuario nuevo con otro numero no las pierde.
-            self._runner.run(self._commands.change_owner('root:root', str(uploads), recursive=True))
-            self._runner.run(self._commands.user_delete(user))
-
-        try:
-            self._make_dir(Path(uploads), 'serverFolder')
-            folder = self._state('sftp')
-            host_key = folder / 'host_ed25519'
-            if self._posix and not host_key.exists():
-                self._must(self._commands.ssh_host_key(str(host_key)))
-            config = folder / 'sshd_config'
-            self._write_sshd_config(config, host_key, port, address, user, writable)
-            self._must(self._commands.set_password(), f'{user}:{password}\n')
-            self._must(self._commands.change_owner(user, str(uploads), recursive=True))
-            if self._posix:
-                Path('/run/sshd').mkdir(mode=0o755, parents=True, exist_ok=True)
-        except Exception:
-            cleanup()
-            raise
-        return _Plan(self._commands.sftp_server(str(config)), cleanup)
-
-    def _write_sshd_config(self, path: Path, host_key: Path, port: int, address: str,
-                           user: str, writable: bool) -> None:
-        lines = [f'Port {port}']
-        if address:
-            lines.append(f'ListenAddress {address}')
-        lines += [
-            f'HostKey {host_key}', 'PidFile none', 'UsePAM no', 'LogLevel VERBOSE',
-            'LoginGraceTime 30', 'MaxAuthTries 3', 'PermitRootLogin no',
-            'PasswordAuthentication yes', 'PubkeyAuthentication no',
-            'ChallengeResponseAuthentication no', f'AllowUsers {user}',
-            'AllowTcpForwarding no', 'X11Forwarding no', 'PermitTTY no',
-            'Subsystem sftp internal-sftp',
-            f'Match User {user}',
-            f'    ChrootDirectory {self._capture_dir}',
-            f'    ForceCommand internal-sftp{"" if writable else " -R"}',
-        ]
-        if not self._posix:
-            return
-        try:
-            path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
-        except OSError as exc:
-            raise CommandFailedError(message('serverFolder')) from exc
-
-    def _must(self, argv: list[str], input_text: str | None = None) -> None:
-        result = (self._runner.run(argv, input_text=input_text) if input_text is not None
-                  else self._runner.run(argv))
-        if not result.ok:
-            raise CommandFailedError(message('serverPrepare', detail=_first_line(result.text)), result)
 
 
 def _first_line(text: str) -> str:

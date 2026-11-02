@@ -8,22 +8,22 @@ import json
 import os
 import re
 import threading
-import tempfile
 from collections import deque
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path, PurePosixPath
 
 from mulita.core.commands import CommandFactory
-from mulita.core.errors import CommandFailedError, ValidationError, PersistenceError
+from mulita.core.errors import CommandFailedError
 from mulita.core.models import MISSING_COMMAND_CODE
-from mulita.core.nmapscan import (Compiled, compare_scans, compile_scan, open_tcp_ports,
-                                  parse_xml, privilege_error, saved_arguments)
+from mulita.core.nmapscan import (Compiled, compile_scan, open_tcp_ports,
+                                  parse_xml, privilege_error)
 from mulita.core.ports import CommandRunner, ExitListener, OutputListener
 from mulita.core.messages import message
 from mulita.services.base import ProcessSession
+from mulita.services.nmap_profiles import NmapProfiles
+from mulita.services.nmap_history import NmapHistory
 
-_RUN = re.compile(r'^[0-9]{8}-[0-9]{6}(?:-\d+)?$')
 _VERSION = re.compile(r'Nmap version (\S+)')
 _STATE = {
     'open': 'nmapStateOpen',
@@ -71,6 +71,8 @@ class NmapScanService(ProcessSession):
         self._commands = commands
         self._directory = Path(directory)
         self._state = Path(state_dir) if state_dir else Path.home() / '.config' / 'mulita' / 'nmap'
+        self._profiles = NmapProfiles(self._state)
+        self._history = NmapHistory(self._directory)
         self._captures = Path(capture_dir)
         self._paths = StoragePaths(self._captures)
         self.version = ''
@@ -81,6 +83,27 @@ class NmapScanService(ProcessSession):
         self._tail: deque[str] = deque(maxlen=8)
         self._privilege = False
         self._log_lock = threading.Lock()
+
+    def users(self) -> list[dict]:
+        return self._profiles.users()
+
+    def save_user(self, profile_id: str, name: str, description: str, arguments: str) -> dict:
+        return self._profiles.save_user(profile_id, name, description, arguments)
+
+    def delete_user(self, profile_id: str) -> None:
+        return self._profiles.delete_user(profile_id)
+
+    def duplicate_user(self, profile_id: str) -> dict:
+        return self._profiles.duplicate_user(profile_id)
+
+    def load(self, run_id: str, today: date | None = None) -> tuple[dict, tuple[dict, ...]]:
+        return self._history.load(run_id, today)
+
+    def compare(self, first: str, second: str, today: date | None = None) -> dict:
+        return self._history.compare(first, second, today)
+
+    def history(self) -> list[dict]:
+        return self._history.history(self._active)
 
     def probe(self) -> str:
         self._ensure_nmap()
@@ -134,73 +157,6 @@ class NmapScanService(ProcessSession):
         """El usuario canceló antes de que el proceso arrancara."""
         self._write_meta(prepared, 'cancelled', None, True)
 
-    def load(self, run_id: str, today: date | None = None) -> tuple[dict, tuple[dict, ...]]:
-        folder = self._folder(run_id)
-        meta = self._read_meta(folder)
-        document = parse_xml(self._read_text(folder / 'informe.xml'), today or date.today())
-        return meta, document.hosts
-
-    def compare(self, first: str, second: str, today: date | None = None) -> dict:
-        _meta, before = self.load(first, today)
-        _other, after = self.load(second, today)
-        return compare_scans(list(before), list(after))
-
-    def history(self) -> list[dict]:
-        if not self._directory.is_dir():
-            return []
-        found = []
-        active = self._active
-        for child in self._directory.iterdir():
-            if not child.is_dir() or not (child / 'meta.json').is_file():
-                continue
-            item = self._read_meta(child)
-            if item.get('status') == 'running' and child != active:
-                item['status'] = 'incomplete'
-            found.append({key: item.get(key, '') for key in (
-                'id', 'profile', 'command', 'targets', 'started', 'finished', 'status',
-                'partial', 'simulated', 'nmapVersion')})
-        found.sort(key=lambda item: item.get('started', ''), reverse=True)
-        return found[:40]
-
-    def users(self) -> list[dict]:
-        try:
-            data = json.loads((self._state / 'profiles.json').read_text(encoding='utf-8'))
-        except (OSError, ValueError):
-            return []
-        if not isinstance(data, list):
-            return []
-        return [item for item in data if isinstance(item, dict) and str(item.get('id', '')).startswith('user-')]
-
-    def save_user(self, profile_id: str, name: str, description: str, arguments: str) -> dict:
-        clean = _profile_name(name)
-        line = _saved_line(arguments)
-        about = (description or '').strip()
-        if len(about) > 240:
-            raise ValidationError(message('nmapBadName'))
-        items = self.users()
-        if profile_id.startswith('user-') and any(item['id'] == profile_id for item in items):
-            saved = {'id': profile_id, 'name': clean, 'description': about, 'arguments': line}
-            items = [saved if item['id'] == profile_id else item for item in items]
-        else:
-            number = 1 + max((int(item['id'].split('-', 1)[1]) for item in items
-                              if item['id'].split('-', 1)[-1].isdigit()), default=0)
-            saved = {'id': f'user-{number}', 'name': clean, 'description': about, 'arguments': line}
-            items.append(saved)
-        self._write_users(items)
-        return saved
-
-    def delete_user(self, profile_id: str) -> None:
-        items = [item for item in self.users() if item['id'] != profile_id]
-        if len(items) == len(self.users()):
-            raise ValidationError(message('nmapBadProfile', value=profile_id))
-        self._write_users(items)
-
-    def duplicate_user(self, profile_id: str) -> dict:
-        source = next((item for item in self.users() if item['id'] == profile_id), None)
-        if source is None:
-            raise ValidationError(message('nmapBadProfile', value=profile_id))
-        return self.save_user('', f"{source['name']} (copy)", source.get('description', ''),
-                              source.get('arguments', ''))
 
     def list_files(self) -> list[dict]:
         found = []
@@ -268,7 +224,7 @@ class NmapScanService(ProcessSession):
 
     def _finish(self, prepared: Prepared, code: int) -> None:
         folder = prepared.folder
-        document = parse_xml(self._read_text(folder / 'informe.xml'), prepared.today)
+        document = parse_xml(self._history.read_text(folder / 'informe.xml'), prepared.today)
         self._write_csv(folder, document.hosts)
         cancelled = self._cancel
         self._cancel = False
@@ -319,7 +275,7 @@ class NmapScanService(ProcessSession):
 
     def _write_meta(self, prepared: Prepared, status: str, code: int | None, partial: bool) -> None:
         path = prepared.folder / 'meta.json'
-        current = self._read_meta(prepared.folder) if path.is_file() else {}
+        current = self._history.read_meta(prepared.folder) if path.is_file() else {}
         compiled = prepared.compiled
         targets = compiled.display[-compiled.target_count:]
         current.update({
@@ -348,51 +304,11 @@ class NmapScanService(ProcessSession):
         folder.mkdir()
         return folder
 
-    def _folder(self, run_id: str) -> Path:
-        if not _RUN.fullmatch(run_id or ''):
-            raise ValidationError(message('nmapRunMissing'))
-        folder = self._directory / run_id
-        if not folder.is_dir() or folder.parent.resolve() != self._directory.resolve():
-            raise ValidationError(message('nmapRunMissing'))
-        return folder
-
-    def _read_meta(self, folder: Path) -> dict:
-        try:
-            data = json.loads((folder / 'meta.json').read_text(encoding='utf-8'))
-        except (OSError, ValueError):
-            return {'id': folder.name}
-        return data if isinstance(data, dict) else {'id': folder.name}
-
-    @staticmethod
-    def _read_text(path: Path) -> str:
-        try:
-            return path.read_text(encoding='utf-8', errors='replace')
-        except OSError:
-            return ''
 
     @staticmethod
     def _write_text(path: Path, text: str) -> None:
         path.write_text(text, encoding='utf-8')
 
-    def _write_users(self, items: list[dict]) -> None:
-        temporary = None
-        try:
-            self._state.mkdir(parents=True, exist_ok=True)
-            with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=self._state,
-                                             delete=False) as handle:
-                temporary = Path(handle.name)
-                json.dump(items, handle, ensure_ascii=False, indent=2)
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(temporary, self._state / 'profiles.json')
-        except OSError as exc:
-            raise PersistenceError(message('nmapProfilesSaveFailed')) from exc
-        finally:
-            if temporary is not None:
-                try:
-                    temporary.unlink(missing_ok=True)
-                except OSError:
-                    pass
 
     @staticmethod
     def _mkdir(folder: Path) -> None:
@@ -416,14 +332,3 @@ class NmapScanService(ProcessSession):
 
 def _label(state: str) -> str:
     return state
-
-
-def _profile_name(name: str) -> str:
-    clean = ' '.join((name or '').split())
-    if not clean or len(clean) > 40:
-        raise ValidationError(message('nmapBadName'))
-    return clean
-
-
-def _saved_line(arguments: str) -> str:
-    return saved_arguments(arguments)

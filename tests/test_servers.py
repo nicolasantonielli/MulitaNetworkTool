@@ -307,13 +307,13 @@ class SftpTest(unittest.TestCase):
         self.service = ServerService(self.runner, CommandFactory(BIN, server_programs()), self.root / 'servidores',
                                      self.root / 'estado', self.captures, posix=True)
         # Las rutas /root no existen en la prueba: el servicio solo las nombra en la configuracion.
-        self.service._make_dir = lambda path, message: None
+        self.service._sftp_provisioner._make_dir = lambda path, message: None
         (self.root / 'estado' / 'sftp').mkdir(parents=True)
         (self.root / 'estado' / 'sftp' / 'host_ed25519').write_text('key')
         # Solo /run/sshd es del sistema: los archivos de configuración siguen
         # escribiéndose realmente dentro del directorio temporal de la prueba.
         self.sshd_runtime = Mock()
-        path_patch = patch('mulita.services.servers.Path', side_effect=lambda value:
+        path_patch = patch('mulita.services.sftp_provisioning.Path', side_effect=lambda value:
                            self.sshd_runtime if value == '/run/sshd' else Path(value))
         path_patch.start()
         self.addCleanup(path_patch.stop)

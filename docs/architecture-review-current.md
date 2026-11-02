@@ -277,3 +277,5 @@ El análisis anterior describe be15570; las correcciones siguientes se verificar
 - **R4 · 3.1.5:** Se separaron notificaciones visuales y carga IPv4; una prueba QML verifica que idioma, tema y escala preservan la edicion y una carga real actualiza el formulario. 30 pruebas aprobadas.
 
 - **R5 · 3.1.6:** Exportacion Ping preparada en temporales y publicada sin sobrescribir, con rollback ante fallos; permite reintento. No garantiza atomicidad conjunta ante corte de energia. 43 pruebas aprobadas.
+
+- **R6 · 3.1.7:** Repositorios de perfiles e historial Nmap separados, preparador SFTP con limpieza explicita, analizadores por formato y constructor independiente de ServerCommands. API compatible; suite completa de 454 pruebas aprobada.

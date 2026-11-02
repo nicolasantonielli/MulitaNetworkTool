@@ -13,8 +13,7 @@ Argv = list[str]
 class CommandFactory(ServerCommands):
 
     def __init__(self, binaries: Binaries, server_programs: PurePosixPath | None = None):
-        self._bin = binaries
-        self._server_programs = server_programs
+        super().__init__(binaries, server_programs)
 
     def interfaces(self) -> Argv:
         return [self._bin.ip, '-j', 'addr']
