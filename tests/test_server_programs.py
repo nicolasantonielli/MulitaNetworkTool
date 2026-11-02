@@ -242,7 +242,7 @@ class WebTest(unittest.TestCase):
         status, body = self.get(port, '/')
         self.assertEqual(status, 200)
         text = body.decode()
-        self.assertIn('Conexion establecida', text)
+        self.assertIn('Conexión establecida', text)
         self.assertIn('127.0.0.1', text)
         self.assertIn('/capturas/', text)
         self.assertEqual(self.get(port, '/', 'HEAD')[1], b'')
