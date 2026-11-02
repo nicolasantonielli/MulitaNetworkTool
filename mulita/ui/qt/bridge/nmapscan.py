@@ -32,6 +32,10 @@ class NmapController(SessionController):
         super().__init__(ctx, nmap)
         self._nmap = nmap
         self._clock = clock or (lambda: datetime.now().strftime('%H:%M:%S'))
+        self._preparing = False
+        self._run_generation = 0
+        self._view_request = 0
+        self._compare_request = 0
         self._phase = 'idle'
         self._progress = Progress()
         self._hosts: tuple[dict, ...] = ()
@@ -153,8 +157,13 @@ class NmapController(SessionController):
 
     @pyqtSlot(str, result=bool)
     def start(self, payload: str) -> bool:
-        if self._running or self._phase == 'starting':
+        if self._running or self._preparing:
             return False
+        self._preparing = True
+        self._run_generation += 1
+        generation = self._run_generation
+        self._view_request += 1
+        self._compare_request += 1
         self._stopping = False
         self._nmap.reset_cancel()
         self._fallback = ''
@@ -171,7 +180,8 @@ class NmapController(SessionController):
         dispatcher = self._ctx.dispatcher
         dispatcher.background(
             lambda: self._nmap.prepare(self._options(payload), self.simulated),
-            self._launch, self._rejected)
+            lambda prepared: self._prepared(generation, prepared),
+            lambda error: self._prepare_failed(generation, error))
         return True
 
     @pyqtSlot(result=bool)
@@ -188,18 +198,26 @@ class NmapController(SessionController):
 
     @pyqtSlot(str)
     def openRun(self, run_id: str) -> None:
-        if self._running or self._phase == 'starting':
+        if self._running or self._preparing:
             return
+        self._view_request += 1
+        request = self._view_request
         self._ctx.dispatcher.background(
-            lambda: self._nmap.load(run_id), self._opened, self._fail)
+            lambda: self._nmap.load(run_id),
+            lambda loaded: self._opened(loaded) if request == self._view_request else None,
+            lambda error: self._fail(error) if request == self._view_request else None)
 
     @pyqtSlot(str, str)
     def compareRuns(self, first: str, second: str) -> None:
         if not first or not second or first == second:
             self._fail(ValidationError(self._tr('nmapCompareNeed')))
             return
+        self._compare_request += 1
+        request = self._compare_request
         self._ctx.dispatcher.background(
-            lambda: self._nmap.compare(first, second), self._compared, self._fail)
+            lambda: self._nmap.compare(first, second),
+            lambda result: self._compared(result) if request == self._compare_request else None,
+            lambda error: self._fail(error) if request == self._compare_request else None)
 
     @pyqtSlot(str)
     def saveProfile(self, payload: str) -> None:
@@ -249,6 +267,22 @@ class NmapController(SessionController):
         self._version_error = error
         self.runChanged.emit()
 
+    def _prepared(self, generation, prepared):
+        if generation != self._run_generation:
+            self._nmap.discard(prepared)
+            return
+        try:
+            self._launch(prepared)
+        except Exception as error:
+            self._rejected(error)
+        finally:
+            self._preparing = False
+
+    def _prepare_failed(self, generation, error):
+        if generation == self._run_generation:
+            self._preparing = False
+            self._rejected(error)
+
     def _launch(self, prepared) -> None:
         if self._stopping:
             self._nmap.discard(prepared)
@@ -263,8 +297,11 @@ class NmapController(SessionController):
         self._profile = compiled.profile_id
         self._started = self._clock()
         dispatcher = self._ctx.dispatcher
+        generation = self._run_generation
         self._nmap.launch(
-            prepared, on_output=dispatcher.wrap(self._output), on_exit=dispatcher.wrap(self._exited))
+            prepared,
+            on_output=dispatcher.wrap(lambda text: self._output(text) if generation == self._run_generation else None),
+            on_exit=dispatcher.wrap(lambda code: self._exited(code) if generation == self._run_generation else None))
         self._set_running(True)
         self._phase = 'running'
         self.runChanged.emit()

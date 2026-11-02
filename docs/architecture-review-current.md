@@ -269,3 +269,5 @@ pruebas permanentes ni se aplicaron correcciones de producción.
 El análisis anterior describe be15570; las correcciones siguientes se verificaron después.
 
 - **R1 · 3.1.2:** Registro de tareas, cierre con espera y reinicio/apagado tras drenar; callbacks tardíos descartados. 43 pruebas relacionadas aprobadas.
+
+- **R2 · 3.1.3:** Se separo la preparacion del estado visual y se invalidaron respuestas antiguas; 32 pruebas aprobadas.
