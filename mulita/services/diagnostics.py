@@ -5,6 +5,7 @@ import os
 from pathlib import Path, PurePosixPath
 from typing import Optional
 
+from mulita.adapters.export_bundle import export_bundle
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
@@ -118,16 +119,18 @@ class PingService(ProcessSession):
             if path.exists():
                 raise ValidationError(message('nameExists'))
         try:
-            with table_path.open('w', encoding='utf-8', newline='') as handle:
-                writer = csv.writer(handle, lineterminator='\n')
-                writer.writerow([
-                    'sequence', 'source', 'ttl', 'time', 'status',
-                ])
-                for reply in replies:
+            with export_bundle((table_path, statics_path)) as staged:
+                table_path, statics_path = staged
+                with table_path.open('w', encoding='utf-8', newline='') as handle:
+                    writer = csv.writer(handle, lineterminator='\n')
                     writer.writerow([
-                        reply.seq, reply.source, reply.ttl, reply.time, _ping_status(reply),
+                        'sequence', 'source', 'ttl', 'time', 'status',
                     ])
-            _write_statics(statics_path, summary or PingSummary())
+                    for reply in replies:
+                        writer.writerow([
+                            reply.seq, reply.source, reply.ttl, reply.time, _ping_status(reply),
+                        ])
+                _write_statics(statics_path, summary or PingSummary())
         except OSError as exc:
             raise CommandFailedError(message('savePingFailed')) from exc
         if hasattr(os, 'sync'):

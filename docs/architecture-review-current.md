@@ -275,3 +275,5 @@ El análisis anterior describe be15570; las correcciones siguientes se verificar
 - **R3 · 3.1.4:** Catalogos en memoria y operaciones de perfiles en segundo plano; guardado atomico con error de persistencia. La vista previa valida sintaxis y prepare verifica archivos. 35 pruebas aprobadas.
 
 - **R4 · 3.1.5:** Se separaron notificaciones visuales y carga IPv4; una prueba QML verifica que idioma, tema y escala preservan la edicion y una carga real actualiza el formulario. 30 pruebas aprobadas.
+
+- **R5 · 3.1.6:** Exportacion Ping preparada en temporales y publicada sin sobrescribir, con rollback ante fallos; permite reintento. No garantiza atomicidad conjunta ante corte de energia. 43 pruebas aprobadas.
