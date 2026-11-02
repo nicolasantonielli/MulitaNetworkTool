@@ -7,7 +7,6 @@ from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 from mulita.core.errors import MulitaError
 from mulita.core.models import PING_COUNT, PING_INTERVAL, PING_SIZE, PingSummary, Range
 from mulita.core.parsers import parse_discovery_line, read_ping_line
-from mulita.presentation import texts
 from mulita.ui.qt.bridge.base import (BridgeContext, SessionController,
                                       TaskController)
 

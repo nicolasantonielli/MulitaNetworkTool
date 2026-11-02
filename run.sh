@@ -8,7 +8,6 @@
 # Uso, en el equipo:
 #   bash install-lite.sh 5  # o 7, según el panel instalado
 #   bash run.sh
-#   bash run.sh --tk
 
 # sh en Debian es dash y rechaza "pipefail". El resto del script es bash.
 if [ -z "${BASH_VERSION-}" ]; then

@@ -47,11 +47,11 @@ The required overlay files must already be available in the operating system's b
 
 Other displays and Raspberry Pi models are not covered by these predefined profiles. Raspberry Pi 5 is not established as a fully validated deployment target; the legacy DHT11 driver is explicitly skipped on that model.
 
-### Windows and legacy interface
+### Windows
 
 Windows is supported for development of the Qt Quick interface and selected simulations. Native Linux network management, raw Ethernet capture, GPIO access, and systemd service management require the Raspberry Pi environment.
 
-A legacy Tk interface is available through `--tk`. The Qt Quick interface is the primary interface; features and layout may differ in the legacy interface.
+Qt Quick is the only supported application interface.
 
 ## Available Functionality
 
@@ -233,7 +233,6 @@ Additional launch options:
 
 ```bash
 bash run.sh --test
-bash run.sh --tk
 bash run.sh --no-keyboard
 ```
 
@@ -343,10 +342,9 @@ Common options:
 run_windows_test.bat -NoUi -SkipTests
 run_windows_test.bat -SkipTests
 run_windows_test.bat -RecreateVenv
-run_windows_test.bat -TkLegacy
 ```
 
-`-NoUi -SkipTests` prepares the environment only. `-SkipTests` starts the interface without running tests. `-RecreateVenv` rebuilds the development environment. `-TkLegacy` selects the legacy interface.
+`-NoUi -SkipTests` prepares the environment only. `-SkipTests` starts the interface without running tests. `-RecreateVenv` rebuilds the development environment.
 
 If PowerShell policy prevents the launcher from running:
 
@@ -403,7 +401,6 @@ The installer reserves tty1 for the application and retains tty3 for local recov
 - **`mulita/services`:** diagnostic operations, network configuration, and service lifecycle management.
 - **`mulita/adapters`:** subprocess, storage, sensor, and hardware integrations.
 - **`mulita/ui/qt`:** Qt controllers, QML pages, reusable controls, and input handling.
-- **`mulita/ui/tk`:** legacy Tk interface.
 - **`scripts`:** installation configuration and runtime verification helpers.
 - **`tests`:** automated verification.
 - **`install-lite.sh`:** unified Raspberry Pi installer.

@@ -10,7 +10,7 @@ from typing import Sequence
 from mulita.adapters.sensors import Dht11Sensor, FixedClimateSensor
 from mulita.adapters.settings_store import JsonSettingsStore
 from mulita.adapters.subprocess_runner import SubprocessCommandRunner
-from mulita.config import AppConfig, Toolkit, load_config
+from mulita.config import AppConfig, load_config
 from mulita.core.commands import CommandFactory
 from mulita.core.models import Calibration
 from mulita.core.ports import ClimateSensor, CommandRunner, SettingsStore
@@ -102,9 +102,5 @@ def main(argv: Sequence[str] | None = None) -> None:
     logging.getLogger(__name__).info('Mulita %s', __version__)
     services = build_services(config)
 
-    if config.toolkit == Toolkit.TK:
-        from mulita.ui.tk.app import TkApplication
-        TkApplication(config, services).run()
-    else:
-        from mulita.ui.qt.app import QtApplication
-        sys.exit(QtApplication(config, services).run())
+    from mulita.ui.qt.app import QtApplication
+    sys.exit(QtApplication(config, services).run())

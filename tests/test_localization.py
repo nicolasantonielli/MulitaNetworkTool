@@ -171,6 +171,6 @@ class LocalizationTest(unittest.TestCase):
                     imports = ([node.module or ''] if isinstance(node, ast.ImportFrom)
                                else [alias.name for alias in node.names] if isinstance(node, ast.Import) else [])
                     for module in imports:
-                        if module.startswith(('mulita.presentation', 'mulita.ui', 'PyQt5', 'tkinter')):
+                        if module.startswith(('mulita.presentation', 'mulita.ui', 'PyQt5')):
                             violations.append(f'{path.name}:{node.lineno}:{module}')
         self.assertEqual(violations, [])

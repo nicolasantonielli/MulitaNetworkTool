@@ -21,7 +21,7 @@ de todos los hallazgos del informe.
   el selector global `_LANGUAGE` y la función mutante `use()`.
 - Los controladores Qt obtienen un traductor a partir de sus propias preferencias.
   Los mensajes estructurados se traducen antes de mostrar o serializar datos para
-  QML. Los errores de la interfaz Tk también se presentan con un idioma explícito.
+  QML, incluida la presentación de errores con un idioma explícito.
 - `WifiLink.facts()` y `PublicAddress.facts()` devuelven nombres de atributo
   estables. Sus etiquetas se traducen en `presentation.facts`.
 - Las etiquetas, agrupaciones y resúmenes visuales TLS se trasladaron desde

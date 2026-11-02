@@ -2,8 +2,5 @@
 # mediante install-lite.sh 5 o install-lite.sh 7. El entorno virtual utiliza
 # --system-site-packages para acceder a los paquetes del sistema.
 #
-# Interfaz anterior (bash run.sh --tk). ttkbootstrap 2.x movio los modulos toast y scrolled
-ttkbootstrap>=1.10,<2
-Pillow
 # Sensor DHT11, solo en la Raspberry Pi
 Adafruit_DHT; platform_machine == "armv7l" or platform_machine == "aarch64"

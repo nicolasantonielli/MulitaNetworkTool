@@ -6,7 +6,7 @@
 
 ## Conclusión
 
-La aplicación tiene una base útil organizada por capas, pero **no mantiene de forma consistente un bajo acoplamiento ni una alta cohesión**. El punto central de composición, la ejecución de comandos mediante una dependencia inyectada, los modelos de datos simples y las interfaces Qt y Tk separadas permiten mejorarla de manera incremental. Sin embargo, el estado global de idioma, la infraestructura concreta dentro de los servicios, las dependencias amplias de los controladores y la mezcla de responsabilidades de interfaz debilitan esos límites.
+La aplicación tiene una base útil organizada por capas, pero **no mantiene de forma consistente un bajo acoplamiento ni una alta cohesión**. El punto central de composición, la ejecución de comandos mediante una dependencia inyectada, los modelos de datos simples y la separación entre interfaz y servicios permiten mejorarla de manera incremental. Sin embargo, el estado global de idioma, la infraestructura concreta dentro de los servicios, las dependencias amplias de los controladores y la mezcla de responsabilidades de interfaz debilitan esos límites.
 
 Esta revisión no recomienda una reescritura completa. Los cambios de mayor valor son independizar los resultados del dominio respecto de la presentación, completar la inyección de dependencias en el límite de la aplicación y extraer componentes de interfaz cohesivos. La longitud de un archivo, por sí sola, no se considera un defecto.
 
@@ -16,7 +16,7 @@ No se modificó código de producción durante esta revisión.
 
 - El análisis sintáctico de Python y de las importaciones internas abarcó los 82 archivos Python de `mulita` —12.525 líneas—.
 - El inventario QML abarcó los 41 archivos QML —8.026 líneas—. La inspección manual se concentró en la estructura principal de la aplicación, la configuración, la navegación de inicio y los controles reutilizables.
-- También se examinaron el punto de entrada, los cuatro scripts auxiliares de instalación en Python, ambos scripts de shell, la composición de servicios, los adaptadores, la integración Qt/Tk y la organización de las pruebas.
+- También se examinaron el punto de entrada, los cuatro scripts auxiliares de instalación en Python, ambos scripts de shell, la composición de servicios, los adaptadores, la integración de la interfaz gráfica y la organización de las pruebas.
 - Se siguieron recorridos representativos desde una acción de interfaz hasta el servicio, la construcción del comando, el adaptador, la función de respuesta y la exportación.
 - Se intentó ejecutar la suite completa por descubrimiento y se ejecutaron por separado los 26 módulos de pruebas.
 - Se realizaron reproducciones pequeñas en memoria para comprobar el aislamiento del idioma, los errores de escritura de configuración y la derivación de rutas de almacenamiento.
@@ -114,7 +114,7 @@ Las dos implementaciones de `showStatic()` también difieren: el formulario Wi-F
 
 **Prioridad:** media desde el punto de vista arquitectónico.
 
-**Evidencias:** [`BridgeContext`](../mulita/ui/qt/bridge/base.py), en la línea 46, contiene el contenedor completo `Services`. `Controller`, en la línea 53, lo copia a cada controlador. [`Services`](../mulita/services/__init__.py) referencia implementaciones concretas de todas las funciones. Tk utiliza un `ScreenContext` igualmente amplio.
+**Evidencias:** [`BridgeContext`](../mulita/ui/qt/bridge/base.py), en la línea 46, contiene el contenedor completo `Services`. `Controller`, en la línea 53, lo copia a cada controlador. [`Services`](../mulita/services/__init__.py) referencia implementaciones concretas de todas las funciones.
 
 **Impacto:** las firmas de los constructores no expresan qué necesita cada controlador. Todos pueden acceder a todos los servicios y las dependencias de importación abarcan más que las de cada función. El patrón admite pruebas con objetos simulados, pero debilita la aplicación efectiva de los límites entre funciones.
 
@@ -144,7 +144,7 @@ Las dos implementaciones de `showStatic()` también difieren: el formulario Wi-F
 - `bootstrap.build_services()` centraliza la mayor parte de la construcción y la inyección de dependencias.
 - `CommandRunner`, `RunningCommand`, `SettingsStore` y `ClimateSensor` ofrecen límites útiles para sustituir implementaciones.
 - Los comandos se expresan principalmente como listas de argumentos y se ejecutan mediante un adaptador, no como cadenas de shell concatenadas.
-- Los módulos del núcleo no importan Qt ni Tk y los servicios no importan ninguna de las dos interfaces.
+- Los módulos del núcleo no importan bibliotecas gráficas y los servicios no importan la interfaz.
 - Muchos modelos son clases de datos inmutables y la validación y el análisis de formatos tienen pruebas considerables.
 - `ProcessSession`, `TaskController` y el despachador ofrecen mecanismos reutilizables de ciclo de vida y ejecución en hilos.
 - Las preferencias se guardan mediante reemplazo de archivos; los configuradores de pantalla conservan respaldos y admiten ejecuciones repetidas.

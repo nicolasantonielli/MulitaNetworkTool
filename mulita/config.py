@@ -60,24 +60,11 @@ class SensorSettings:
     temperature_offset: float = -6
 
 
-class Toolkit:
-    QT = 'qt'
-    TK = 'tk'
-
-
 @dataclass(frozen=True)
 class AppConfig:
     test_mode: bool = TEST
-    toolkit: str = Toolkit.QT
     settings_path: Path = Path.home() / '.config' / 'mulita' / 'settings.json'
     virtual_keyboard: bool = True
-    window_title: str = 'RED TEST'
-    window_width: int = 800
-    window_height: int = 480
-    default_theme: str = 'cosmo'
-    themes: tuple[str, ...] = (
-        'cosmo', 'darkly', 'pulse', 'lumen', 'litera',
-        'journal', 'solar', 'superhero', 'vapor', 'cyborg')
     capture_dir: PurePosixPath = Path.home() / 'capturas'
     default_capture_name: str = 'prueba'
     trace_dir: PurePosixPath = Path.home() / 'capturas' / 'trazas'
@@ -105,18 +92,16 @@ class AppConfig:
     update_remote: str = 'origin'
     update_branch: str = 'v3'
     service_name: str = 'mulita'
-    assets_dir: Path = PROJECT_ROOT / 'img'
     binaries: Binaries = field(default_factory=Binaries)
     sensor: SensorSettings = field(default_factory=SensorSettings)
 
 
 def load_config(argv: Sequence[str] = ()) -> AppConfig:
-    """`--test` o MULITA_TEST=1 activan el modo test; `--tk` vuelve a la interfaz anterior;
-    `--no-keyboard` desactiva el teclado virtual integrado."""
+    """`--test` o MULITA_TEST=1 activan el modo test;
+    `--no-keyboard` desactiva el teclado virtual integrado de Qt."""
     test_mode = TEST or '--test' in argv or os.environ.get('MULITA_TEST') == '1'
-    toolkit = Toolkit.TK if '--tk' in argv else Toolkit.QT
     paths = _installation_paths()
-    return AppConfig(**paths, test_mode=test_mode, toolkit=toolkit,
+    return AppConfig(**paths, test_mode=test_mode,
                      virtual_keyboard='--no-keyboard' not in argv)
 
 

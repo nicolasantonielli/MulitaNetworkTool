@@ -100,7 +100,6 @@ APT_PACKAGES=(
   python3-venv
   python3-pip
   python3-dev
-  python3-tk
   build-essential
   python3-pyqt5
   python3-pyqt5.qtquick
