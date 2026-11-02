@@ -16,6 +16,7 @@ The project also includes a Windows environment for interface development and se
 - [Windows development environment](#windows-development-environment)
 - [Verification and troubleshooting](#verification-and-troubleshooting)
 - [Project structure](#project-structure)
+- [License](#license)
 
 ## Compatibility and Requirements
 
@@ -381,3 +382,11 @@ The installer reserves tty1 for the application and retains tty3 for local recov
 - **`tests`:** automated verification.
 - **`install-lite.sh`:** unified Raspberry Pi installer.
 - **`run.sh`:** application launcher for an existing installation.
+
+## License
+
+The original code in this repository is licensed under the **GNU General Public License, version 3 only** (`GPL-3.0-only`), unless a file explicitly states otherwise. The complete license text is provided in [LICENSE](LICENSE).
+
+Commercial use, modification, and redistribution are permitted under the terms of GPLv3. When distributing covered software, recipients must receive the applicable license notices and access to the corresponding source code as required by the license. This software is provided without warranty, to the extent permitted by law.
+
+Third-party libraries, system packages, and external tools retain their respective licenses. The project license does not replace or modify the license terms of those components.
