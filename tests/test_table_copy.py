@@ -31,9 +31,9 @@ class TableCopyTest(unittest.TestCase):
         self.notifier = Notifier()
         self.toasts = []
         self.notifier.notified.connect(lambda *args: self.toasts.append(args))
-        ctx = BridgeContext(AppConfig(test_mode=True), services, None, self.notifier)
+        ctx = BridgeContext(AppConfig(test_mode=True), getattr(services, 'settings', None), None, self.notifier)
         self.ui = Appearance(ctx)
-        self.system = SystemController(ctx)
+        self.system = SystemController(ctx, getattr(services, 'maintenance', None), getattr(services, 'share', None))
         self.i18n = I18nController(ctx)
         self.copy = TextCopyController()
         self.app.installEventFilter(self.copy)

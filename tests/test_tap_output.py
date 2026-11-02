@@ -17,11 +17,7 @@ class TapOutputTest(unittest.TestCase):
         cls.app = qt_app()
 
     def setUp(self):
-        self.controller = TapController(BridgeContext(
-            config=AppConfig(capture_dir=PurePosixPath('/root/capturas')),
-            services=SimpleNamespace(tap=SimpleNamespace(is_running=False)),
-            dispatcher=QtDispatcher(),
-            notifier=Notifier()))
+        self.controller = TapController(BridgeContext(config=AppConfig(capture_dir=PurePosixPath('/root/capturas')), settings=getattr(SimpleNamespace(tap=SimpleNamespace(is_running=False)), 'settings', None), dispatcher=QtDispatcher(), notifier=Notifier()), getattr(SimpleNamespace(tap=SimpleNamespace(is_running=False)), 'tap', None))
 
     def test_raw_lines_keep_arrival_order_and_hide_the_folder(self):
         self.controller._output('/root/capturas/tap/sesion.pcap: listening on br-mulita\n')

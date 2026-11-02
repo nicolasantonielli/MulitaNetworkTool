@@ -42,8 +42,7 @@ class SettingsPersistenceTest(unittest.TestCase):
                 levels = []
                 backlight = SimpleNamespace(apply=levels.append, available=lambda: True)
                 service = SettingsService(store, backlight)
-                ctx = BridgeContext(AppConfig(test_mode=True),
-                                    SimpleNamespace(settings=service), None, Notifier())
+                ctx = BridgeContext(AppConfig(test_mode=True), getattr(SimpleNamespace(settings=service), 'settings', None), None, Notifier())
                 controller = SettingsController(ctx)
                 catalog = I18nController(ctx)
                 notifications, changes, catalog_changes = [], [], []
@@ -64,8 +63,7 @@ class SettingsPersistenceTest(unittest.TestCase):
     def test_successful_reset_notifies_after_preferences_are_saved(self):
         store = MemorySettingsStore(Settings(home=HomeOrder(screens=(('wifi',),))))
         service = SettingsService(store, SimpleNamespace(apply=lambda _: None))
-        ctx = BridgeContext(AppConfig(test_mode=True),
-                            SimpleNamespace(settings=service), None, Notifier())
+        ctx = BridgeContext(AppConfig(test_mode=True), getattr(SimpleNamespace(settings=service), 'settings', None), None, Notifier())
         controller = SettingsController(ctx)
         notifications = []
         ctx.notifier.notified.connect(lambda *args: notifications.append((args[0], store.load())))

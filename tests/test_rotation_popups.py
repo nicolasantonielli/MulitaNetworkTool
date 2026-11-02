@@ -37,7 +37,7 @@ class PopupRotationTest(unittest.TestCase):
         cls.app=qt_app()
     def test_popup_rotation(self):
         service=SettingsService(MemorySettingsStore(), FakeBacklight())
-        ctx=BridgeContext(AppConfig(test_mode=True), SimpleNamespace(settings=service),None,Notifier())
+        ctx=BridgeContext(AppConfig(test_mode=True), getattr(SimpleNamespace(settings=service), 'settings', None), None, Notifier())
         ui=Appearance(ctx);i18n=I18nController(ctx)
         engine=QQmlEngine()
         engine.rootContext().setContextProperty('ui',ui)

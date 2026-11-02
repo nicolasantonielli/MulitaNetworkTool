@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from mulita.services.diagnostics import TraceService
+    from mulita.services.diagnostics import PingService
+    from mulita.services.diagnostics import PortScanService
+    from mulita.services.diagnostics import DiscoveryService
+
 from collections import deque
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
@@ -18,8 +26,9 @@ def _limits(limits: Range) -> dict:
 class TraceController(TaskController):
     hopsChanged = pyqtSignal()
 
-    def __init__(self, ctx: BridgeContext):
+    def __init__(self, ctx: BridgeContext, trace: TraceService):
         super().__init__(ctx)
+        self._trace = trace
         self._hops: tuple = ()
 
     @pyqtProperty(str, notify=hopsChanged)
@@ -38,7 +47,7 @@ class TraceController(TaskController):
 
     @pyqtSlot(str)
     def trace(self, target: str) -> None:
-        self._task(lambda: self._services.trace.trace(target), self._show)
+        self._task(lambda: self._trace.trace(target), self._show)
 
     @pyqtSlot()
     def clear(self) -> None:
@@ -50,7 +59,7 @@ class TraceController(TaskController):
     @pyqtSlot(str)
     def save(self, filename: str) -> None:
         hops = self._hops
-        self._task(lambda: self._services.trace.save(hops, filename), self._saved)
+        self._task(lambda: self._trace.save(hops, filename), self._saved)
 
     def _show(self, hops: tuple) -> None:
         self._hops = tuple(hops)
@@ -66,8 +75,9 @@ class PingController(SessionController):
     repliesChanged = pyqtSignal()
     summaryChanged = pyqtSignal()
 
-    def __init__(self, ctx: BridgeContext):
-        super().__init__(ctx, ctx.services.ping)
+    def __init__(self, ctx: BridgeContext, ping: PingService):
+        super().__init__(ctx, ping)
+        self._ping = ping
         self._replies: tuple = ()
         self._summary = PingSummary()
         self._pending = ''
@@ -132,7 +142,7 @@ class PingController(SessionController):
         def saved(name):
             statics = name[:-4] + '.statics.csv' if name.endswith('.csv') else name
             self._ctx.notifier.success(self._tr('pingTitle'), self._tr('pingSaved', table=name, statics=statics))
-        self._export(lambda: self._services.ping.save(replies, summary, filename), saved)
+        self._export(lambda: self._ping.save(replies, summary, filename), saved)
 
     def _output(self, text: str) -> None:
         self._pending += text.replace('\r', '')
@@ -162,8 +172,9 @@ class PingController(SessionController):
 class PortScanController(TaskController):
     portsChanged = pyqtSignal()
 
-    def __init__(self, ctx: BridgeContext):
+    def __init__(self, ctx: BridgeContext, port_scan: PortScanService):
         super().__init__(ctx)
+        self._port_scan = port_scan
         self._ports: tuple = ()
 
     @pyqtProperty(str, notify=portsChanged)
@@ -178,7 +189,7 @@ class PortScanController(TaskController):
 
     @pyqtSlot(str)
     def scan(self, arguments: str) -> None:
-        self._task(lambda: self._services.port_scan.scan(arguments), self._show)
+        self._task(lambda: self._port_scan.scan(arguments), self._show)
 
     @pyqtSlot()
     def clear(self) -> None:
@@ -190,7 +201,7 @@ class PortScanController(TaskController):
     @pyqtSlot(str)
     def save(self, filename: str) -> None:
         found = self._ports
-        self._task(lambda: self._services.port_scan.save(found, filename), self._saved)
+        self._task(lambda: self._port_scan.save(found, filename), self._saved)
 
     def _show(self, found: tuple) -> None:
         self._ports = tuple(found)
@@ -205,8 +216,9 @@ class PortScanController(TaskController):
 class DiscoveryController(SessionController):
     hostsChanged = pyqtSignal()
 
-    def __init__(self, ctx: BridgeContext):
-        super().__init__(ctx, ctx.services.discovery)
+    def __init__(self, ctx: BridgeContext, discovery: DiscoveryService):
+        super().__init__(ctx, discovery)
+        self._discovery = discovery
         self._hosts: list = []
         self._pending = ''
         self._diagnostics: deque[str] = deque(maxlen=8)
@@ -250,7 +262,7 @@ class DiscoveryController(SessionController):
         if self._running:
             return
         found = tuple(self._hosts)
-        self._export(lambda: self._services.discovery.save(found, filename),
+        self._export(lambda: self._discovery.save(found, filename),
                      lambda name: self._ctx.notifier.success(self._tr('discoverTitle'), name))
 
     def _output(self, text: str) -> None:

@@ -26,7 +26,7 @@ class IPv4Controller(TaskController):
         self._interface_name = interface_name
         self._title_key = title_key
         self._config = EthernetConfig()
-        ctx.services.settings.subscribe(lambda _settings: self.loaded.emit())
+        ctx.settings.subscribe(lambda _settings: self.loaded.emit())
 
     @pyqtProperty(str, notify=loaded)
     def interfaceName(self) -> str:

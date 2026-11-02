@@ -96,8 +96,7 @@ class TouchPanelTest(unittest.TestCase):
     def test_qml_page_loads_counts_clicks_clears_and_restores_normal_on_exit(self):
         light = SimpleNamespace(apply=lambda _: None, available=lambda: False)
         settings = SettingsService(MemorySettingsStore(), light)
-        ctx = BridgeContext(AppConfig(test_mode=True), SimpleNamespace(settings=settings),
-                            None, Notifier())
+        ctx = BridgeContext(AppConfig(test_mode=True), getattr(SimpleNamespace(settings=settings), 'settings', None), None, Notifier())
         appearance = Appearance(ctx)
         i18n = I18nController(ctx)
         engine = QQmlEngine()

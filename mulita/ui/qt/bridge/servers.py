@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from mulita.services.servers import ServerService
+
 import json
 from copy import deepcopy
 from typing import Callable
@@ -23,8 +28,9 @@ class ServersController(Controller):
     rowsChanged = pyqtSignal()
     currentChanged = pyqtSignal()
 
-    def __init__(self, ctx: BridgeContext, clock: Callable[[], str] | None = None):
+    def __init__(self, ctx: BridgeContext, servers: ServerService, clock: Callable[[], str] | None = None):
         super().__init__(ctx)
+        self._servers = servers
         self._logs = {kind.id: ServerLog(kind, clock) if clock else ServerLog(kind) for kind in KINDS}
         self._states: dict[str, str] = {}
         self._stopping: set[str] = set()
@@ -88,7 +94,7 @@ class ServersController(Controller):
         self._set_state(kind, STARTING)
         self._notify_rows(kind)
         dispatcher = self._ctx.dispatcher
-        servers = self._services.servers
+        servers = self._servers
         on_output = dispatcher.wrap(lambda text: self._output(kind, text))
         on_exit = dispatcher.wrap(lambda code: self._exited(kind, code))
         dispatcher.background(
@@ -107,8 +113,8 @@ class ServersController(Controller):
         # y mantiene bloqueado un segundo arranque del mismo servidor.
         if kind in self._starting:
             return
-        self._services.servers.stop(kind)
-        if not self._services.servers.is_running(kind):
+        self._servers.stop(kind)
+        if not self._servers.is_running(kind):
             self._set_state(kind, IDLE)
 
     @pyqtSlot(str)
@@ -122,7 +128,7 @@ class ServersController(Controller):
         if kind not in self._logs:
             return
         rows = deepcopy(list(self._logs[kind].rows))
-        self._export(lambda: self._services.servers.save(kind, rows, filename),
+        self._export(lambda: self._servers.save(kind, rows, filename),
                      lambda name: self._ctx.notifier.success(self._tr(kind_by_id(kind).title), name))
 
     # --- Respuestas del proceso ---------------------------------------------------------
@@ -143,15 +149,15 @@ class ServersController(Controller):
     def _started(self, kind: str) -> None:
         self._starting.discard(kind)
         if kind in self._stopping:
-            self._services.servers.stop(kind)
-            if not self._services.servers.is_running(kind):
+            self._servers.stop(kind)
+            if not self._servers.is_running(kind):
                 self._exited(kind, self._early_exits.pop(kind, 0))
             return
         if kind in self._early_exits:
             self._exited(kind, self._early_exits.pop(kind))
             return
         # Un proceso que cae al instante avisa su salida antes que esta respuesta.
-        if self._states.get(kind) == STARTING and self._services.servers.is_running(kind):
+        if self._states.get(kind) == STARTING and self._servers.is_running(kind):
             self._set_state(kind, RUNNING)
 
     def _rejected(self, kind: str, error: Exception) -> None:
@@ -171,7 +177,7 @@ class ServersController(Controller):
         if kind in self._starting:
             self._early_exits[kind] = code
             return
-        if self._services.servers.is_running(kind):
+        if self._servers.is_running(kind):
             return
         if self._logs[kind].flush():
             self._notify_rows(kind)

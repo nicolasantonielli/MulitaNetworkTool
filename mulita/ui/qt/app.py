@@ -85,7 +85,7 @@ class QtApplication:
         self.app.installEventFilter(self._text_copy)
 
         notifier = Notifier()
-        ctx = BridgeContext(config=config, services=services, dispatcher=QtDispatcher(), notifier=notifier)
+        ctx = BridgeContext(config=config, settings=services.settings, dispatcher=QtDispatcher(), notifier=notifier)
         self._controllers = {
             'textCopy': self._text_copy,
             'touchTest': self._touch_test,
@@ -93,27 +93,27 @@ class QtApplication:
             'i18n': I18nController(ctx),
             'notifier': notifier,
             'settings': SettingsController(ctx),
-            'system': SystemController(ctx),
-            'network': NetworkController(ctx),
+            'system': SystemController(ctx, services.maintenance, services.share),
+            'network': NetworkController(ctx, services.interfaces),
             'interna': InternalEthernetController(ctx, services.ethernet),
             'wifiIp': IPv4Controller(ctx, services.wifi, lambda: 'Wi-Fi', 'wifiIp'),
-            'wifi': WifiController(ctx),
-            'capture': CaptureController(ctx),
-            'tap': TapController(ctx),
-            'trace': TraceController(ctx),
-            'ping': PingController(ctx),
-            'portScan': PortScanController(ctx),
-            'discovery': DiscoveryController(ctx),
-            'wakeOnLan': WakeOnLanController(ctx),
-            'climate': ClimateController(ctx),
-            'speedTest': SpeedTestController(ctx),
-            'publicIp': PublicIpController(ctx),
-            'macVendor': MacVendorController(ctx),
-            'files': FilesController(ctx),
-            'servers': ServersController(ctx),
-            'tls': TlsController(ctx),
-            'nmapScan': NmapController(ctx),
-            'switchPort': SwitchPortController(ctx),
+            'wifi': WifiController(ctx, services.wifi),
+            'capture': CaptureController(ctx, services.capture),
+            'tap': TapController(ctx, services.tap),
+            'trace': TraceController(ctx, services.trace),
+            'ping': PingController(ctx, services.ping),
+            'portScan': PortScanController(ctx, services.port_scan),
+            'discovery': DiscoveryController(ctx, services.discovery),
+            'wakeOnLan': WakeOnLanController(ctx, services.wake_on_lan),
+            'climate': ClimateController(ctx, services.climate),
+            'speedTest': SpeedTestController(ctx, services.speed_test),
+            'publicIp': PublicIpController(ctx, services.public_ip),
+            'macVendor': MacVendorController(ctx, services.mac_vendor),
+            'files': FilesController(ctx, services.files),
+            'servers': ServersController(ctx, services.servers),
+            'tls': TlsController(ctx, services.tls),
+            'nmapScan': NmapController(ctx, services.nmap),
+            'switchPort': SwitchPortController(ctx, services.switchport),
         }
 
         self.engine = QQmlApplicationEngine()

@@ -40,8 +40,8 @@ class SwitchPortControllerTest(unittest.TestCase):
         config = AppConfig(test_mode=True, capture_dir=Path(temp.name))
         self.services = build_services(config, runner=FakeRunner(), settings_store=MemorySettingsStore())
         self.dispatcher = Deferred()
-        self.ctx = BridgeContext(config, self.services, self.dispatcher, Notifier())
-        self.controller = SwitchPortController(self.ctx)
+        self.ctx = BridgeContext(config, getattr(self.services, 'settings', None), self.dispatcher, Notifier())
+        self.controller = SwitchPortController(self.ctx, getattr(self.services, 'switchport', None))
 
     def test_demo_is_marked_and_save_produces_a_report(self):
         self.controller.start('eth0', 60)

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, TYPE_CHECKING
 import json
 
 from PyQt5.QtCore import QObject, pyqtProperty, pyqtSignal, pyqtSlot
@@ -11,7 +11,8 @@ from mulita.config import AppConfig
 from mulita.core.errors import MulitaError
 from mulita.presentation.dispatcher import UiDispatcher
 from mulita.presentation.i18n import Translator
-from mulita.services import Services
+if TYPE_CHECKING:
+    from mulita.services.settings import SettingsService
 
 
 class Notifier(QObject):
@@ -47,7 +48,7 @@ class Console(QObject):
 @dataclass
 class BridgeContext:
     config: AppConfig
-    services: Services
+    settings: SettingsService | None
     dispatcher: UiDispatcher
     notifier: Notifier
 
@@ -58,7 +59,6 @@ class Controller(QObject):
     def __init__(self, ctx: BridgeContext):
         super().__init__()
         self._ctx = ctx
-        self._services = ctx.services
         self._saving = False
 
     @pyqtProperty(bool, notify=savingChanged)
@@ -86,7 +86,7 @@ class Controller(QObject):
 
     @property
     def translator(self) -> Translator:
-        settings = getattr(self._services, 'settings', None)
+        settings = self._ctx.settings
         return Translator(settings.current.language.value if settings is not None else 'es')
 
     def _tr(self, code: str, /, **parameters) -> str:

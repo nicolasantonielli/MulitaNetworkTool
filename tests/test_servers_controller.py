@@ -45,9 +45,7 @@ class ServersControllerTest(unittest.TestCase):
         self.notifier = Notifier()
         self.toasts = []
         self.notifier.notified.connect(lambda *args: self.toasts.append(args))
-        self.controller = ServersController(BridgeContext(
-            config=None, services=SimpleNamespace(servers=self.service),
-            dispatcher=QtDispatcher(), notifier=self.notifier), clock=lambda: '10:00:00')
+        self.controller = ServersController(BridgeContext(config=None, settings=getattr(SimpleNamespace(servers=self.service), 'settings', None), dispatcher=QtDispatcher(), notifier=self.notifier), getattr(SimpleNamespace(servers=self.service), 'servers', None), clock=lambda: '10:00:00')
 
     def pump(self, condition, seconds=3):
         deadline = time.time() + seconds

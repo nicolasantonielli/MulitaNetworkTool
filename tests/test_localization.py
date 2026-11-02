@@ -36,7 +36,7 @@ def settings(language='es', store=None):
 
 
 def context(service):
-    return BridgeContext(AppConfig(test_mode=True), SimpleNamespace(settings=service), None, Notifier())
+    return BridgeContext(AppConfig(test_mode=True), getattr(SimpleNamespace(settings=service), 'settings', None), None, Notifier())
 
 
 class LocalizationTest(unittest.TestCase):
@@ -46,7 +46,7 @@ class LocalizationTest(unittest.TestCase):
 
     def test_controllers_and_catalogs_are_independent_between_instances(self):
         spanish, english = settings('es'), settings('en')
-        first, second = WifiController(context(spanish)), WifiController(context(english))
+        first, second = WifiController(context(spanish), None), WifiController(context(english), None)
         first._link = second._link = WifiLink(ssid='Office')
         first_catalog = I18nController(context(spanish))
         second_catalog = I18nController(context(english))
@@ -118,8 +118,8 @@ class LocalizationTest(unittest.TestCase):
 
     def test_serialized_notes_are_localized_without_modifying_domain_messages(self):
         note = message('nmapPnWarn')
-        english = WifiController(context(settings('en')))
-        spanish = WifiController(context(settings('es')))
+        english = WifiController(context(settings('en')), None)
+        spanish = WifiController(context(settings('es')), None)
         self.assertEqual(json.loads(english._json([note])), [Translator('en').tr('nmapPnWarn')])
         self.assertEqual(json.loads(spanish._json([note])), [Translator('es').tr('nmapPnWarn')])
         self.assertEqual(str(note), 'nmapPnWarn')

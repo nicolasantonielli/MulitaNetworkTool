@@ -274,9 +274,7 @@ class ControllerTest(unittest.TestCase):
         self.notifier = Notifier()
         self.toasts = []
         self.notifier.notified.connect(lambda *args: self.toasts.append(args))
-        self.controller = TlsController(BridgeContext(
-            config=None, services=SimpleNamespace(tls=self.service),
-            dispatcher=QtDispatcher(), notifier=self.notifier), clock=lambda: '20261027-220000')
+        self.controller = TlsController(BridgeContext(config=None, settings=getattr(SimpleNamespace(tls=self.service), 'settings', None), dispatcher=QtDispatcher(), notifier=self.notifier), getattr(SimpleNamespace(tls=self.service), 'tls', None), clock=lambda: '20261027-220000')
         self.console = []
         self.controller.console.appended.connect(self.console.append)
 

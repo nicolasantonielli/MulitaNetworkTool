@@ -1,6 +1,11 @@
 """Escaneo Nmap visto desde QML: perfiles, avance, resultados e historial."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from mulita.services.nmapscan import NmapScanService
+
 import json
 import os
 from datetime import datetime
@@ -23,8 +28,9 @@ class NmapController(SessionController):
     compareChanged = pyqtSignal()
     filesChanged = pyqtSignal()
 
-    def __init__(self, ctx: BridgeContext, clock: Callable[[], str] | None = None):
-        super().__init__(ctx, ctx.services.nmap)
+    def __init__(self, ctx: BridgeContext, nmap: NmapScanService, clock: Callable[[], str] | None = None):
+        super().__init__(ctx, nmap)
+        self._nmap = nmap
         self._clock = clock or (lambda: datetime.now().strftime('%H:%M:%S'))
         self._phase = 'idle'
         self._progress = Progress()
@@ -48,7 +54,7 @@ class NmapController(SessionController):
 
     @pyqtProperty(str, notify=profilesChanged)
     def profilesJson(self) -> str:
-        return self._json(profiles_view(self._services.nmap.users()))
+        return self._json(profiles_view(self._nmap.users()))
 
     @pyqtProperty(str, constant=True)
     def checksJson(self) -> str:
@@ -80,7 +86,7 @@ class NmapController(SessionController):
 
     @pyqtProperty(str, notify=runChanged)
     def version(self) -> str:
-        return self._services.nmap.version
+        return self._nmap.version
 
     @pyqtProperty(str, notify=runChanged)
     def versionError(self) -> str:
@@ -109,7 +115,7 @@ class NmapController(SessionController):
 
     @pyqtProperty(str, notify=historyChanged)
     def historyJson(self) -> str:
-        return self._json(self._services.nmap.history())
+        return self._json(self._nmap.history())
 
     @pyqtProperty(str, notify=compareChanged)
     def compareJson(self) -> str:
@@ -122,7 +128,7 @@ class NmapController(SessionController):
     @pyqtSlot(str, result=str)
     def commandPreview(self, payload: str) -> str:
         try:
-            compiled = compile_scan(self._options(payload), self._saved(), self._services.nmap.resolve)
+            compiled = compile_scan(self._options(payload), self._saved(), self._nmap.resolve)
         except MulitaError as exc:
             return self._json({'ok': False, 'command': '', 'notes': [], 'error': self._render(exc)})
         except (TypeError, ValueError):
@@ -133,7 +139,7 @@ class NmapController(SessionController):
     def refresh(self) -> None:
         def task() -> str:
             try:
-                self._services.nmap.probe()
+                self._nmap.probe()
             except MulitaError as exc:
                 return self._render(exc)
             return ''
@@ -142,7 +148,7 @@ class NmapController(SessionController):
 
     @pyqtSlot()
     def refreshFiles(self) -> None:
-        self._files = self._services.nmap.list_files()
+        self._files = self._nmap.list_files()
         self.filesChanged.emit()
 
     @pyqtSlot(str, result=bool)
@@ -150,7 +156,7 @@ class NmapController(SessionController):
         if self._running or self._phase == 'starting':
             return False
         self._stopping = False
-        self._services.nmap.reset_cancel()
+        self._nmap.reset_cancel()
         self._fallback = ''
         self._progress = Progress()
         self._hosts = ()
@@ -164,7 +170,7 @@ class NmapController(SessionController):
         self.hostsChanged.emit()
         dispatcher = self._ctx.dispatcher
         dispatcher.background(
-            lambda: self._services.nmap.prepare(self._options(payload), self.simulated),
+            lambda: self._nmap.prepare(self._options(payload), self.simulated),
             self._launch, self._rejected)
         return True
 
@@ -177,7 +183,7 @@ class NmapController(SessionController):
     @pyqtSlot()
     def stop(self) -> None:
         self._stopping = True
-        self._services.nmap.request_cancel()
+        self._nmap.request_cancel()
         super().stop()
 
     @pyqtSlot(str)
@@ -185,7 +191,7 @@ class NmapController(SessionController):
         if self._running or self._phase == 'starting':
             return
         self._ctx.dispatcher.background(
-            lambda: self._services.nmap.load(run_id), self._opened, self._fail)
+            lambda: self._nmap.load(run_id), self._opened, self._fail)
 
     @pyqtSlot(str, str)
     def compareRuns(self, first: str, second: str) -> None:
@@ -193,13 +199,13 @@ class NmapController(SessionController):
             self._fail(ValidationError(self._tr('nmapCompareNeed')))
             return
         self._ctx.dispatcher.background(
-            lambda: self._services.nmap.compare(first, second), self._compared, self._fail)
+            lambda: self._nmap.compare(first, second), self._compared, self._fail)
 
     @pyqtSlot(str)
     def saveProfile(self, payload: str) -> None:
         try:
             data = self._options(payload)
-            saved = self._services.nmap.save_user(
+            saved = self._nmap.save_user(
                 str(data.get('profile') or ''), str(data.get('name') or ''),
                 str(data.get('description') or ''), str(data.get('custom') or ''))
         except MulitaError as exc:
@@ -211,7 +217,7 @@ class NmapController(SessionController):
     @pyqtSlot(str)
     def deleteProfile(self, profile_id: str) -> None:
         try:
-            self._services.nmap.delete_user(profile_id)
+            self._nmap.delete_user(profile_id)
         except MulitaError as exc:
             self._fail(exc)
             return
@@ -220,7 +226,7 @@ class NmapController(SessionController):
     @pyqtSlot(str)
     def duplicateProfile(self, profile_id: str) -> None:
         try:
-            saved = self._services.nmap.duplicate_user(profile_id)
+            saved = self._nmap.duplicate_user(profile_id)
         except MulitaError as exc:
             self._fail(exc)
             return
@@ -228,7 +234,7 @@ class NmapController(SessionController):
         self._ctx.notifier.success(self._tr('cyberNmap'), saved['name'])
 
     def _saved(self) -> dict[str, dict]:
-        return {item['id']: item for item in self._services.nmap.users()}
+        return {item['id']: item for item in self._nmap.users()}
 
     def _options(self, payload: str) -> dict:
         try:
@@ -245,7 +251,7 @@ class NmapController(SessionController):
 
     def _launch(self, prepared) -> None:
         if self._stopping:
-            self._services.nmap.discard(prepared)
+            self._nmap.discard(prepared)
             self._stopping = False
             self._phase = 'cancelled'
             self.runChanged.emit()
@@ -257,7 +263,7 @@ class NmapController(SessionController):
         self._profile = compiled.profile_id
         self._started = self._clock()
         dispatcher = self._ctx.dispatcher
-        self._services.nmap.launch(
+        self._nmap.launch(
             prepared, on_output=dispatcher.wrap(self._output), on_exit=dispatcher.wrap(self._exited))
         self._set_running(True)
         self._phase = 'running'
@@ -277,10 +283,10 @@ class NmapController(SessionController):
             self.progressChanged.emit()
 
     def _exited(self, code: int) -> None:
-        if self._services.nmap.is_running:
+        if self._nmap.is_running:
             return
         self._set_running(False)
-        outcome = self._services.nmap.outcome
+        outcome = self._nmap.outcome
         self._stopping = False
         if outcome is None:
             self._phase = 'error'

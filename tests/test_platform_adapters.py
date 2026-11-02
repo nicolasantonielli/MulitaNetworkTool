@@ -69,6 +69,17 @@ class PacketAdapterTest(unittest.TestCase):
 
 
 class ServiceBoundariesTest(unittest.TestCase):
+    def test_controllers_cannot_reach_global_service_container(self):
+        from dataclasses import fields
+        from mulita.ui.qt.bridge.base import BridgeContext
+        self.assertEqual({field.name for field in fields(BridgeContext)},
+                         {'config', 'settings', 'dispatcher', 'notifier'})
+        root = Path(__file__).resolve().parents[1] / 'mulita/ui/qt/bridge'
+        for path in root.glob('*.py'):
+            for node in ast.walk(ast.parse(path.read_text(encoding='utf-8'))):
+                if isinstance(node, ast.Attribute):
+                    self.assertNotIn(node.attr, ('services', '_services'), str(path))
+
     def test_a3_services_do_not_import_hardware_implementations(self):
         root = Path(__file__).resolve().parents[1] / 'mulita' / 'services'
         for name in ('settings.py', 'switchport.py', 'files.py'):

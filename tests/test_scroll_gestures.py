@@ -24,7 +24,7 @@ class ScrollGestureTest(unittest.TestCase):
     def setUp(self):
         light = SimpleNamespace(apply=lambda _: None, available=lambda: False)
         services = SimpleNamespace(settings=SettingsService(MemorySettingsStore(), light))
-        self.ui = Appearance(BridgeContext(AppConfig(test_mode=True), services, None, Notifier()))
+        self.ui = Appearance(BridgeContext(AppConfig(test_mode=True), getattr(services, 'settings', None), None, Notifier()))
         self.engine = QQmlEngine()
         self.engine.rootContext().setContextProperty('ui', self.ui)
         self.filter = TouchDebug()

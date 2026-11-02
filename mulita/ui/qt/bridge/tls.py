@@ -1,6 +1,11 @@
 """Analisis de certificados TLS con testssl.sh."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from mulita.services.tls import TlsService
+
 import re
 from collections import deque
 from datetime import datetime
@@ -18,12 +23,13 @@ from mulita.ui.qt.bridge.base import BridgeContext, SessionController
 class TlsController(SessionController):
     resultChanged = pyqtSignal()
 
-    def __init__(self, ctx: BridgeContext, clock: Callable[[], str] | None = None):
-        super().__init__(ctx, ctx.services.tls)
+    def __init__(self, ctx: BridgeContext, tls: TlsService, clock: Callable[[], str] | None = None):
+        super().__init__(ctx, tls)
+        self._tls = tls
         self._clock = clock or (lambda: datetime.now().strftime('%Y%m%d-%H%M%S'))
         self._findings: tuple = ()
-        if getattr(ctx.services, 'settings', None) is not None:
-            ctx.services.settings.subscribe(lambda _settings: self.resultChanged.emit())
+        if ctx.settings is not None:
+            ctx.settings.subscribe(lambda _settings: self.resultChanged.emit())
         self._target = ''
         self._stopping = False
         self._tail: deque[str] = deque(maxlen=6)
@@ -73,7 +79,7 @@ class TlsController(SessionController):
         if self._running:
             return
         findings, filename = self._findings, self._filename()
-        self._export(lambda: self._services.tls.save(findings, filename),
+        self._export(lambda: self._tls.save(findings, filename),
                      lambda name: self._ctx.notifier.success(self._tr('cyberTls'), name))
 
     def _filename(self) -> str:

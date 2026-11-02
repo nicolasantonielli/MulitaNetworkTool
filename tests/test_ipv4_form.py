@@ -22,7 +22,7 @@ class IPv4FormTest(unittest.TestCase):
 
     def test_loaded_profiles_clear_optional_fields_and_apply_current_values(self):
         service = SettingsService(MemorySettingsStore(), FakeBacklight())
-        ctx = BridgeContext(AppConfig(test_mode=True), SimpleNamespace(settings=service), None, Notifier())
+        ctx = BridgeContext(AppConfig(test_mode=True), getattr(SimpleNamespace(settings=service), 'settings', None), None, Notifier())
         controller = IPv4Controller(ctx, None, lambda: 'test0', 'wifiIp')
         appearance, catalog = Appearance(ctx), I18nController(ctx)
         engine = QQmlEngine()

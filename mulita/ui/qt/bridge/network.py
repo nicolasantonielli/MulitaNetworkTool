@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from mulita.services.network import InterfaceService
+    from mulita.services.network import CaptureService
+    from mulita.services.network import TapService
+
 import ipaddress
 import time
 from collections import deque
@@ -40,8 +47,9 @@ class NetworkController(Controller):
     primaryAddressChanged = pyqtSignal()
     refreshingChanged = pyqtSignal()
 
-    def __init__(self, ctx: BridgeContext):
+    def __init__(self, ctx: BridgeContext, interfaces: InterfaceService):
         super().__init__(ctx)
+        self._interface_service = interfaces
         self._interfaces: list[dict] = []
         self._primary = ''
         self._refreshing = False
@@ -64,7 +72,7 @@ class NetworkController(Controller):
         if self._refreshing:
             return
         self._set_refreshing(True)
-        self._ctx.dispatcher.background(self._services.interfaces.list_interfaces,
+        self._ctx.dispatcher.background(self._interface_service.list_interfaces,
                                         self._loaded, self._failed)
 
     def _loaded(self, interfaces: list[NetworkInterface]) -> None:
@@ -109,8 +117,9 @@ class NetworkController(Controller):
 class CaptureController(SessionController):
     activeFileChanged = pyqtSignal()
 
-    def __init__(self, ctx: BridgeContext):
-        super().__init__(ctx, ctx.services.capture)
+    def __init__(self, ctx: BridgeContext, capture: CaptureService):
+        super().__init__(ctx, capture)
+        self._capture = capture
         self._last_output: deque[str] = deque(maxlen=3)
         self._stopping = False
         self._active_file = ''
@@ -163,15 +172,16 @@ class TapController(Controller):
     activeFileChanged = pyqtSignal()
     linesChanged = pyqtSignal()
 
-    def __init__(self, ctx: BridgeContext):
+    def __init__(self, ctx: BridgeContext, tap: TapService):
         super().__init__(ctx)
+        self._tap = tap
         self._active_file = ''
         self._lines: list[str] = []
         self._pending = ''
 
     @pyqtProperty(bool, notify=runningChanged)
     def running(self) -> bool:
-        return self._services.tap.is_running
+        return self._tap.is_running
 
     @pyqtProperty(str, notify=linesChanged)
     def linesJson(self) -> str:
@@ -189,7 +199,7 @@ class TapController(Controller):
     def start(self, entrante: str, mirror: str, saliente: str, filename: str) -> None:
         from mulita.core.errors import MulitaError
         try:
-            name = self._services.tap.start(
+            name = self._tap.start(
                 TapConfig(entrante=entrante, mirror=mirror, saliente=saliente),
                 filename,
                 on_output=self._ctx.dispatcher.wrap(self._output),
@@ -206,7 +216,7 @@ class TapController(Controller):
 
     @pyqtSlot()
     def stop(self) -> None:
-        self._services.tap.stop()
+        self._tap.stop()
         self._active_file = ''
         self.activeFileChanged.emit()
         self.runningChanged.emit()
@@ -230,5 +240,5 @@ class TapController(Controller):
             self._take(self._pending)
             self._pending = ''
             self.linesChanged.emit()
-        if code != 0 and self._services.tap.is_running:
+        if code != 0 and self._tap.is_running:
             self._ctx.notifier.error(self._tr('tapStopped'), title='TAP')

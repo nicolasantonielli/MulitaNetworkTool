@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from mulita.services.switchport import SwitchPortService
+
 import os
 from copy import deepcopy
 
@@ -11,11 +16,12 @@ from mulita.ui.qt.bridge.base import Controller
 class SwitchPortController(Controller):
     changed = pyqtSignal()
 
-    def __init__(self, ctx):
+    def __init__(self, ctx, switchport: SwitchPortService):
         super().__init__(ctx)
+        self._switchport = switchport
         self._running = False
         self._report = {}
-        self._cancelled = self._services.switchport.cancelled
+        self._cancelled = self._switchport.cancelled
         self._status = ''
 
     @pyqtProperty(bool, notify=changed)
@@ -45,7 +51,7 @@ class SwitchPortController(Controller):
         self.changed.emit()
         dispatcher = self._ctx.dispatcher
         dispatcher.background(
-            lambda: self._services.switchport.scan(interface, seconds, self._cancelled,
+            lambda: self._switchport.scan(interface, seconds, self._cancelled,
                 dispatcher.wrap(self._updated), self.simulated), self._finished, self._failed)
 
     @pyqtSlot()
@@ -67,7 +73,7 @@ class SwitchPortController(Controller):
         if self._running or not self._report:
             return
         report = deepcopy(self._report)
-        self._export(lambda: self._services.switchport.save(report),
+        self._export(lambda: self._switchport.save(report),
                      lambda path: self._ctx.notifier.success(self._tr('switchTitle'), path.name))
 
     def _updated(self, report):

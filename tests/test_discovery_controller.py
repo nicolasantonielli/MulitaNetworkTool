@@ -30,9 +30,7 @@ class DiscoveryControllerTest(unittest.TestCase):
         self.notifier = Notifier()
         self.toasts = []
         self.notifier.notified.connect(lambda *args: self.toasts.append(args))
-        self.controller = DiscoveryController(BridgeContext(
-            config=None, services=SimpleNamespace(discovery=self.session),
-            dispatcher=QtDispatcher(), notifier=self.notifier))
+        self.controller = DiscoveryController(BridgeContext(config=None, settings=getattr(SimpleNamespace(discovery=self.session), 'settings', None), dispatcher=QtDispatcher(), notifier=self.notifier), getattr(SimpleNamespace(discovery=self.session), 'discovery', None))
 
     def output(self, text):
         self.runner.outputs[-1](text)

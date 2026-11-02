@@ -180,6 +180,16 @@ Las evidencias siguientes corresponden a la revisión original.
 
 ### A7. Los controladores reciben un contenedor global de servicios en lugar de sus dependencias concretas
 
+**Corregido el 2 de noviembre de 2026.** `BridgeContext` ya no contiene `Services`:
+solo configuración, preferencias/idioma, despachador y notificador. Cada controlador
+recibe explícitamente los servicios que utiliza; la fábrica Qt realiza la conexión.
+No hay accesos `ctx.services` ni `self._services` en los controladores. Los tipos
+de servicios específicos se importan solo para anotaciones, sin cargar el contenedor
+global desde la base. Una prueba arquitectónica protege este límite y las pruebas
+Wi-Fi suministran únicamente sus colaboradores. Verificación completa por módulos:
+**438 pruebas aprobadas**, más arranque Qt sin pantalla física.
+Las evidencias siguientes corresponden a la revisión original.
+
 **Prioridad:** media desde el punto de vista arquitectónico.
 
 **Evidencias:** [`BridgeContext`](../mulita/ui/qt/bridge/base.py), en la línea 46, contiene el contenedor completo `Services`. `Controller`, en la línea 53, lo copia a cada controlador. [`Services`](../mulita/services/__init__.py) referencia implementaciones concretas de todas las funciones.

@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from mulita.services.wifi import WifiService
+
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
@@ -14,13 +19,14 @@ class WifiController(TaskController):
     networksChanged = pyqtSignal()
     passwordRequested = pyqtSignal(str, bool, arguments=['ssid', 'secure'])
 
-    def __init__(self, ctx):
+    def __init__(self, ctx, wifi: WifiService):
         super().__init__(ctx)
+        self._wifi = wifi
         self._device = ''
         self._networks: tuple[WifiNetwork, ...] = ()
         self._link = WifiLink()
         self._saved = []
-        ctx.services.settings.subscribe(lambda _settings: self.networksChanged.emit())
+        ctx.settings.subscribe(lambda _settings: self.networksChanged.emit())
 
     @pyqtProperty(str, notify=networksChanged)
     def deviceName(self) -> str:
@@ -54,7 +60,7 @@ class WifiController(TaskController):
     def loadSaved(self) -> None:
         self._saved = []
         self.networksChanged.emit()
-        self._task(self._services.wifi.saved, self._show_saved)
+        self._task(self._wifi.saved, self._show_saved)
 
     def _show_saved(self, profiles) -> None:
         self._saved = profiles
@@ -70,7 +76,7 @@ class WifiController(TaskController):
             self._ctx.notifier.success('Wi-Fi', self._tr('wifiForgotten'))
             self.loadSaved()
 
-        self._task(lambda: self._services.wifi.forget_saved(uuid), forgotten)
+        self._task(lambda: self._wifi.forget_saved(uuid), forgotten)
 
     @pyqtSlot()
     def disconnect(self) -> None:
@@ -81,7 +87,7 @@ class WifiController(TaskController):
             self._ctx.notifier.success('Wi-Fi', self._tr('wifiDisconnected'))
             self.refresh()
 
-        self._task(self._services.wifi.disconnect, disconnected)
+        self._task(self._wifi.disconnect, disconnected)
 
     @pyqtProperty(str, notify=networksChanged)
     def networksJson(self) -> str:
@@ -95,18 +101,18 @@ class WifiController(TaskController):
 
     @pyqtSlot()
     def refresh(self) -> None:
-        self._task(self._services.wifi.scan, self._show)
+        self._task(self._wifi.scan, self._show)
 
     @pyqtSlot()
     def loadLink(self) -> None:
-        self._task(self._services.wifi.status, self._show_link)
+        self._task(self._wifi.status, self._show_link)
 
     @pyqtSlot()
     def saveLink(self) -> None:
         if self._busy or not self._link.facts():
             return
         link = self._link
-        self._task(lambda: self._services.wifi.save(link),
+        self._task(lambda: self._wifi.save(link),
                    lambda name: self._ctx.notifier.success(self._tr('wifiInfo'), name))
 
     @pyqtSlot(str, str, bool)
@@ -115,7 +121,7 @@ class WifiController(TaskController):
             self._ctx.notifier.success('Wi-Fi', self._tr('wifiConnected', name=name))
             self.refresh()
 
-        self._task(lambda: self._services.wifi.connect(ssid, password, secure), connected)
+        self._task(lambda: self._wifi.connect(ssid, password, secure), connected)
 
     @pyqtSlot(str, bool)
     def connectRemembered(self, ssid: str, secure: bool) -> None:
@@ -130,7 +136,7 @@ class WifiController(TaskController):
             else:
                 self.passwordRequested.emit(ssid, secure)
 
-        self._task(lambda: self._services.wifi.reconnect_saved(ssid), finished)
+        self._task(lambda: self._wifi.reconnect_saved(ssid), finished)
 
     def _show(self, found: tuple[str | None, tuple[WifiNetwork, ...]]) -> None:
         device, networks = found

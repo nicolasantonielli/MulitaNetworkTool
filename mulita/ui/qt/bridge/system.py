@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from mulita.services.system import MaintenanceService
+    from mulita.services.system import ShareService
+
 import json
 import os
 import sys
@@ -16,6 +22,11 @@ from mulita.version import __version__
 
 
 class SystemController(TaskController):
+    def __init__(self, ctx, maintenance: MaintenanceService, share: ShareService):
+        super().__init__(ctx)
+        self._maintenance = maintenance
+        self._share = share
+
 
     @pyqtSlot(str)
     def copyText(self, text: str) -> None:
@@ -30,7 +41,7 @@ class SystemController(TaskController):
 
     @pyqtSlot()
     def update(self) -> None:
-        self._task(self._services.maintenance.update,
+        self._task(self._maintenance.update,
                    lambda _result: self._ctx.notifier.success(self._tr('updateWord'), self._tr('updateDone')))
 
     @pyqtSlot()
@@ -39,15 +50,15 @@ class SystemController(TaskController):
             if result is None:
                 os.execv(sys.executable, [sys.executable, *sys.argv])
 
-        self._task(self._services.maintenance.reset, restarted)
+        self._task(self._maintenance.reset, restarted)
 
     @pyqtSlot()
     def poweroff(self) -> None:
-        self._task(self._services.maintenance.poweroff)
+        self._task(self._maintenance.poweroff)
 
     @pyqtSlot(str)
     def share(self, source: str) -> None:
-        self._services.share.share(source)
+        self._share.share(source)
         self._ctx.notifier.info(self._tr('share'), self._tr('shareSoon'))
 
 
@@ -58,11 +69,11 @@ class SettingsController(Controller):
     def __init__(self, ctx: BridgeContext):
         super().__init__(ctx)
         self._brightness_error = ''
-        ctx.services.settings.subscribe(lambda _settings: self.changed.emit())
+        ctx.settings.subscribe(lambda _settings: self.changed.emit())
 
     @property
     def _current(self) -> Settings:
-        return self._services.settings.current
+        return self._ctx.settings.current
 
     @pyqtProperty(str, notify=changed)
     def theme(self) -> str:
@@ -86,7 +97,7 @@ class SettingsController(Controller):
     @pyqtSlot(int)
     def setRotation(self, angle: int) -> None:
         try:
-            self._services.settings.set_rotation(angle)
+            self._ctx.settings.set_rotation(angle)
         except MulitaError as exc:
             self._fail(exc)
 
@@ -97,7 +108,7 @@ class SettingsController(Controller):
     @pyqtSlot(bool)
     def setResizeTiles(self, value: bool) -> None:
         try:
-            self._services.settings.set_resize_tiles(value)
+            self._ctx.settings.set_resize_tiles(value)
         except MulitaError as exc:
             self._fail(exc)
 
@@ -107,7 +118,7 @@ class SettingsController(Controller):
 
     @pyqtProperty(bool, constant=True)
     def brightnessReady(self) -> bool:
-        return self._services.settings.backlight_ready()
+        return self._ctx.settings.backlight_ready()
 
     @pyqtProperty(str, notify=changed)
     def language(self) -> str:
@@ -120,21 +131,21 @@ class SettingsController(Controller):
     @pyqtSlot(str)
     def setLanguage(self, value: str) -> None:
         try:
-            self._services.settings.set_language(value)
+            self._ctx.settings.set_language(value)
         except MulitaError as exc:
             self._fail(exc)
 
     @pyqtSlot(str)
     def setTheme(self, value: str) -> None:
         try:
-            self._services.settings.set_theme(value)
+            self._ctx.settings.set_theme(value)
         except MulitaError as exc:
             self._fail(exc)
 
     @pyqtSlot(float)
     def setScale(self, value: float) -> None:
         try:
-            self._services.settings.set_scale(value)
+            self._ctx.settings.set_scale(value)
         except MulitaError as exc:
             self._fail(exc)
 
@@ -146,14 +157,14 @@ class SettingsController(Controller):
     def setHomeScreens(self, order_json: str) -> None:
         try:
             screens = json.loads(order_json or '[]')
-            self._services.settings.set_home_screens(screens)
+            self._ctx.settings.set_home_screens(screens)
         except (MulitaError, ValueError) as exc:
             self._fail(exc if isinstance(exc, MulitaError) else ValidationError(self._tr('badTileOrder')))
 
     @pyqtSlot()
     def resetTileOrder(self) -> None:
         try:
-            self._services.settings.reset_tile_order()
+            self._ctx.settings.reset_tile_order()
         except MulitaError as exc:
             self._fail(exc)
             return
@@ -162,7 +173,7 @@ class SettingsController(Controller):
     @pyqtSlot(float)
     def setBrightness(self, value: float) -> None:
         try:
-            self._services.settings.set_brightness(value)
+            self._ctx.settings.set_brightness(value)
         except MulitaError as exc:
             message = self._render(exc)
             if message != self._brightness_error:
@@ -178,8 +189,8 @@ class I18nController(Controller):
 
     def __init__(self, ctx: BridgeContext):
         super().__init__(ctx)
-        self._language = ctx.services.settings.current.language.value
-        ctx.services.settings.subscribe(self._apply)
+        self._language = ctx.settings.current.language.value
+        ctx.settings.subscribe(self._apply)
 
     def _apply(self, settings: Settings) -> None:
         chosen = settings.language.value
@@ -209,8 +220,8 @@ class Appearance(Controller):
 
     def __init__(self, ctx: BridgeContext):
         super().__init__(ctx)
-        self._load(ctx.services.settings.current)
-        ctx.services.settings.subscribe(self._reload)
+        self._load(ctx.settings.current)
+        ctx.settings.subscribe(self._reload)
 
     def _load(self, settings: Settings) -> None:
         self._settings = settings

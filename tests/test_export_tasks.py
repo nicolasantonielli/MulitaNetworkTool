@@ -43,9 +43,8 @@ class ExportTasksTest(unittest.TestCase):
             return 'wifi.csv'
         settings = SimpleNamespace(subscribe=lambda _: None,
                                    current=SimpleNamespace(language=SimpleNamespace(value='es')))
-        ctx = BridgeContext(None, SimpleNamespace(wifi=SimpleNamespace(save=save), settings=settings),
-                            QtDispatcher(), Notifier())
-        controller = WifiController(ctx)
+        ctx = BridgeContext(None, getattr(SimpleNamespace(wifi=SimpleNamespace(save=save), settings=settings), 'settings', None), QtDispatcher(), Notifier())
+        controller = WifiController(ctx, getattr(SimpleNamespace(wifi=SimpleNamespace(save=save), settings=settings), 'wifi', None))
         controller._link = WifiLink(ssid='before')
         notifications, ticks = [], []
         ctx.notifier.notified.connect(lambda *args: notifications.append(args))
@@ -69,8 +68,7 @@ class ExportTasksTest(unittest.TestCase):
         received = []
         service = SimpleNamespace(cancelled=threading.Event(),
                                   save=lambda report: received.append(report) or Path('saved.json'))
-        controller = SwitchPortController(BridgeContext(
-            None, SimpleNamespace(switchport=service), dispatcher, Notifier()))
+        controller = SwitchPortController(BridgeContext(None, getattr(SimpleNamespace(switchport=service), 'settings', None), dispatcher, Notifier()), getattr(SimpleNamespace(switchport=service), 'switchport', None))
         controller._report = {'neighbors': [{'name': 'before'}]}
         controller.save()
         controller._report['neighbors'][0]['name'] = 'after'
@@ -82,7 +80,7 @@ class ExportTasksTest(unittest.TestCase):
 
     def test_export_failure_unlocks_retry_and_notifies(self):
         dispatcher, notifier = Deferred(), Notifier()
-        controller = Controller(BridgeContext(None, SimpleNamespace(), dispatcher, notifier))
+        controller = Controller(BridgeContext(None, getattr(SimpleNamespace(), 'settings', None), dispatcher, notifier))
         notifications = []
         notifier.notified.connect(lambda *args: notifications.append(args))
         controller._export(lambda: None, lambda _: self.fail('unexpected success'))

@@ -17,7 +17,7 @@ class IPv4ControllerTest(unittest.TestCase):
         dispatcher = SimpleNamespace(background=lambda task, ok, fail: ok(task()))
         settings = SimpleNamespace(subscribe=lambda fn: None,
                                    current=SimpleNamespace(language=SimpleNamespace(value='es')))
-        return BridgeContext(None, SimpleNamespace(settings=settings), dispatcher, Notifier())
+        return BridgeContext(None, getattr(SimpleNamespace(settings=settings), 'settings', None), dispatcher, Notifier())
 
     def test_ipv4_uses_only_shared_contract_and_has_no_vlan_actions(self):
         network = SimpleNamespace(read=Mock(return_value=EthernetConfig()),
