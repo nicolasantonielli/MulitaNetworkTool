@@ -53,11 +53,36 @@ class BridgeContext:
 
 
 class Controller(QObject):
+    savingChanged = pyqtSignal()
 
     def __init__(self, ctx: BridgeContext):
         super().__init__()
         self._ctx = ctx
         self._services = ctx.services
+        self._saving = False
+
+    @pyqtProperty(bool, notify=savingChanged)
+    def saving(self) -> bool:
+        return self._saving
+
+    def _export(self, task, on_success) -> None:
+        """Una exportación por controlador, con respuestas en el hilo gráfico."""
+        if self._saving:
+            return
+        self._saving = True
+        self.savingChanged.emit()
+
+        def finished(callback, value):
+            self._saving = False
+            self.savingChanged.emit()
+            callback(value)
+
+        try:
+            self._ctx.dispatcher.background(
+                task, lambda value: finished(on_success, value),
+                lambda error: finished(self._fail, error))
+        except Exception as error:
+            finished(self._fail, error)
 
     @property
     def translator(self) -> Translator:

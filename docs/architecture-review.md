@@ -154,6 +154,20 @@ Las dos implementaciones de `showStatic()` también difieren: el formulario Wi-F
 
 ### A6. Las exportaciones no utilizan consistentemente el mecanismo de ejecución asíncrona
 
+**Corregido el 2 de noviembre de 2026.** Wi-Fi e IP pública usan `_task()`;
+Ping, descubrimiento, TLS, servidores y switch usan `_export()` con el mismo
+despachador de segundo plano, estado `saving` y rechazo de duplicados.
+Los datos se capturan antes de lanzar el trabajo; informes y registros mutables
+se copian en profundidad. Las notificaciones vuelven al hilo gráfico.
+Se conserva por ahora la sincronización existente en segundo plano para no
+reducir las garantías de escritura de las exportaciones; reemplazarla por
+durabilidad por archivo requiere validar el almacenamiento de destino.
+Se corrigió además una conversión de texto inválida en la selección para exportación
+USB por lotes. Verificación: 77 pruebas aprobadas, incluido guardado demorado
+con un evento Qt atendido mientras el trabajador permanece bloqueado, copia
+independiente del informe, rechazo de duplicados y reintento tras error.
+Las evidencias siguientes corresponden a la revisión original.
+
 **Prioridad:** media para la capacidad de respuesta de la interfaz.
 
 **Evidencias:** [`WifiController.saveLink()`](../mulita/ui/qt/bridge/wifi.py), en la línea 106, llama directamente a `WifiService.save()` desde un slot Qt. [`mulita/services/wifi.py:60`](../mulita/services/wifi.py) ejecuta `os.sync()` después de escribir. Otros controladores también guardan directamente, mientras las búsquedas y conexiones utilizan `TaskController._task()`.

@@ -72,12 +72,9 @@ class TlsController(SessionController):
         """Guarda el resultado como CSV. El nombre lleva el servidor y la hora."""
         if self._running:
             return
-        try:
-            name = self._services.tls.save(self._findings, self._filename())
-        except MulitaError as exc:
-            self._fail(exc)
-            return
-        self._ctx.notifier.success(self._tr('cyberTls'), name)
+        findings, filename = self._findings, self._filename()
+        self._export(lambda: self._services.tls.save(findings, filename),
+                     lambda name: self._ctx.notifier.success(self._tr('cyberTls'), name))
 
     def _filename(self) -> str:
         slug = re.sub(r'[^A-Za-z0-9._-]+', '-', self._target.rsplit(':', 1)[0]).strip('-._')

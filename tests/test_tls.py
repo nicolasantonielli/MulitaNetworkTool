@@ -375,6 +375,7 @@ class ControllerTest(unittest.TestCase):
         self.controller.start('https://Example.com:8443/inicio', 'certificate')
         self.finish()
         self.controller.save()
+        self.pump(lambda: not self.controller.saving)
         self.assertEqual(self.toasts[-1][:1], ('success',))
         self.assertEqual(self.toasts[-1][2], 'tls-Example.com-20261027-220000.csv')
         self.assertTrue((Path(self.tmp.name) / 'tls' / 'tls-Example.com-20261027-220000.csv').is_file())
@@ -383,16 +384,19 @@ class ControllerTest(unittest.TestCase):
         self.controller.start('[2001:db8::1]:8443', 'certificate')
         self.finish()
         self.controller.save()
+        self.pump(lambda: not self.controller.saving)
         self.assertEqual(self.toasts[-1][2], 'tls-2001-db8-1-20261027-220000.csv')
 
     def test_save_without_results_is_an_error(self):
         self.controller.save()
+        self.pump(lambda: not self.controller.saving)
         self.assertEqual(self.toasts[-1][0], 'error')
         self.assertEqual(list((Path(self.tmp.name) / 'tls').iterdir()), [])
 
     def test_save_is_ignored_while_scanning(self):
         self.controller.start('example.com', 'certificate')
         self.controller.save()
+        self.pump(lambda: not self.controller.saving)
         self.assertEqual(self.toasts, [])
 
 

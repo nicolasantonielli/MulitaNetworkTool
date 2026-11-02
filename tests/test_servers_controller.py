@@ -231,8 +231,10 @@ class ServersControllerTest(unittest.TestCase):
         self.start('ntp')
         self.output('1.1.1.1\tHora entregada (NTPv4)\n')
         self.controller.save('ntp', 'ntp-prueba')
+        self.pump(lambda: not self.controller.saving)
         self.assertEqual(self.toasts[-1], ('success', tr('srvNtp'), 'ntp-prueba.csv'))
         self.controller.save('ntp', 'ntp-prueba')
+        self.pump(lambda: not self.controller.saving)
         self.assertEqual(self.toasts[-1][0], 'error')
 
     def test_clear_empties_the_log(self):

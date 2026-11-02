@@ -105,12 +105,9 @@ class WifiController(TaskController):
     def saveLink(self) -> None:
         if self._busy or not self._link.facts():
             return
-        try:
-            name = self._services.wifi.save(self._link)
-        except MulitaError as exc:
-            self._fail(exc)
-            return
-        self._ctx.notifier.success(self._tr('wifiInfo'), name)
+        link = self._link
+        self._task(lambda: self._services.wifi.save(link),
+                   lambda name: self._ctx.notifier.success(self._tr('wifiInfo'), name))
 
     @pyqtSlot(str, str, bool)
     def connectTo(self, ssid: str, password: str, secure: bool) -> None:

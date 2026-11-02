@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from copy import deepcopy
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
@@ -65,12 +66,9 @@ class SwitchPortController(Controller):
     def save(self):
         if self._running or not self._report:
             return
-        try:
-            path = self._services.switchport.save(self._report)
-        except OSError as exc:
-            self._fail(exc)
-            return
-        self._ctx.notifier.success(self._tr('switchTitle'), path.name)
+        report = deepcopy(self._report)
+        self._export(lambda: self._services.switchport.save(report),
+                     lambda path: self._ctx.notifier.success(self._tr('switchTitle'), path.name))
 
     def _updated(self, report):
         self._report = report

@@ -168,12 +168,8 @@ class PublicIpController(TaskController):
         info = self._info
         if info is None or self._busy:
             return
-        try:
-            name = self._services.public_ip.save(info)
-        except MulitaError as exc:
-            self._fail(exc)
-            return
-        self._ctx.notifier.success(self._tr('pubTitle'), name)
+        self._task(lambda: self._services.public_ip.save(info),
+                   lambda name: self._ctx.notifier.success(self._tr('pubTitle'), name))
 
     def _show(self, info) -> None:
         self._info, self._status = info, ''
@@ -222,8 +218,8 @@ def _picked(payload: str) -> list[tuple[str, str]]:
     for row in data if isinstance(data, list) else []:
         if not isinstance(row, dict):
             continue
-        place = smessage(row.get('place') or '')
-        name = smessage(row.get('name') or '')
+        place = str(row.get('place') or '')
+        name = str(row.get('name') or '')
         if place and name:
             items.append((place, name))
     if not items:

@@ -128,13 +128,11 @@ class PingController(SessionController):
     def save(self, filename: str) -> None:
         if self._running:
             return
-        try:
-            name = self._services.ping.save(self._replies, self._summary, filename)
-        except MulitaError as exc:
-            self._fail(exc)
-            return
-        statics = name[:-4] + '.statics.csv' if name.endswith('.csv') else name
-        self._ctx.notifier.success(self._tr('pingTitle'), self._tr('pingSaved', table=name, statics=statics))
+        replies, summary = self._replies, self._summary
+        def saved(name):
+            statics = name[:-4] + '.statics.csv' if name.endswith('.csv') else name
+            self._ctx.notifier.success(self._tr('pingTitle'), self._tr('pingSaved', table=name, statics=statics))
+        self._export(lambda: self._services.ping.save(replies, summary, filename), saved)
 
     def _output(self, text: str) -> None:
         self._pending += text.replace('\r', '')
@@ -252,12 +250,8 @@ class DiscoveryController(SessionController):
         if self._running:
             return
         found = tuple(self._hosts)
-        try:
-            name = self._services.discovery.save(found, filename)
-        except MulitaError as exc:
-            self._fail(exc)
-            return
-        self._ctx.notifier.success(self._tr('discoverTitle'), name)
+        self._export(lambda: self._services.discovery.save(found, filename),
+                     lambda name: self._ctx.notifier.success(self._tr('discoverTitle'), name))
 
     def _output(self, text: str) -> None:
         self._pending += text.replace('\r', '')

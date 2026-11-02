@@ -50,6 +50,7 @@ class SwitchPortControllerTest(unittest.TestCase):
         self.assertFalse(self.controller.running)
         self.assertTrue(json.loads(self.controller.reportJson)['simulated'])
         self.controller.save()
+        self.dispatcher.finish()
         self.assertEqual(len(list((self.ctx.config.capture_dir / 'puerto-switch').glob('*.json'))), 1)
 
     def test_cancel_before_worker_starts_is_preserved_and_restart_is_blocked(self):
@@ -75,6 +76,7 @@ class SwitchPortControllerTest(unittest.TestCase):
         self.controller.start('eth0', 60)
         self.dispatcher.finish()
         self.controller.save()
+        self.dispatcher.finish()
         self.controller.clear()
         self.assertEqual(json.loads(self.controller.reportJson), {})
         self.assertEqual(self.controller.status, '')

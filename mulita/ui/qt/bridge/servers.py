@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from typing import Callable
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
@@ -120,12 +121,9 @@ class ServersController(Controller):
     def save(self, kind: str, filename: str) -> None:
         if kind not in self._logs:
             return
-        try:
-            name = self._services.servers.save(kind, list(self._logs[kind].rows), filename)
-        except MulitaError as exc:
-            self._fail(exc)
-            return
-        self._ctx.notifier.success(self._tr(kind_by_id(kind).title), name)
+        rows = deepcopy(list(self._logs[kind].rows))
+        self._export(lambda: self._services.servers.save(kind, rows, filename),
+                     lambda name: self._ctx.notifier.success(self._tr(kind_by_id(kind).title), name))
 
     # --- Respuestas del proceso ---------------------------------------------------------
 
