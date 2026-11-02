@@ -49,7 +49,8 @@ class SettingsStore(ABC):
     def load(self) -> Settings: ...
 
     @abstractmethod
-    def save(self, settings: Settings) -> None: ...
+    def save(self, settings: Settings) -> None:
+        """Guarda las preferencias o lanza PersistenceError ante fallas de almacenamiento."""
 
 
 class ClimateSensor(ABC):

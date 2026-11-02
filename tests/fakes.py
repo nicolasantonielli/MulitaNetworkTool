@@ -62,3 +62,32 @@ class FakeRunner(CommandRunner):
         handle = FakeCommand(on_exit)
         self.handles.append(handle)
         return handle
+
+
+class FakeBacklight:
+    def available(self):
+        return False
+
+    def apply(self, percent):
+        pass
+
+
+class FakeStorage:
+    def __init__(self, drives=()):
+        self.drives = drives
+        self.syncs = 0
+
+    def list_drives(self):
+        return tuple(self.drives)
+
+    def folder(self, drive_id):
+        from pathlib import Path
+        from mulita.core.errors import ValidationError
+        from mulita.core.messages import message
+        for drive in self.drives:
+            if drive.device == drive_id:
+                return Path(drive.mountpoint)
+        raise ValidationError(message('usbMissing'))
+
+    def sync(self):
+        self.syncs += 1

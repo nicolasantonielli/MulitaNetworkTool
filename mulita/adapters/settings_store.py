@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 from mulita.core.ports import SettingsStore
-from mulita.core.errors import CommandFailedError
+from mulita.core.errors import PersistenceError
 from mulita.core.messages import message
 from mulita.core.settings import Settings, settings_from_dict
 
@@ -36,7 +36,7 @@ class JsonSettingsStore(SettingsStore):
             temporary.write_text(json.dumps(settings.to_dict(), indent=2), encoding='utf-8')
             os.replace(temporary, self._path)
         except OSError as exc:
-            raise CommandFailedError(message('settingsSaveFailed')) from exc
+            raise PersistenceError(message('settingsSaveFailed')) from exc
         finally:
             try:
                 temporary.unlink(missing_ok=True)

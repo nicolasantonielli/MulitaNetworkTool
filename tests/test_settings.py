@@ -9,11 +9,12 @@ from unittest.mock import patch
 from mulita.adapters.backlight import MailboxBacklight, PanelBacklight, SysfsBacklight
 from mulita.adapters.settings_store import JsonSettingsStore, MemorySettingsStore
 from mulita.core import settings as rules
-from mulita.core.errors import CommandFailedError, ValidationError
+from mulita.core.errors import CommandFailedError, PersistenceError, ValidationError
 from mulita.core.settings import (CYBER_ORDER, NETWORK_ORDER, DisplaySettings,
                                  Language, Settings, Theme)
 from mulita.presentation.theme import Metrics
 from mulita.services.settings import SettingsService
+from tests.fakes import FakeBacklight
 
 
 class DisplayRulesTest(unittest.TestCase):
@@ -25,7 +26,7 @@ class DisplayRulesTest(unittest.TestCase):
     def test_tile_resize_setting_survives_save_and_reload(self):
         with tempfile.TemporaryDirectory() as directory:
             store = JsonSettingsStore(Path(directory) / 'settings.json')
-            service = SettingsService(store)
+            service = SettingsService(store, FakeBacklight())
             notifications = []
             service.subscribe(notifications.append)
             service.set_resize_tiles(False)
@@ -123,6 +124,21 @@ class JsonSettingsStoreTest(unittest.TestCase):
         self.path.parent.mkdir(parents=True)
         self.path.write_text('{no es json', encoding='utf-8')
         self.assertEqual(self.store.load(), Settings())
+
+    def test_storage_failures_preserve_saved_preferences_and_original_cause(self):
+        original = Settings(theme=Theme.CLARO)
+        self.store.save(original)
+        for operation in ('pathlib.Path.mkdir', 'pathlib.Path.write_text',
+                          'mulita.adapters.settings_store.os.replace'):
+            with self.subTest(operation=operation):
+                cause = OSError('storage unavailable')
+                with patch(operation, side_effect=cause):
+                    with self.assertRaises(PersistenceError) as caught:
+                        self.store.save(Settings())
+                self.assertEqual(caught.exception.code, 'settingsSaveFailed')
+                self.assertIs(caught.exception.__cause__, cause)
+                self.assertEqual(self.store.load(), original)
+                self.assertFalse(self.path.with_suffix('.tmp').exists())
 
 
 class _MemoryBacklight:

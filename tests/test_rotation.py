@@ -12,13 +12,14 @@ from mulita.adapters.settings_store import JsonSettingsStore
 from mulita.core.errors import ValidationError
 from mulita.core.settings import settings_from_dict
 from mulita.services.settings import SettingsService
+from tests.fakes import FakeBacklight
 
 
 class RotationSettingsTest(unittest.TestCase):
     def test_four_angles_persist_and_keep_other_display_preferences(self):
         with tempfile.TemporaryDirectory() as folder:
             store = JsonSettingsStore(Path(folder) / 'settings.json')
-            service = SettingsService(store)
+            service = SettingsService(store, FakeBacklight())
             service.set_scale(1.1)
             service.set_resize_tiles(False)
             for angle in (0, 90, 180, 270):
@@ -33,7 +34,7 @@ class RotationSettingsTest(unittest.TestCase):
         for angle in (-90, 360, 45, '90', True, None):
             self.assertEqual(settings_from_dict({'rotation': angle}).display.rotation, 0)
             with tempfile.TemporaryDirectory() as folder:
-                service = SettingsService(JsonSettingsStore(Path(folder) / 'settings.json'))
+                service = SettingsService(JsonSettingsStore(Path(folder) / 'settings.json'), FakeBacklight())
                 with self.assertRaises(ValidationError):
                     service.set_rotation(angle)
 

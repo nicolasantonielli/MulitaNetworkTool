@@ -152,7 +152,11 @@ class SettingsController(Controller):
 
     @pyqtSlot()
     def resetTileOrder(self) -> None:
-        self._services.settings.reset_tile_order()
+        try:
+            self._services.settings.reset_tile_order()
+        except MulitaError as exc:
+            self._fail(exc)
+            return
         self._ctx.notifier.success(self._tr('tileOrderTitle'), self._tr('tileOrderResetDone'))
 
     @pyqtSlot(float)

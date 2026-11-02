@@ -48,6 +48,19 @@ Una falla de almacenamiento simulada durante `set_language('en')` también deja 
 
 ### A2. Los errores de almacenamiento atraviesan el límite de la aplicación sin normalizarse
 
+**Actualización del 2 de noviembre de 2026:** corregido en el código de trabajo.
+`JsonSettingsStore.save()` convierte los errores del sistema de archivos en
+`PersistenceError`, dentro de la jerarquía `MulitaError`, conservando la causa
+original encadenada. El contrato `SettingsStore.save()` documenta ese error.
+Todos los puntos de guardado del controlador de preferencias lo manejan,
+incluido `resetTileOrder()`, que ya no informa éxito si el guardado falla.
+Se verificaron fallas al crear directorios, escribir y reemplazar archivos,
+además de las ocho acciones de preferencias con un almacén fallido inyectado:
+se conservan las preferencias y el idioma, sin notificar cambios exitosos ni
+aplicar brillo nuevo. Los módulos `test_settings`, `test_localization` y
+`test_settings_persistence` completaron **42 pruebas aprobadas** con Qt sin
+pantalla física. Las evidencias siguientes describen el hallazgo histórico.
+
 **Prioridad:** alta para la confiabilidad.
 
 **Evidencias:** [`JsonSettingsStore.save()`](../mulita/adapters/settings_store.py), en la línea 28, crea directorios, escribe archivos y los reemplaza sin traducir los errores del sistema de archivos. [`SettingsController.setLanguage()`](../mulita/ui/qt/bridge/system.py), en la línea 120, captura `MulitaError`, mientras las operaciones de almacenamiento pueden lanzar `OSError`.
@@ -59,6 +72,31 @@ Una falla de almacenamiento simulada durante `set_language('en')` también deja 
 **Criterios de aceptación:** un almacén de configuración inyectado que falla produce una notificación controlada; las preferencias y el estado de presentación permanecen consistentes después del error.
 
 ### A3. Algunos servicios todavía construyen u operan infraestructura directamente
+
+**Actualización del 2 de noviembre de 2026:** corregido en el código de trabajo.
+`bootstrap` construye e inyecta `PanelBacklight`, `LinuxPacketSource`,
+`SysfsLinkReader`, `JsonSwitchReportStore` y `LinuxRemovableStorage`.
+Los contratos están en `core.platform`: el servicio de preferencias requiere
+un colaborador de brillo, el de switch recibe paquetes, lector de enlace y
+almacén de informes, y el de archivos recibe almacenamiento extraíble.
+Sin este último colaborador, el servicio de archivos permite las operaciones
+locales, lista cero unidades y rechaza exportaciones USB de forma controlada.
+La recepción AF_PACKET, AUXDATA y membresía promiscua, las lecturas sysfs/procfs,
+el descubrimiento/montaje USB y la escritura JSON quedaron en adaptadores.
+Las operaciones locales simples de archivos y el formato de sus metadatos se
+conservan; no se introdujo una abstracción genérica del sistema de archivos.
+
+La prueba del servicio de switch ahora inyecta tramas y verifica vecinos,
+retiro por TTL cero, VLAN y cancelación sin reemplazar `socket.socket`.
+Las pruebas del adaptador verifican AUXDATA, descarte de tráfico saliente,
+timeout, errores y cierre del socket con una API simulada por instancia.
+Se actualizaron los consumidores de los constructores y se agregó una regla
+de importaciones para los tres servicios. La verificación abarcó **430 pruebas**
+en módulos separados; dos pruebas que consultaban la antigua propiedad
+`switchport.directory` se ajustaron a la ruta configurada y el módulo completo
+pasó al repetirse. Compilación Python y `git diff --check` correctos.
+No se validó hardware físico ni una ejecución conjunta de Qt en un único proceso.
+Las evidencias siguientes describen el hallazgo histórico.
 
 **Prioridad:** media desde el punto de vista arquitectónico.
 

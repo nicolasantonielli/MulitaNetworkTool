@@ -1,14 +1,16 @@
 import json
-import socket
 import struct
 import tempfile
 import threading
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 from mulita.core.switchport import parse_frame
-from mulita.services.switchport import SwitchPortService, read_link
+from mulita.services.switchport import SwitchPortService
+from mulita.adapters.switchport import JsonSwitchReportStore, SysfsLinkReader, read_link
+from mulita.core.platform import ReceivedFrame
+from contextlib import contextmanager
+from types import SimpleNamespace
 from mulita.services.files import CaptureFilesService
 
 
@@ -73,34 +75,38 @@ class FrameTest(unittest.TestCase):
 
 
 class ScanTest(unittest.TestCase):
-    def test_receive_session_tracks_auxdata_vlan_and_withdrawal_and_closes_socket(self):
+    def test_receive_session_tracks_vlan_and_withdrawal_without_hardware(self):
         for withdrawal in (False, True):
-            with self.subTest(withdrawal=withdrawal), tempfile.TemporaryDirectory() as directory:
+            with self.subTest(withdrawal=withdrawal):
                 cancel = threading.Event()
-                class Receiver:
+                class Packets:
                     closed = False
                     frames = [lldp(), lldp(0)] if withdrawal else [lldp()]
-                    def __enter__(self): return self
-                    def __exit__(self, *args): self.closed = True
-                    def bind(self, value): pass
-                    def settimeout(self, value): pass
-                    def setsockopt(self, *args): pass
-                    def recvmsg(self, *args):
+                    @contextmanager
+                    def open(self, interface):
+                        self.interface = interface
+                        try:
+                            yield self
+                        finally:
+                            self.closed = True
+                    def receive(self):
                         if not self.frames:
                             cancel.set()
-                            raise socket.timeout()
-                        aux = struct.pack('IIIHHHH', 1 << 4, 0, 0, 0, 0, 55, 0x8100)
-                        return self.frames.pop(0), [(263, 8, aux)], 0, ('eth0', 0, 0)
-                receiver = Receiver()
-                with patch.object(socket, 'AF_PACKET', 17, create=True), \
-                     patch.object(socket, 'socket', return_value=receiver), \
-                     patch.object(socket, 'if_nametoindex', return_value=1, create=True), \
-                     patch('mulita.services.switchport.read_link', return_value={'carrier': '1'}):
-                    report = SwitchPortService(Path(directory)).scan('eth0', 5, cancel, lambda _: None)
-                self.assertTrue(receiver.closed)
+                            return None
+                        return ReceivedFrame(self.frames.pop(0), (55,))
+                packets = Packets()
+                service = SwitchPortService(packets, SimpleNamespace(read=lambda _: {'carrier': '1'}),
+                                            SimpleNamespace(save=lambda report: Path('report.json')))
+                updates = []
+                report = service.scan('eth0', 5, cancel, updates.append)
+                self.assertTrue(packets.closed)
+                self.assertEqual(packets.interface, 'eth0')
                 self.assertEqual(report['vlans'], [55])
                 self.assertEqual(len(report['neighbors']), 0 if withdrawal else 1)
                 self.assertTrue(report['cancelled'])
+                self.assertEqual(report['link'], {'carrier': '1'})
+                self.assertTrue(updates)
+                self.assertEqual(service.save(report), Path('report.json'))
 
     def test_link_reading_and_report_export(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -111,7 +117,7 @@ class ScanTest(unittest.TestCase):
             self.assertEqual(read_link('eth0', root)['speed'], '1000')
             (root / 'eth0' / 'speed').write_text('-1')
             self.assertEqual(read_link('eth0', root)['speed'], '')
-            service = SwitchPortService(root / 'reports')
+            service = SwitchPortService(None, None, JsonSwitchReportStore(root / 'reports'))
             report = service.scan('eth0', 5, threading.Event(), lambda _: None, simulated=True)
             self.assertTrue(report['simulated'])
             self.assertEqual(json.loads(service.save(report).read_text(encoding='utf-8')), report)
@@ -120,7 +126,7 @@ class ScanTest(unittest.TestCase):
     def test_saved_report_is_available_in_the_file_browser(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            service = SwitchPortService(root / 'puerto-switch')
+            service = SwitchPortService(None, None, JsonSwitchReportStore(root / 'puerto-switch'))
             path = service.save({'simulated': True})
             files = CaptureFilesService(root)
             self.assertEqual(files.list_files()[0].name, path.name)

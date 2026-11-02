@@ -36,6 +36,10 @@ class AlreadyRunningError(MulitaError):
     pass
 
 
+class PersistenceError(MulitaError):
+    """No se pudo guardar el estado; la causa técnica queda encadenada."""
+
+
 class CommandFailedError(MulitaError):
 
     def __init__(self, message: str, result: CommandResult | None = None):

@@ -9,6 +9,7 @@ from PyQt5.QtTest import QTest
 from tests.qt_support import qt_app
 from mulita.config import AppConfig
 from mulita.services.settings import SettingsService
+from tests.fakes import FakeBacklight
 from mulita.adapters.settings_store import MemorySettingsStore
 from mulita.ui.qt.bridge.base import BridgeContext, Notifier
 from mulita.ui.qt.bridge.system import Appearance, I18nController
@@ -35,7 +36,7 @@ class PopupRotationTest(unittest.TestCase):
     def setUpClass(cls):
         cls.app=qt_app()
     def test_popup_rotation(self):
-        service=SettingsService(MemorySettingsStore())
+        service=SettingsService(MemorySettingsStore(), FakeBacklight())
         ctx=BridgeContext(AppConfig(test_mode=True), SimpleNamespace(settings=service),None,Notifier())
         ui=Appearance(ctx);i18n=I18nController(ctx)
         engine=QQmlEngine()

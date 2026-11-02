@@ -8,8 +8,10 @@ from mulita.config import Binaries
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import ValidationError
 from mulita.core.models import CommandResult
-from mulita.services.files import CaptureFilesService, UsbDrive, list_usb_drives, parse_usb_drives
-from tests.fakes import FakeRunner
+from mulita.services.files import CaptureFilesService
+from mulita.core.platform import UsbDrive
+from mulita.adapters.removable_storage import LinuxRemovableStorage, list_usb_drives, parse_usb_drives
+from tests.fakes import FakeRunner, FakeStorage
 
 
 class CaptureFilesTest(unittest.TestCase):
@@ -77,13 +79,14 @@ class CaptureFilesTest(unittest.TestCase):
             stick = root / 'stick'
             stick.mkdir()
             service = CaptureFilesService(
-                root, drives=lambda: (UsbDrive('sda1', 'KINGSTON', str(stick)),))
+                root, storage=FakeStorage((UsbDrive('sda1', 'KINGSTON', str(stick)),)))
             self.assertEqual(service.export('captura', 'uno.pcap', 'sda1'), 'uno.pcap')
+            self.assertEqual(service._storage.syncs, 1)
             self.assertEqual((stick / 'uno.pcap').read_bytes(), b'abc')
             with self.assertRaises(ValidationError):
                 service.export('captura', 'uno.pcap', 'sda1')
             with self.assertRaises(ValidationError):
-                CaptureFilesService(root, drives=lambda: ()).export('captura', 'uno.pcap', 'sda1')
+                CaptureFilesService(root, storage=FakeStorage()).export('captura', 'uno.pcap', 'sda1')
 
     def test_batch_delete_and_export(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -95,7 +98,7 @@ class CaptureFilesTest(unittest.TestCase):
             (tap / 'uno.pcap').write_bytes(b'same')
             stick = root / 'stick'
             stick.mkdir()
-            service = CaptureFilesService(root, drives=lambda: (UsbDrive('sda1', 'KINGSTON', str(stick)),))
+            service = CaptureFilesService(root, storage=FakeStorage((UsbDrive('sda1', 'KINGSTON', str(stick)),)))
             with self.assertRaises(ValidationError):
                 service.export_many([('captura', 'uno.pcap'), ('tap', 'uno.pcap')], 'sda1')
             self.assertFalse((stick / 'uno.pcap').exists())
@@ -123,8 +126,22 @@ class CaptureFilesTest(unittest.TestCase):
                 {'name': 'sda1', 'label': None, 'mountpoint': None, 'type': 'part'},
             ]},
         ]}))})
-        service = CaptureFilesService(Path('.'), runner=runner, commands=CommandFactory(Binaries()))
+        service = CaptureFilesService(Path('.'), storage=LinuxRemovableStorage(runner, CommandFactory(Binaries())))
         self.assertEqual(service.list_drives(), (UsbDrive('sda1', 'Pendrive', ''),))
+
+    def test_storage_adapter_resolves_mounted_drive_and_rejects_missing_drive(self):
+        with tempfile.TemporaryDirectory() as folder:
+            runner = FakeRunner({'/usr/bin/lsblk': CommandResult(0, json.dumps({'blockdevices': [
+                {'name': 'sda', 'tran': 'usb', 'children': [
+                    {'name': 'sda1', 'mountpoint': folder, 'label': 'USB'},
+                ]},
+            ]}))})
+            storage = LinuxRemovableStorage(runner, CommandFactory(Binaries()))
+            self.assertEqual(storage.folder('sda1'), Path(folder))
+            with self.assertRaises(ValidationError):
+                storage.folder('sdb1')
+            with self.assertRaises(ValidationError):
+                storage.folder('../sda1')
 
     def test_sysfs_accepts_a_scsi_disk_hanging_off_usb(self):
         with tempfile.TemporaryDirectory() as folder:

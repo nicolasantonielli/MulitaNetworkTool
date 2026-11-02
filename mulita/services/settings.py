@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import replace
-from typing import Any, Callable, Optional, Protocol
+from typing import Any, Callable
 
 from mulita.core import settings as rules
 from mulita.core.errors import MulitaError, ValidationError
 from mulita.core.ports import SettingsStore
 from mulita.core.settings import Settings
-from mulita.adapters.backlight import PanelBacklight
+from mulita.core.platform import Backlight
 from mulita.core.messages import message
 
 log = logging.getLogger(__name__)
@@ -16,18 +16,11 @@ log = logging.getLogger(__name__)
 SettingsListener = Callable[[Settings], None]
 
 
-class Backlight(Protocol):
-
-    def available(self) -> bool: ...
-
-    def apply(self, percent: int) -> None: ...
-
-
 class SettingsService:
 
-    def __init__(self, store: SettingsStore, backlight: Optional[Backlight] = None):
+    def __init__(self, store: SettingsStore, backlight: Backlight):
         self._store = store
-        self._backlight = backlight or PanelBacklight()
+        self._backlight = backlight
         self._current = store.load()
         self._listeners: list[SettingsListener] = []
         self._restore_brightness()

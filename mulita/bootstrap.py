@@ -9,6 +9,9 @@ from typing import Sequence
 
 from mulita.adapters.sensors import Dht11Sensor, FixedClimateSensor
 from mulita.adapters.settings_store import JsonSettingsStore
+from mulita.adapters.backlight import PanelBacklight
+from mulita.adapters.removable_storage import LinuxRemovableStorage
+from mulita.adapters.switchport import LinuxPacketSource, SysfsLinkReader, JsonSwitchReportStore
 from mulita.adapters.subprocess_runner import SubprocessCommandRunner
 from mulita.config import AppConfig, load_config
 from mulita.core.commands import CommandFactory
@@ -67,18 +70,20 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
             runner, commands, config.public_ip_url, config.public_ip_timeout, config.public_ip_dir),
         mac_vendor=MacVendorService(runner, commands, config.mac_vendor_url, config.mac_vendor_timeout),
         files=CaptureFilesService(
-            config.capture_dir, lambda: capture.is_running, lambda: tap.is_running, runner, commands),
+            config.capture_dir, lambda: capture.is_running, lambda: tap.is_running,
+            storage=LinuxRemovableStorage(runner, commands)),
         maintenance=MaintenanceService(runner, commands, config.repository_dir, config.service_name,
                                    config.update_remote, config.update_branch, config.installation_user),
         keyboard=KeyboardService(runner, commands),
         share=ShareService(),
-        settings=SettingsService(settings_store or JsonSettingsStore(config.settings_path)),
+        settings=SettingsService(settings_store or JsonSettingsStore(config.settings_path), PanelBacklight()),
         servers=ServerService(runner, commands, config.servers_dir, config.servers_state_dir,
                               config.capture_dir),
         tls=TlsService(runner, commands, config.tls_dir),
         nmap=NmapScanService(runner, commands, config.nmap_dir,
                              config.settings_path.parent / 'nmap', config.capture_dir),
-        switchport=SwitchPortService(Path(config.capture_dir) / 'puerto-switch'),
+        switchport=SwitchPortService(LinuxPacketSource(), SysfsLinkReader(),
+                                    JsonSwitchReportStore(Path(config.capture_dir) / 'puerto-switch')),
     )
 
 
