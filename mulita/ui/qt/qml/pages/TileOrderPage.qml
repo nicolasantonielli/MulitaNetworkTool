@@ -10,6 +10,8 @@ ColumnLayout {
     objectName: "tileOrderPage"
     signal goBack()
 
+    property var activeDrag: null
+    property real dragViewportY: 0
     property bool dragging: false
     property bool animateMoves: true
     property int dragLine: -1
@@ -146,6 +148,28 @@ ColumnLayout {
         dest.splice(Math.max(0, Math.min(toIndex, dest.length)), 0, id)
         next[toScreen] = dest
         save(next)
+    }
+
+    Timer {
+        interval: 16
+        repeat: true
+        running: root.dragging && root.visible && root.activeDrag !== null
+        onTriggered: {
+            var edge = Math.min(root.rowH, flick.height / 4)
+            if (edge <= 0) return
+            var direction = 0
+            if (root.dragViewportY < edge)
+                direction = -Math.min(1, (edge - root.dragViewportY) / edge)
+            else if (root.dragViewportY > flick.height - edge)
+                direction = Math.min(1, (root.dragViewportY - flick.height + edge) / edge)
+            var maximum = Math.max(0, flick.contentHeight - flick.height)
+            var next = Math.max(0, Math.min(maximum,
+                flick.contentY + direction * root.rowH * 5 * interval / 1000))
+            if (next !== flick.contentY) {
+                flick.contentY = next
+                root.activeDrag.updateOffset()
+            }
+        }
     }
 
     RowLayout {
@@ -311,7 +335,10 @@ ColumnLayout {
                             preventStealing: true
 
                             onPressed: {
+                                flick.cancelFlick()
                                 origin = mapToItem(column, mouse.x, mouse.y).y
+                                root.dragViewportY = mapToItem(flick, mouse.x, mouse.y).y
+                                root.activeDrag = dragArea
                                 offset = 0
                                 root.dragLine = index
                                 root.hover = index
@@ -321,8 +348,11 @@ ColumnLayout {
                             onPositionChanged: {
                                 if (!pressed)
                                     return
-                                var y = mapToItem(column, mouse.x, mouse.y).y
-                                var delta = y - origin
+                                root.dragViewportY = mapToItem(flick, mouse.x, mouse.y).y
+                                updateOffset()
+                            }
+                            function updateOffset() {
+                                var delta = root.dragViewportY + flick.contentY - origin
                                 var minY = -slot.y
                                 var maxY = column.height - slot.y - slot.height
                                 offset = Math.max(minY, Math.min(maxY, delta))
@@ -335,6 +365,7 @@ ColumnLayout {
                                 var line = root.lines[root.hover]
                                 var fromScreen = modelData.screen
                                 var fromIndex = modelData.tileIndex
+                                root.activeDrag = null
                                 root.animateMoves = false
                                 offset = 0
                                 root.dragLine = -1
