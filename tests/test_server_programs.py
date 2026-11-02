@@ -254,6 +254,41 @@ class WebTest(unittest.TestCase):
         self.assertEqual(self.get(port, '/nada.bin')[0], 404)
         self.assertEqual(self.get(port, '/archivos/')[0], 200)
 
+    def test_folder_pages_share_the_theme_and_preserve_encoded_downloads(self):
+        folder = os.path.join(self.root, 'sub carpeta')
+        os.mkdir(folder)
+        with open(os.path.join(folder, 'a&b #1.txt'), 'wb') as handle:
+            handle.write(b'example')
+        with open(os.path.join(folder, 'index.html'), 'wb') as handle:
+            handle.write(b'custom file')
+        port = self.serve()
+        for route in ('/archivos/', '/capturas/', '/archivos/sub%20carpeta/'):
+            status, body = self.get(port, route)
+            self.assertEqual(status, 200)
+            text = body.decode()
+            self.assertIn('id="theme"', text)
+            self.assertIn('mulita-theme', text)
+            self.assertIn('Ruta de navegación', text)
+            self.assertEqual(self.get(port, route, 'HEAD'), (200, b''))
+        self.assertIn('a&amp;b #1.txt', text)
+        self.assertIn('href="a%26b%20%231.txt" download', text)
+        self.assertIn('href="/archivos/"', text)
+        self.assertEqual(self.get(port, '/archivos/sub%20carpeta/a%26b%20%231.txt'), (200, b'example'))
+        self.assertEqual(self.get(port, '/archivos/sub%20carpeta/index.html'), (200, b'custom file'))
+
+    def test_empty_folder_and_error_pages_use_the_shared_shell(self):
+        os.mkdir(os.path.join(self.root, 'empty'))
+        port = self.serve()
+        status, body = self.get(port, '/archivos/empty/')
+        self.assertEqual(status, 200)
+        self.assertIn('Esta carpeta está vacía.', body.decode())
+        status, body = self.get(port, '/missing')
+        self.assertEqual(status, 404)
+        self.assertIn('Error 404', body.decode())
+        self.assertIn('id="theme"', body.decode())
+        self.assertIn('href="/"', body.decode())
+        self.assertEqual(self.get(port, '/missing', 'HEAD'), (404, b''))
+
     def test_captures_are_shared_only_when_enabled(self):
         self.assertEqual(self.get(self.serve(captures=True), '/capturas/informe.csv'), (200, b'a,b\n'))
         status, body = self.get(self.serve(captures=False), '/capturas/')

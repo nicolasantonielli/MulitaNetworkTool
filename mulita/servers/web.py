@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import io
 import os
 import posixpath
 import socket
@@ -18,7 +19,7 @@ import threading
 import time
 from string import Template
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import unquote, urlsplit
+from urllib.parse import quote, unquote, urlsplit
 
 MAX_TEST_MB = 1024
 CHUNK = 64 * 1024
@@ -64,6 +65,14 @@ svg { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.7;
 .brand small { color:var(--muted); font-size:12px; }
 .theme { display:flex; align-items:center; gap:9px; border:1px solid var(--border);
   border-radius:9px; padding:9px 13px; min-height:44px; background:var(--alt); color:var(--text); }
+[hidden] { display:none !important; }
+.breadcrumbs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; overflow-wrap:anywhere; }
+.file-list { margin:0; padding:0; list-style:none; overflow:hidden; }
+.file-list li + li { border-top:1px solid var(--border); }
+.file-list .resource { min-width:0; }
+.file-name { min-width:0; overflow-wrap:anywhere; }
+.empty { padding:28px; color:var(--muted); }
+.back-link { display:inline-flex; align-items:center; min-height:44px; margin-top:12px; }
 .theme:hover { background:var(--high); }
 main { max-width:1080px; margin:auto; padding:42px 28px 28px; }
 .eyebrow { margin:0 0 8px; color:var(--muted); font-size:12px; font-weight:600;
@@ -115,23 +124,7 @@ footer { display:flex; justify-content:space-between; gap:12px; margin-top:24px;
 <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/>
 <path d="M12 4v16M12 4a8 8 0 0 1 0 16Z"/></svg><span id="theme-label">Modo oscuro</span></button>
 </div></header>
-<main><p class="eyebrow">Servidor web · $scheme</p>
-<h1>Conexión establecida</h1><p class="intro">Este equipo llegó a Mulita por $scheme.</p>
-<section class="panel connection" aria-labelledby="connection-title">
-<div class="panel-heading"><h2 id="connection-title">Tu conexión</h2>
-<span class="badge"><span class="dot"></span>Acceso confirmado</span></div>
-<dl><div><dt>Tu dirección IP</dt><dd>$client</dd></div>
-<div><dt>Dirección del servidor</dt><dd>$server</dd></div>
-<div><dt>Hora del servidor al cargar</dt><dd>$timestamp</dd></div></dl></section>
-<h2 class="section-title">Recursos compartidos</h2><div class="resources">
-<a class="panel resource" href="/archivos/"><span class="mark" aria-hidden="true">
-<svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
-</span><span><strong>Archivos de prueba</strong><small>Explorá y descargá archivos del servidor.</small></span>
-<span class="arrow" aria-hidden="true">›</span></a>$captures</div>
-<section class="panel downloads" aria-labelledby="downloads-title">
-<h2 id="downloads-title">Probá la transferencia</h2>
-<p>Descargá un archivo de prueba para comprobar la transferencia de datos en tu red.</p>
-<div class="sizes">$downloads</div></section>
+<main>$content
 <footer><span>Mulita · Herramientas de diagnóstico de red</span><span>Conexión por $scheme</span></footer>
 </main><script>
 const button = document.getElementById('theme');
@@ -153,6 +146,32 @@ button.addEventListener('click', function () {
 if (preference.addEventListener) preference.addEventListener('change', updateLabel);
 updateLabel();
 </script></body></html>'''
+
+
+HOME = '''<p class="eyebrow">Servidor web · $scheme</p>
+<h1>Conexión establecida</h1><p class="intro">Este equipo llegó a Mulita por $scheme.</p>
+<section class="panel connection" aria-labelledby="connection-title">
+<div class="panel-heading"><h2 id="connection-title">Tu conexión</h2>
+<span class="badge"><span class="dot"></span>Acceso confirmado</span></div>
+<dl><div><dt>Tu dirección IP</dt><dd>$client</dd></div>
+<div><dt>Dirección del servidor</dt><dd>$server</dd></div>
+<div><dt>Hora del servidor al cargar</dt><dd>$timestamp</dd></div></dl></section>
+<h2 class="section-title">Recursos compartidos</h2><div class="resources">
+<a class="panel resource" href="/archivos/"><span class="mark" aria-hidden="true">
+<svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+</span><span><strong>Archivos de prueba</strong><small>Explorá y descargá archivos del servidor.</small></span>
+<span class="arrow" aria-hidden="true">›</span></a>$captures</div>
+<section class="panel downloads" aria-labelledby="downloads-title">
+<h2 id="downloads-title">Probá la transferencia</h2>
+<p>Descargá un archivo de prueba para comprobar la transferencia de datos en tu red.</p>
+<div class="sizes">$downloads</div></section>
+'''
+
+
+def render_page(content: str, secure: bool = False) -> bytes:
+    """One shared shell for the home page, folders and HTTP errors."""
+    return Template(PAGE).substitute(
+        content=content, scheme='HTTPS' if secure else 'HTTP').encode('utf-8')
 
 
 def say(client: str, event: str) -> None:
@@ -185,6 +204,84 @@ class Handler(SimpleHTTPRequestHandler):
 
     def translate_path(self, path: str) -> str:
         return map_path(path, self.server.root, self.server.captures)
+
+    def send_head(self):
+        # Always show the file browser for folders, even if they contain index.html.
+        path = self.translate_path(self.path)
+        if urlsplit(self.path).path.endswith('/') and os.path.isdir(path):
+            return self.list_directory(path)
+        return super().send_head()
+
+    def list_directory(self, path: str):
+        try:
+            with os.scandir(path) as listing:
+                entries = sorted(listing, key=lambda item: (not item.is_dir(), item.name.casefold()))
+        except OSError:
+            self.send_error(403, 'No se puede acceder a esta carpeta.')
+            return None
+
+        parts = [part for part in unquote(urlsplit(self.path).path).split('/')
+                 if part and part not in ('.', '..')]
+        labels = {'archivos': 'Archivos de prueba', 'capturas': 'Capturas e informes'}
+        title = labels.get(parts[0], parts[0]) if len(parts) == 1 else (parts[-1] if parts else 'Archivos')
+        crumbs = ['<a href="/">Inicio</a>']
+        for index, part in enumerate(parts):
+            label = labels.get(part, part) if index == 0 else part
+            href = '/' + '/'.join(quote(piece, safe='') for piece in parts[:index + 1]) + '/'
+            crumbs.append(f'<span aria-hidden="true">/</span><a href="{href}">{html.escape(label)}</a>')
+        parent = '/' + '/'.join(quote(piece, safe='') for piece in parts[:-1])
+        if parent != '/':
+            parent += '/'
+        rows = []
+        for entry in entries:
+            folder = entry.is_dir()
+            href = quote(entry.name, safe='') + ('/' if folder else '')
+            label = html.escape(entry.name)
+            if folder:
+                detail = 'Carpeta · Abrir'
+                icon = '<path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/>'
+            else:
+                try:
+                    size = entry.stat().st_size
+                    detail = f'{size:,} bytes · Descargar'.replace(',', '.')
+                except OSError:
+                    detail = 'Archivo · Descargar'
+                icon = '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9ZM14 3v6h6M8 13h8M8 17h5"/>'
+            download = '' if folder else ' download'
+            rows.append(
+                f'<li><a class="resource" href="{href}"{download}>'
+                f'<span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24">{icon}</svg></span>'
+                f'<span class="file-name"><strong>{label}</strong><small>{detail}</small></span>'
+                '<span class="arrow" aria-hidden="true">›</span></a></li>')
+        listing = ('<ul class="panel file-list">' + ''.join(rows) + '</ul>' if rows else
+                   '<div class="panel empty">Esta carpeta está vacía.</div>')
+        content = (
+            '<nav class="breadcrumbs" aria-label="Ruta de navegación">' + ''.join(crumbs) + '</nav>'
+            f'<p class="eyebrow">Recursos compartidos</p><h1>{html.escape(title)}</h1>'
+            f'<p class="intro">{len(entries)} elementos · Explorá las carpetas o descargá un archivo.</p>'
+            + listing + f'<a class="back-link" href="{parent}">← Volver al nivel anterior</a>')
+        page = render_page(content, self.secure)
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/html; charset=utf-8')
+        self.send_header('Content-Length', str(len(page)))
+        self.send_header('Cache-Control', 'no-store')
+        self.end_headers()
+        return io.BytesIO(page)
+
+    def send_error(self, code, message=None, explain=None):
+        content = (
+            '<p class="eyebrow">Servidor web</p><h1>Error ERROR_CODE</h1>'
+            '<p class="intro">No se pudo completar la solicitud.</p>'
+            '<section class="panel connection"><h2>ERROR_MESSAGE</h2>'
+            '<p>Comprobá la dirección o volvé al inicio para explorar los recursos disponibles.</p>'
+            '<a class="back-link" href="/">← Volver al inicio</a></section>')
+        # The standard handler escapes the message and preserves HTTP/HEAD semantics.
+        self.error_message_format = (render_page(content, self.secure).decode('utf-8')
+                                     .replace('%', '%%').replace('ERROR_CODE', '%(code)d')
+                                     .replace('ERROR_MESSAGE', '%(message)s'))
+        if message == 'File not found':
+            message = 'No se encontró el archivo o la carpeta.'
+        super().send_error(code, message, explain)
 
     def log_request(self, code='-', size='-') -> None:
         say(self.client_address[0], f'{self.command} {self.path} {code}')
@@ -244,10 +341,11 @@ class Handler(SimpleHTTPRequestHandler):
             '<svg aria-hidden="true" viewBox="0 0 24 24">'
             '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg></a>'
             for mb in (1, 10, 100))
-        page = Template(PAGE).substitute(
+        content = Template(HOME).substitute(
             scheme=scheme, client=html.escape(self.client_address[0]),
             server=html.escape(server), timestamp=time.strftime('%Y-%m-%d %H:%M:%S'),
-            captures=captures, downloads=downloads).encode('utf-8')
+            captures=captures, downloads=downloads)
+        page = render_page(content, self.secure)
         self.send_response(200)
         self.send_header('Content-Type', 'text/html; charset=utf-8')
         self.send_header('Content-Length', str(len(page)))
