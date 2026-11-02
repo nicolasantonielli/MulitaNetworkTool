@@ -422,3 +422,19 @@ class ServiceTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class ProfilePersistenceTest(unittest.TestCase):
+    def test_failed_replace_preserves_previous_profiles_and_cleans_temporary(self):
+        from unittest.mock import patch
+        from mulita.core.errors import PersistenceError
+        with tempfile.TemporaryDirectory() as folder:
+            service = NmapScanService(FakeRunner(), CommandFactory(Binaries()), state_dir=Path(folder))
+            service.save_user('', 'Original', '', '-sT')
+            original = (Path(folder) / 'profiles.json').read_bytes()
+            with patch('mulita.services.nmapscan.os.replace', side_effect=OSError('disk full')):
+                with self.assertRaises(PersistenceError):
+                    service.save_user('', 'New', '', '-sT')
+            self.assertEqual((Path(folder) / 'profiles.json').read_bytes(), original)
+            self.assertEqual(len(list(Path(folder).iterdir())), 1)
+            service.save_user('', 'Retry', '', '-sT')
+            self.assertEqual(len(service.users()), 2)

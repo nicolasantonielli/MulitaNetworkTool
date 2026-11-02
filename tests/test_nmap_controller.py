@@ -58,3 +58,32 @@ class NmapControllerTest(unittest.TestCase):
         self.controller.start('{}')
         self.dispatcher.jobs[0][2](OSError('failed'))
         self.assertTrue(self.controller.start('{}'))
+
+    def test_properties_and_profile_save_do_not_touch_disk_on_ui_thread(self):
+        c = self.controller
+        self.service.users = Mock(return_value=[])
+        self.service.history = Mock(return_value=[])
+        self.service.save_user = Mock(side_effect=OSError('disk full'))
+        self.assertEqual(c.historyJson, '[]')
+        c.profilesJson
+        c.commandPreview('{}')
+        c.saveProfile('{}')
+        self.service.users.assert_not_called()
+        self.service.history.assert_not_called()
+        self.service.save_user.assert_not_called()
+        errors = []
+        c._ctx.notifier.notified.connect(lambda *args: errors.append(args))
+        task, success, failed = self.dispatcher.jobs[-1]
+        try:
+            success(task())
+        except Exception as error:
+            failed(error)
+        self.assertFalse(c.saving)
+        self.assertEqual(len(errors), 1)
+
+    def test_latest_catalog_snapshot_wins(self):
+        c = self.controller
+        c._refresh_catalog(); c._refresh_catalog()
+        self.dispatcher.jobs[1][1](([], [{'id': 'new'}]))
+        self.dispatcher.jobs[0][1](([], [{'id': 'old'}]))
+        self.assertIn('new', c.historyJson)

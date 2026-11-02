@@ -50,6 +50,10 @@ class NmapController(SessionController):
         self._stopping = False
         self._compare = {'ready': False}
         self._files: list[dict] = []
+        self._users: list[dict] = []
+        self._history: list[dict] = []
+        self._catalog_request = 0
+        self._files_request = 0
         self._version_error = ''
 
     @pyqtProperty(bool, constant=True)
@@ -58,7 +62,7 @@ class NmapController(SessionController):
 
     @pyqtProperty(str, notify=profilesChanged)
     def profilesJson(self) -> str:
-        return self._json(profiles_view(self._nmap.users()))
+        return self._json(profiles_view(self._users))
 
     @pyqtProperty(str, constant=True)
     def checksJson(self) -> str:
@@ -119,7 +123,7 @@ class NmapController(SessionController):
 
     @pyqtProperty(str, notify=historyChanged)
     def historyJson(self) -> str:
-        return self._json(self._nmap.history())
+        return self._json(self._history)
 
     @pyqtProperty(str, notify=compareChanged)
     def compareJson(self) -> str:
@@ -132,7 +136,8 @@ class NmapController(SessionController):
     @pyqtSlot(str, result=str)
     def commandPreview(self, payload: str) -> str:
         try:
-            compiled = compile_scan(self._options(payload), self._saved(), self._nmap.resolve)
+            # Preview validates syntax; prepare validates files in its worker.
+            compiled = compile_scan(self._options(payload), self._saved(), lambda value: value)
         except MulitaError as exc:
             return self._json({'ok': False, 'command': '', 'notes': [], 'error': self._render(exc)})
         except (TypeError, ValueError):
@@ -141,6 +146,8 @@ class NmapController(SessionController):
 
     @pyqtSlot()
     def refresh(self) -> None:
+        self._refresh_catalog()
+        self.refreshFiles()
         def task() -> str:
             try:
                 self._nmap.probe()
@@ -152,8 +159,13 @@ class NmapController(SessionController):
 
     @pyqtSlot()
     def refreshFiles(self) -> None:
-        self._files = self._nmap.list_files()
-        self.filesChanged.emit()
+        self._files_request += 1
+        request = self._files_request
+        def loaded(files):
+            if request == self._files_request:
+                self._files = files
+                self.filesChanged.emit()
+        self._ctx.dispatcher.background(self._nmap.list_files, loaded, self._fail)
 
     @pyqtSlot(str, result=bool)
     def start(self, payload: str) -> bool:
@@ -221,38 +233,41 @@ class NmapController(SessionController):
 
     @pyqtSlot(str)
     def saveProfile(self, payload: str) -> None:
-        try:
+        def save():
             data = self._options(payload)
-            saved = self._nmap.save_user(
-                str(data.get('profile') or ''), str(data.get('name') or ''),
-                str(data.get('description') or ''), str(data.get('custom') or ''))
-        except MulitaError as exc:
-            self._fail(exc)
-            return
-        self.profilesChanged.emit()
-        self._ctx.notifier.success(self._tr('cyberNmap'), saved['name'])
+            return self._nmap.save_user(str(data.get('profile') or ''),
+                str(data.get('name') or ''), str(data.get('description') or ''),
+                str(data.get('custom') or ''))
+        self._change_profile(save)
 
     @pyqtSlot(str)
     def deleteProfile(self, profile_id: str) -> None:
-        try:
-            self._nmap.delete_user(profile_id)
-        except MulitaError as exc:
-            self._fail(exc)
-            return
-        self.profilesChanged.emit()
+        self._change_profile(lambda: self._nmap.delete_user(profile_id))
 
     @pyqtSlot(str)
     def duplicateProfile(self, profile_id: str) -> None:
-        try:
-            saved = self._nmap.duplicate_user(profile_id)
-        except MulitaError as exc:
-            self._fail(exc)
-            return
-        self.profilesChanged.emit()
-        self._ctx.notifier.success(self._tr('cyberNmap'), saved['name'])
+        self._change_profile(lambda: self._nmap.duplicate_user(profile_id))
+
+    def _change_profile(self, operation):
+        def done(saved):
+            self._refresh_catalog()
+            if saved:
+                self._ctx.notifier.success(self._tr('cyberNmap'), saved['name'])
+        self._export(operation, done)
+
+    def _refresh_catalog(self):
+        self._catalog_request += 1
+        request = self._catalog_request
+        def loaded(result):
+            if request == self._catalog_request:
+                self._users, self._history = result
+                self.profilesChanged.emit()
+                self.historyChanged.emit()
+        self._ctx.dispatcher.background(
+            lambda: (self._nmap.users(), self._nmap.history()), loaded, self._fail)
 
     def _saved(self) -> dict[str, dict]:
-        return {item['id']: item for item in self._nmap.users()}
+        return {item['id']: item for item in self._users}
 
     def _options(self, payload: str) -> dict:
         try:
@@ -289,7 +304,7 @@ class NmapController(SessionController):
             self._stopping = False
             self._phase = 'cancelled'
             self.runChanged.emit()
-            self.historyChanged.emit()
+            self._refresh_catalog()
             return
         compiled = prepared.compiled
         self._command = compiled.command
@@ -339,7 +354,7 @@ class NmapController(SessionController):
                 self._ctx.notifier.error(outcome.tail or self._tr('nmapFailed', code=code), title=self._tr('cyberNmap'))
         self.hostsChanged.emit()
         self.runChanged.emit()
-        self.historyChanged.emit()
+        self._refresh_catalog()
 
     def _opened(self, loaded) -> None:
         meta, hosts = loaded

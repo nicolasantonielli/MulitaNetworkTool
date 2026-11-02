@@ -8,13 +8,14 @@ import json
 import os
 import re
 import threading
+import tempfile
 from collections import deque
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path, PurePosixPath
 
 from mulita.core.commands import CommandFactory
-from mulita.core.errors import CommandFailedError, ValidationError
+from mulita.core.errors import CommandFailedError, ValidationError, PersistenceError
 from mulita.core.models import MISSING_COMMAND_CODE
 from mulita.core.nmapscan import (Compiled, compare_scans, compile_scan, open_tcp_ports,
                                   parse_xml, privilege_error, saved_arguments)
@@ -374,8 +375,24 @@ class NmapScanService(ProcessSession):
         path.write_text(text, encoding='utf-8')
 
     def _write_users(self, items: list[dict]) -> None:
-        self._mkdir(self._state)
-        self._write_text(self._state / 'profiles.json', json.dumps(items, ensure_ascii=False, indent=2))
+        temporary = None
+        try:
+            self._state.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=self._state,
+                                             delete=False) as handle:
+                temporary = Path(handle.name)
+                json.dump(items, handle, ensure_ascii=False, indent=2)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, self._state / 'profiles.json')
+        except OSError as exc:
+            raise PersistenceError(message('nmapProfilesSaveFailed')) from exc
+        finally:
+            if temporary is not None:
+                try:
+                    temporary.unlink(missing_ok=True)
+                except OSError:
+                    pass
 
     @staticmethod
     def _mkdir(folder: Path) -> None:

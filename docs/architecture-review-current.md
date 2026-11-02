@@ -271,3 +271,5 @@ El análisis anterior describe be15570; las correcciones siguientes se verificar
 - **R1 · 3.1.2:** Registro de tareas, cierre con espera y reinicio/apagado tras drenar; callbacks tardíos descartados. 43 pruebas relacionadas aprobadas.
 
 - **R2 · 3.1.3:** Se separo la preparacion del estado visual y se invalidaron respuestas antiguas; 32 pruebas aprobadas.
+
+- **R3 · 3.1.4:** Catalogos en memoria y operaciones de perfiles en segundo plano; guardado atomico con error de persistencia. La vista previa valida sintaxis y prepare verifica archivos. 35 pruebas aprobadas.

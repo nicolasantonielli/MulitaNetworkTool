@@ -653,6 +653,7 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('nmapBadName', 'Escriba un nombre de hasta 40 caracteres', 'Enter a name of up to 40 characters'),
     ('nmapMissing', 'Nmap no está instalado. Ejecute install-lite.sh', 'Nmap is not installed. Run install-lite.sh'),
     ('nmapScriptMissing', 'Faltan comprobaciones de Nmap: {names}', 'Missing Nmap checks: {names}'),
+    ('nmapProfilesSaveFailed', 'No se pudieron guardar los perfiles de Nmap', 'Nmap profiles could not be saved'),
     ('nmapFolder', 'No se pudo preparar la carpeta del escaneo', 'The scan folder could not be prepared'),
     ('nmapFailed', 'Nmap terminó con código {code}', 'Nmap stopped with code {code}'),
     ('nmapRunMissing', 'No se encuentra ese escaneo', 'That scan was not found'),
