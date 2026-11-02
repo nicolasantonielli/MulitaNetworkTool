@@ -202,6 +202,27 @@ Las evidencias siguientes corresponden a la revisión original.
 
 ### A8. Las utilidades compartidas y las rutas tienen varias fuentes de verdad
 
+**Corregidos los criterios de aceptación el 2 de noviembre de 2026.**
+`StoragePaths` deriva las ubicaciones desde `capture_dir`; `AppConfig` expone
+propiedades derivadas en lugar de valores predeterminados independientes.
+El constructor directo, `dataclasses.replace` y el cargador de instalación
+utilizan el mismo contrato. El catálogo `core.storage.PLACES` reúne los
+identificadores, subcarpetas y claves de etiquetas utilizados por archivos,
+Nmap y QML, conservando sus filtros específicos. La prueba TAP utiliza una
+carpeta temporal explícita.
+
+Los comandos de servidores se separaron en `core.server_commands`; la ubicación
+de los programas incluidos se resuelve en `adapters.deployment` y se inyecta
+desde `bootstrap`. Los analizadores puros existentes conservan su API; su
+división por función sigue siendo una mejora gradual al modificar cada función,
+no una condición para corregir la inconsistencia de rutas.
+Verificación: **441 pruebas aprobadas por módulos**, compilación Python y
+arranque QML sin pantalla física. Se corrigió un error de importación en la
+adaptación de las pruebas de programas de servidor y sus 23 pruebas pasaron
+al repetir ese módulo. No se validó hardware físico; persisten los avisos QML
+de geometría documentados anteriormente.
+Las evidencias siguientes corresponden a la revisión original.
+
 **Prioridad:** baja desde el punto de vista arquitectónico; se confirmó un defecto de portabilidad en una prueba.
 
 **Evidencias:**

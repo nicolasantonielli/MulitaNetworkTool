@@ -3,14 +3,50 @@ import os
 from pathlib import Path, PurePosixPath
 import tempfile
 import unittest
+from dataclasses import replace
 from unittest.mock import patch
 
-from mulita.config import load_config, PROJECT_ROOT, Binaries
+from mulita.config import AppConfig, load_config, PROJECT_ROOT, Binaries
+from mulita.core.storage import PLACES
 from mulita.core.commands import CommandFactory
 from scripts.configure_installation import installation_config, unit_text, write_atomic
 
 
 class InstallationPathsTest(unittest.TestCase):
+    def test_direct_configuration_and_replacement_derive_all_storage_paths(self):
+        initial = AppConfig(capture_dir=self.root / 'first')
+        updated = replace(initial, capture_dir=self.root / 'second')
+        for config in (initial, updated):
+            for field, place in [('trace_dir', 'traza'), ('ping_dir', 'ping'),
+                                 ('wifi_dir', 'wifi'), ('scan_dir', 'escaneo'),
+                                 ('nmap_dir', 'nmap'), ('tls_dir', 'tls'),
+                                 ('discovery_dir', 'descubrimiento'),
+                                 ('servers_dir', 'servidores'), ('public_ip_dir', 'publica')]:
+                self.assertEqual(getattr(config, field), config.storage.folder(place))
+                self.assertEqual(getattr(config, field).parent, config.capture_dir)
+            for place in PLACES:
+                self.assertEqual(config.storage.folder(place.id), config.capture_dir / place.folder)
+
+    def test_file_browser_and_nmap_share_custom_location_and_identifier(self):
+        from tests.fakes import FakeRunner
+        from mulita.services.files import CaptureFilesService
+        from mulita.services.nmapscan import NmapScanService
+        config = AppConfig(capture_dir=self.root / 'custom')
+        config.wifi_dir.mkdir(parents=True)
+        path = config.wifi_dir / 'link.csv'
+        path.write_text('ssid,Office', encoding='utf-8')
+        browser = CaptureFilesService(config.capture_dir)
+        scanner = NmapScanService(FakeRunner(), CommandFactory(Binaries()),
+                                  config.nmap_dir, self.root / 'state', config.capture_dir)
+        self.assertEqual(browser.list_files()[0].place, 'wifi')
+        self.assertEqual(scanner.list_files()[0]['token'], '@wifi/link.csv')
+        self.assertEqual(scanner.resolve('@wifi/link.csv'), str(path.resolve()))
+
+    def test_server_program_path_is_injected(self):
+        directory = self.root / 'deployment with spaces'
+        command = CommandFactory(Binaries(), directory).ntp_server(123, 2)
+        self.assertEqual(command[2], str(directory / 'ntp.py'))
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

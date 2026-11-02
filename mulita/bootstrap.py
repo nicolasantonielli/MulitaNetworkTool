@@ -9,6 +9,7 @@ from typing import Sequence
 
 from mulita.adapters.sensors import Dht11Sensor, FixedClimateSensor
 from mulita.adapters.settings_store import JsonSettingsStore
+from mulita.adapters.deployment import server_programs
 from mulita.adapters.backlight import PanelBacklight
 from mulita.adapters.removable_storage import LinuxRemovableStorage
 from mulita.adapters.switchport import LinuxPacketSource, SysfsLinkReader, JsonSwitchReportStore
@@ -50,9 +51,9 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
                    climate: ClimateService | None = None,
                    settings_store: SettingsStore | None = None) -> Services:
     runner = runner or SubprocessCommandRunner()
-    commands = CommandFactory(config.binaries)
+    commands = CommandFactory(config.binaries, server_programs())
     capture = CaptureService(runner, commands, config.capture_dir)
-    tap = TapService(runner, commands, CaptureService(runner, commands, config.capture_dir / 'tap'))
+    tap = TapService(runner, commands, CaptureService(runner, commands, config.storage.folder('tap')))
     return Services(
         interfaces=InterfaceService(runner, commands),
         ethernet=EthernetService(runner, commands, config.internal_interface, config.internal_connection),
@@ -83,7 +84,7 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
         nmap=NmapScanService(runner, commands, config.nmap_dir,
                              config.settings_path.parent / 'nmap', config.capture_dir),
         switchport=SwitchPortService(LinuxPacketSource(), SysfsLinkReader(),
-                                    JsonSwitchReportStore(Path(config.capture_dir) / 'puerto-switch')),
+                                    JsonSwitchReportStore(config.storage.folder('puerto-switch'))),
     )
 
 

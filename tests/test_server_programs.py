@@ -354,10 +354,11 @@ class ProcessTest(unittest.TestCase):
     def test_ntp_command_answers_and_logs_a_line_the_log_can_read(self):
         from mulita.config import Binaries
         from mulita.core.commands import CommandFactory
+        from mulita.adapters.deployment import server_programs
         from mulita.core.servers import ServerLog, kind_by_id
         port = free_udp_port()
         handle, lines = self.run_command(
-            CommandFactory(Binaries()).ntp_server(port, 2, '127.0.0.1'), 'escuchando')
+            CommandFactory(Binaries(), server_programs()).ntp_server(port, 2, '127.0.0.1'), 'escuchando')
         client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         client.settimeout(3)
         request = bytearray(48)
@@ -376,7 +377,8 @@ class ProcessTest(unittest.TestCase):
     def test_tftp_and_web_commands_start_and_report_their_port(self):
         from mulita.config import Binaries
         from mulita.core.commands import CommandFactory
-        commands = CommandFactory(Binaries())
+        from mulita.adapters.deployment import server_programs
+        commands = CommandFactory(Binaries(), server_programs())
         with tempfile.TemporaryDirectory() as folder:
             self.run_command(commands.tftp_server(folder, free_udp_port(), '127.0.0.1'), 'TFTP escuchando')
             with socket.socket() as probe:
@@ -387,11 +389,12 @@ class ProcessTest(unittest.TestCase):
     def test_a_busy_port_ends_the_process_with_the_reason(self):
         from mulita.config import Binaries
         from mulita.core.commands import CommandFactory
+        from mulita.adapters.deployment import server_programs
         holder = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         holder.bind(('127.0.0.1', 0))
         self.addCleanup(holder.close)
         _handle, lines = self.run_command(
-            CommandFactory(Binaries()).ntp_server(holder.getsockname()[1], 3, '127.0.0.1'),
+            CommandFactory(Binaries(), server_programs()).ntp_server(holder.getsockname()[1], 3, '127.0.0.1'),
             'No se pudo abrir el puerto')
         self.assertTrue(any('No se pudo abrir' in line for line in lines))
 

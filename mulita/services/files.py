@@ -7,24 +7,14 @@ from datetime import datetime
 from pathlib import Path, PurePosixPath
 
 from mulita.core import validation
+from mulita.core.storage import PLACES, StoragePaths
 from mulita.core.errors import ValidationError
 from mulita.core.platform import RemovableStorage, UsbDrive
 from mulita.core.messages import message
 
 _DEVICE = re.compile(r'^[A-Za-z0-9]+$')
 
-_PLACES = {
-    'captura': ('Captura', ('.pcap',)),
-    'tap': ('TAP', ('.pcap',)),
-    'traza': ('Traza', ('.csv',)),
-    'ping': ('Ping', ('.csv',)),
-    'publica': ('IP pública', ('.csv',)),
-    'wifi': ('Info Wi-Fi', ('.csv',)),
-    'escaneo': ('Escaneo', ('.csv',)),
-    'descubrimiento': ('Descubrimiento', ('.csv',)),
-    'tls': ('TLS', ('.csv',)),
-    'puerto-switch': ('Puerto de switch', ('.json',)),
-}
+_PLACES = {place.id: (place.label, place.suffixes) for place in PLACES if place.suffixes}
 
 
 @dataclass(frozen=True)
@@ -43,6 +33,7 @@ class CaptureFilesService:
                  capture_active=None, tap_active=None,
                  storage: RemovableStorage | None = None):
         self._root = Path(directory)
+        self._paths = StoragePaths(self._root)
         self._capture_active = capture_active or (lambda: False)
         self._tap_active = tap_active or (lambda: False)
         self._storage = storage
@@ -156,27 +147,9 @@ class CaptureFilesService:
             raise ValidationError(message('tapBusy'))
 
     def _folder(self, place: str) -> Path:
-        if place == 'captura':
-            return self._root
-        if place == 'tap':
-            return self._root / 'tap'
-        if place == 'traza':
-            return self._root / 'trazas'
-        if place == 'ping':
-            return self._root / 'ping'
-        if place == 'publica':
-            return self._root / 'internet'
-        if place == 'wifi':
-            return self._root / 'wifi'
-        if place == 'escaneo':
-            return self._root / 'escaneo'
-        if place == 'descubrimiento':
-            return self._root / 'descubrimiento'
-        if place == 'tls':
-            return self._root / 'tls'
-        if place == 'puerto-switch':
-            return self._root / 'puerto-switch'
-        raise ValidationError(message('badFolder'))
+        if place not in _PLACES:
+            raise ValidationError(message('badFolder'))
+        return self._paths.folder(place)
 
     def _named(self, place: str, name: str, suffix: str = '') -> Path:
         folder = self._folder(place)

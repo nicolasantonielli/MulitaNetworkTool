@@ -1,7 +1,8 @@
 import json
 import unittest
 from types import SimpleNamespace
-from pathlib import PurePosixPath
+from pathlib import Path
+import tempfile
 
 from tests.qt_support import qt_app
 
@@ -17,10 +18,15 @@ class TapOutputTest(unittest.TestCase):
         cls.app = qt_app()
 
     def setUp(self):
-        self.controller = TapController(BridgeContext(config=AppConfig(capture_dir=PurePosixPath('/root/capturas')), settings=getattr(SimpleNamespace(tap=SimpleNamespace(is_running=False)), 'settings', None), dispatcher=QtDispatcher(), notifier=Notifier()), getattr(SimpleNamespace(tap=SimpleNamespace(is_running=False)), 'tap', None))
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.config = AppConfig(capture_dir=Path(temporary.name))
+        self.controller = TapController(
+            BridgeContext(self.config, None, QtDispatcher(), Notifier()),
+            SimpleNamespace(is_running=False))
 
     def test_raw_lines_keep_arrival_order_and_hide_the_folder(self):
-        self.controller._output('/root/capturas/tap/sesion.pcap: listening on br-mulita\n')
+        self.controller._output(str(self.config.capture_dir / 'tap') + '/sesion.pcap: listening on br-mulita\n')
         self.controller._output('tcpdump: 2 packets captured\n')
         lines = json.loads(self.controller.linesJson)
         self.assertEqual(lines, [

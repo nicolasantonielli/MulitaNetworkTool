@@ -8,6 +8,7 @@ from tests.fakes import FakeRunner
 
 from mulita.config import Binaries
 from mulita.core.commands import CommandFactory
+from mulita.adapters.deployment import server_programs
 from mulita.core.models import CommandResult, MISSING_COMMAND_CODE
 from mulita.presentation.i18n import tr, Translator
 from mulita.services.servers import ServerService
@@ -40,7 +41,7 @@ class ServersControllerTest(unittest.TestCase):
         root = Path(self.tmp.name)
         self.runner = FakeRunner({'/usr/bin/ip': CommandResult(0, json.dumps([{
             'ifname': 'eth1', 'addr_info': [{'family': 'inet', 'local': '192.168.50.1', 'prefixlen': 24}]}]))})
-        self.service = ServerService(self.runner, CommandFactory(Binaries()), root / 'servidores',
+        self.service = ServerService(self.runner, CommandFactory(Binaries(), server_programs()), root / 'servidores',
                                      root / 'estado', root / 'capturas', posix=True)
         self.notifier = Notifier()
         self.toasts = []

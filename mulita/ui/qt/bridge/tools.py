@@ -251,12 +251,14 @@ class FilesController(TaskController):
         self._files_service = files
         self._files: tuple = ()
         self._drives: tuple = ()
+        if ctx.settings is not None:
+            ctx.settings.subscribe(lambda _: self.filesChanged.emit())
 
     @pyqtProperty(str, notify=filesChanged)
     def filesJson(self) -> str:
         return self._json([{
             'place': item.place,
-            'placeLabel': item.place_label,
+            'placeLabel': self._tr(item.place_label),
             'name': item.name,
             'size': item.size,
             'modified': item.modified,

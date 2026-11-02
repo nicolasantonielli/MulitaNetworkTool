@@ -836,15 +836,7 @@ Item {
                                 anchors.leftMargin: ui.touch * 0.85
                                 anchors.rightMargin: ui.padding
                                 verticalAlignment: Text.AlignVCenter
-                                text: (modelData.place === "captura" ? i18n.pack.placeCapture
-                                      : modelData.place === "tap" ? i18n.pack.placeTap
-                                      : modelData.place === "traza" ? i18n.pack.placeTrace
-                                      : modelData.place === "ping" ? i18n.pack.placePing
-                                      : modelData.place === "publica" ? i18n.pack.placePublic
-                                      : modelData.place === "wifi" ? i18n.pack.placeWifi
-                                      : modelData.place === "escaneo" ? i18n.pack.placeScan
-                                      : modelData.place === "descubrimiento" ? i18n.pack.placeDiscover
-                                      : modelData.placeLabel) + "   " + modelData.name
+                                text: modelData.placeLabel + "   " + modelData.name
                                       + "   " + modelData.size + "   " + modelData.modified
                                 color: picked ? ui.onAccent : ui.text
                                 font.pixelSize: ui.fontSmall

@@ -10,6 +10,7 @@ from tests.fakes import FakeRunner
 
 from mulita.config import Binaries
 from mulita.core.commands import CommandFactory
+from mulita.adapters.deployment import server_programs
 from mulita.core.errors import AlreadyRunningError, CommandFailedError, ValidationError
 from mulita.core.models import CommandResult
 from mulita.core.servers import KINDS, RANDOM, ServerLog, kind_by_id
@@ -148,7 +149,7 @@ class ServerServiceTest(unittest.TestCase):
         self.service = self._service(self.runner)
 
     def _service(self, runner):
-        return ServerService(runner, CommandFactory(BIN), self.root / 'servidores',
+        return ServerService(runner, CommandFactory(BIN, server_programs()), self.root / 'servidores',
                              self.root / 'estado', self.captures, posix=True)
 
     def test_iperf_binds_to_the_chosen_interface(self):
@@ -303,7 +304,7 @@ class SftpTest(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.captures = PurePosixPath('/root/capturas')
         self.runner = ScriptedRunner({'getent': CommandResult(2, '')})
-        self.service = ServerService(self.runner, CommandFactory(BIN), self.root / 'servidores',
+        self.service = ServerService(self.runner, CommandFactory(BIN, server_programs()), self.root / 'servidores',
                                      self.root / 'estado', self.captures, posix=True)
         # Las rutas /root no existen en la prueba: el servicio solo las nombra en la configuracion.
         self.service._make_dir = lambda path, message: None
@@ -392,7 +393,7 @@ class SaveLogTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        self.service = ServerService(FakeRunner(), CommandFactory(BIN), self.root / 'servidores',
+        self.service = ServerService(FakeRunner(), CommandFactory(BIN, server_programs()), self.root / 'servidores',
                                      self.root / 'estado', self.root / 'capturas', posix=True)
 
     def test_saves_the_columns_of_the_server(self):

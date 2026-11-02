@@ -1,6 +1,8 @@
 """Escaneo Nmap: un proceso por vez, informe en su propia carpeta y perfiles propios."""
 from __future__ import annotations
 
+from mulita.core.storage import PLACES, StoragePaths
+
 import csv
 import json
 import os
@@ -32,25 +34,8 @@ _STATE = {
     'down': 'nmapStateDown',
 }
 # Carpetas de capturas que se pueden elegir para -iL o --script. La pantalla muestra el nombre.
-_PLACES = {
-    'captura': '',
-    'tap': 'tap',
-    'traza': 'trazas',
-    'ping': 'ping',
-    'publica': 'internet',
-    'wifi': 'wifi',
-    'escaneo': 'escaneo',
-    'descubrimiento': 'descubrimiento',
-    'tls': 'tls',
-    'servidores': 'servidores',
-    'nmap': 'nmap',
-}
-_PLACE_LABEL = {
-    'captura': 'placeCapture', 'tap': 'placeTap', 'traza': 'placeTrace', 'ping': 'placePing',
-    'publica': 'placePublic', 'wifi': 'placeWifi', 'escaneo': 'placeScan',
-    'descubrimiento': 'placeDiscover', 'tls': 'placeTls', 'servidores': 'pageServers',
-    'nmap': 'cyberNmap',
-}
+_PLACES = {place.id: place.folder for place in PLACES if place.nmap_input}
+_PLACE_LABEL = {place.id: place.label for place in PLACES if place.nmap_input}
 
 
 @dataclass
@@ -86,6 +71,7 @@ class NmapScanService(ProcessSession):
         self._directory = Path(directory)
         self._state = Path(state_dir) if state_dir else Path.home() / '.config' / 'mulita' / 'nmap'
         self._captures = Path(capture_dir)
+        self._paths = StoragePaths(self._captures)
         self.version = ''
         self.outcome: Outcome | None = None
         self._known: set[str] = set()
@@ -220,7 +206,7 @@ class NmapScanService(ProcessSession):
         if not self._captures.is_dir():
             return found
         for place, folder in _PLACES.items():
-            base = self._captures / folder if folder else self._captures
+            base = self._paths.folder(place)
             if not base.is_dir():
                 continue
             for child in sorted(base.iterdir(), key=lambda item: item.name.lower()):
@@ -237,7 +223,7 @@ class NmapScanService(ProcessSession):
             if place not in _PLACES or not name or '/' in name or '\\' in name or name in ('.', '..'):
                 return None
             folder = _PLACES[place]
-            base = self._captures / folder if folder else self._captures
+            base = self._paths.folder(place)
             path = base / name
             try:
                 if path.is_file() and path.resolve().parent == base.resolve():

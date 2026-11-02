@@ -32,7 +32,7 @@ class CaptureFilesTest(unittest.TestCase):
             self.assertEqual(
                 {(item.place, item.name, item.size) for item in listed},
                 {('captura', 'uno.pcap', '3 B'), ('tap', 'dos.pcap', '5 B'), ('traza', 'ruta.csv', '3 B')})
-            self.assertEqual({item.place_label for item in listed}, {'Captura', 'TAP', 'Traza'})
+            self.assertEqual({item.place_label for item in listed}, {'placeCapture', 'placeTap', 'placeTrace'})
 
     def test_rename_copy_and_delete_stay_inside_the_folder(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -6,6 +6,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Sequence
+from mulita.core.storage import StoragePaths
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -63,25 +64,16 @@ class SensorSettings:
 @dataclass(frozen=True)
 class AppConfig:
     test_mode: bool = TEST
-    settings_path: Path = Path.home() / '.config' / 'mulita' / 'settings.json'
+    settings_path: Path = field(default_factory=lambda: Path.home() / '.config' / 'mulita' / 'settings.json')
     virtual_keyboard: bool = True
-    capture_dir: PurePosixPath = Path.home() / 'capturas'
+    capture_dir: PurePosixPath = field(default_factory=lambda: Path.home() / 'capturas')
+    storage: StoragePaths = field(init=False)
     default_capture_name: str = 'prueba'
-    trace_dir: PurePosixPath = Path.home() / 'capturas' / 'trazas'
-    ping_dir: PurePosixPath = Path.home() / 'capturas' / 'ping'
-    wifi_dir: PurePosixPath = Path.home() / 'capturas' / 'wifi'
-    scan_dir: PurePosixPath = Path.home() / 'capturas' / 'escaneo'
-    nmap_dir: PurePosixPath = Path.home() / 'capturas' / 'nmap'
-    discovery_dir: PurePosixPath = Path.home() / 'capturas' / 'descubrimiento'
-    tls_dir: PurePosixPath = Path.home() / 'capturas' / 'tls'
-    # Archivos que ve el tecnico: carpeta del TFTP, carpeta del servidor web y registros.
-    servers_dir: PurePosixPath = Path.home() / 'capturas' / 'servidores'
     # Claves, certificados y estado interno. Fuera de las capturas para que no se compartan.
-    servers_state_dir: Path = Path.home() / '.config' / 'mulita' / 'servers'
+    servers_state_dir: Path = field(default_factory=lambda: Path.home() / '.config' / 'mulita' / 'servers')
     trace_cycles: int = 6
     public_ip_url: str = 'https://ipwho.is/'
     public_ip_timeout: int = 10
-    public_ip_dir: PurePosixPath = Path.home() / 'capturas' / 'internet'
     mac_vendor_url: str = 'https://api.macvendors.com'
     mac_vendor_timeout: int = 10
     repository_dir: str = str(PROJECT_ROOT)
@@ -94,6 +86,45 @@ class AppConfig:
     service_name: str = 'mulita'
     binaries: Binaries = field(default_factory=Binaries)
     sensor: SensorSettings = field(default_factory=SensorSettings)
+
+    def __post_init__(self):
+        object.__setattr__(self, 'storage', StoragePaths(self.capture_dir))
+
+    @property
+    def trace_dir(self) -> PurePosixPath:
+        return self.storage.folder('traza')
+
+    @property
+    def ping_dir(self) -> PurePosixPath:
+        return self.storage.folder('ping')
+
+    @property
+    def wifi_dir(self) -> PurePosixPath:
+        return self.storage.folder('wifi')
+
+    @property
+    def scan_dir(self) -> PurePosixPath:
+        return self.storage.folder('escaneo')
+
+    @property
+    def nmap_dir(self) -> PurePosixPath:
+        return self.storage.folder('nmap')
+
+    @property
+    def discovery_dir(self) -> PurePosixPath:
+        return self.storage.folder('descubrimiento')
+
+    @property
+    def tls_dir(self) -> PurePosixPath:
+        return self.storage.folder('tls')
+
+    @property
+    def servers_dir(self) -> PurePosixPath:
+        return self.storage.folder('servidores')
+
+    @property
+    def public_ip_dir(self) -> PurePosixPath:
+        return self.storage.folder('publica')
 
 
 def load_config(argv: Sequence[str] = ()) -> AppConfig:
@@ -131,10 +162,6 @@ def _installation_paths() -> dict:
     home = directory('user_home', Path.home())
     captures = directory('capture_dir', home / 'capturas')
     state = directory('state_dir', home / '.config' / 'mulita')
-    return dict(capture_dir=captures, trace_dir=captures / 'trazas',
-                ping_dir=captures / 'ping', wifi_dir=captures / 'wifi',
-                scan_dir=captures / 'escaneo', nmap_dir=captures / 'nmap',
-                discovery_dir=captures / 'descubrimiento', tls_dir=captures / 'tls',
-                servers_dir=captures / 'servidores', public_ip_dir=captures / 'internet',
+    return dict(capture_dir=captures,
                 settings_path=state / 'settings.json', servers_state_dir=state / 'servers',
                 repository_dir=str(PROJECT_ROOT), installation_user=user)
