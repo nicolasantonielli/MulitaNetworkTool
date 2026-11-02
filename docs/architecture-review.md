@@ -114,6 +114,13 @@ Las evidencias siguientes describen el hallazgo histórico.
 
 ### A4. Un controlador de Ethernet también implementa Wi-Fi mediante un indicador
 
+**Corregido el 2 de noviembre de 2026.** `IPv4Configuration` declara lectura,
+DHCP e IP fija. `IPv4Controller` recibe esa capacidad y sus datos de presentación;
+no contiene decisiones Wi-Fi ni operaciones VLAN. `InternalEthernetController`
+agrega exclusivamente lectura y aplicación VLAN. La fábrica Qt inyecta ambos
+servicios. Verificación: 57 pruebas de controladores IPv4, Ethernet y Wi-Fi aprobadas.
+Las evidencias siguientes corresponden a la revisión original.
+
 **Prioridad:** media desde el punto de vista arquitectónico.
 
 **Evidencias:** [`InternalEthernetController.__init__()`](../mulita/ui/qt/bridge/ethernet.py), en la línea 23, acepta `wifi=False`. Este indicador selecciona servicios, cambia nombres y notificaciones, modifica la actualización de datos y suprime operaciones VLAN. [`mulita/ui/qt/app.py`](../mulita/ui/qt/app.py) registra la misma clase como `interna` y `wifiIp`.

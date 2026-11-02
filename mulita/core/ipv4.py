@@ -1,0 +1,9 @@
+from typing import Protocol
+from mulita.core.models import EthernetConfig
+
+
+class IPv4Configuration(Protocol):
+    def read(self) -> EthernetConfig: ...
+    def apply_dhcp(self) -> EthernetConfig: ...
+    def apply_static(self, address: str, netmask: str,
+                     gateway: str = '', dns: str = '') -> EthernetConfig: ...

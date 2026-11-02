@@ -35,6 +35,7 @@ class QtApplication:
 
         from mulita.ui.qt.bridge.base import BridgeContext, Notifier
         from mulita.ui.qt.bridge.ethernet import InternalEthernetController
+        from mulita.ui.qt.bridge.ipv4 import IPv4Controller
         from mulita.ui.qt.bridge.diagnostics import (DiscoveryController,
                                                      PingController,
                                                      PortScanController,
@@ -94,8 +95,8 @@ class QtApplication:
             'settings': SettingsController(ctx),
             'system': SystemController(ctx),
             'network': NetworkController(ctx),
-            'interna': InternalEthernetController(ctx),
-            'wifiIp': InternalEthernetController(ctx, wifi=True),
+            'interna': InternalEthernetController(ctx, services.ethernet),
+            'wifiIp': IPv4Controller(ctx, services.wifi, lambda: 'Wi-Fi', 'wifiIp'),
             'wifi': WifiController(ctx),
             'capture': CaptureController(ctx),
             'tap': TapController(ctx),
