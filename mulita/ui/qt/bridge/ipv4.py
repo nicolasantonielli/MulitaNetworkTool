@@ -19,6 +19,7 @@ def _netmask(config: EthernetConfig) -> str:
 class IPv4Controller(TaskController):
     """Presentación IPv4 compartida sin decisiones sobre el tipo de conexión."""
     loaded = pyqtSignal()
+    presentationChanged = pyqtSignal()
 
     def __init__(self, ctx, network: IPv4Configuration, interface_name, title_key: str):
         super().__init__(ctx)
@@ -26,7 +27,7 @@ class IPv4Controller(TaskController):
         self._interface_name = interface_name
         self._title_key = title_key
         self._config = EthernetConfig()
-        ctx.settings.subscribe(lambda _settings: self.loaded.emit())
+        ctx.settings.subscribe(lambda _settings: self.presentationChanged.emit())
 
     @pyqtProperty(str, notify=loaded)
     def interfaceName(self) -> str:
@@ -52,7 +53,7 @@ class IPv4Controller(TaskController):
     def dns(self) -> str:
         return self._config.dns
 
-    @pyqtProperty(str, notify=loaded)
+    @pyqtProperty(str, notify=presentationChanged)
     def summary(self) -> str:
         if self._config.mode is AddressMode.ESTATICA and self._config.address:
             return self._tr('inUseStatic', address=self._config.address, prefix=self._config.prefix)
@@ -89,3 +90,4 @@ class IPv4Controller(TaskController):
     def _show(self, config: EthernetConfig) -> None:
         self._config = config
         self.loaded.emit()
+        self.presentationChanged.emit()

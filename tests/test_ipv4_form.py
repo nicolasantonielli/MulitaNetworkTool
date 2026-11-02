@@ -39,6 +39,16 @@ class IPv4FormTest(unittest.TestCase):
         try:
             controller._show(EthernetConfig(AddressMode.ESTATICA, '192.0.2.5', 24, '192.0.2.1', '1.1.1.1'))
             self.assertEqual(form.property('gateway'), '192.0.2.1')
+            form.setProperty('address', '192.0.2.99')
+            form.setProperty('gateway', '192.0.2.254')
+            previous_summary = controller.summary
+            service.set_language('en')
+            service.set_theme('dark')
+            service.set_scale(1.2)
+            self.app.processEvents()
+            self.assertEqual(form.property('address'), '192.0.2.99')
+            self.assertEqual(form.property('gateway'), '192.0.2.254')
+            self.assertNotEqual(controller.summary, previous_summary)
             controller._show(EthernetConfig(AddressMode.ESTATICA, '192.0.2.6', 24, '', ''))
             self.assertEqual(form.property('address'), '192.0.2.6')
             self.assertEqual(form.property('netmask'), '255.255.255.0')
