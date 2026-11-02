@@ -365,6 +365,9 @@ ColumnLayout {
                                 var line = root.lines[root.hover]
                                 var fromScreen = modelData.screen
                                 var fromIndex = modelData.tileIndex
+                                // Al bajar, el hueco queda después de la fila destino.
+                                var toIndex = line && line.kind === "tile"
+                                    ? line.tileIndex + (root.hover > root.dragLine ? 1 : 0) : 0
                                 root.activeDrag = null
                                 root.animateMoves = false
                                 offset = 0
@@ -373,7 +376,6 @@ ColumnLayout {
                                 root.dragId = ""
                                 root.dragging = false
                                 if (line && modelData.kind === "tile") {
-                                    var toIndex = line.kind === "separator" ? 0 : line.tileIndex
                                     root.moveTile(fromScreen, fromIndex, line.screen, toIndex)
                                 }
                                 Qt.callLater(function() { root.animateMoves = true })
