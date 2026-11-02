@@ -50,11 +50,11 @@ class SystemController(TaskController):
             if result is None:
                 os.execv(sys.executable, [sys.executable, *sys.argv])
 
-        self._task(self._maintenance.reset, restarted)
+        self._ctx.dispatcher.finish_background(self._maintenance.reset, restarted, self._fail)
 
     @pyqtSlot()
     def poweroff(self) -> None:
-        self._task(self._maintenance.poweroff)
+        self._ctx.dispatcher.finish_background(self._maintenance.poweroff, on_error=self._fail)
 
     @pyqtSlot(str)
     def share(self, source: str) -> None:

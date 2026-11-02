@@ -123,7 +123,8 @@ class QtApplication:
         for name, controller in self._controllers.items():
             context.setContextProperty(name, controller)
 
-        self.app.aboutToQuit.connect(services.shutdown)
+        self._dispatcher = ctx.dispatcher
+        self.app.aboutToQuit.connect(self._shutdown)
         self.engine.load(QUrl.fromLocalFile(str(QML_DIR / 'Main.qml')))
         if not self.engine.rootObjects():
             raise RuntimeError('No se pudo cargar la interfaz QML')
@@ -166,9 +167,16 @@ class QtApplication:
         finally:
             self.dispose()
 
+    def _shutdown(self) -> None:
+        try:
+            self._services.shutdown()
+        finally:
+            self._dispatcher.shutdown()
+
     def dispose(self) -> None:
         """El motor QML se destruye antes que los controladores que sus vinculaciones leen."""
         from PyQt5 import sip
+        self._shutdown()
         if self.engine is not None and not sip.isdeleted(self.engine):
             sip.delete(self.engine)
         self.engine = None

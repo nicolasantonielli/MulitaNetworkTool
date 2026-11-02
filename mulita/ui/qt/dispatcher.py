@@ -30,6 +30,7 @@ class QtDispatcher(UiDispatcher):
     """Una senal encolada lleva cada llamada al hilo de la interfaz."""
 
     def __init__(self):
+        super().__init__()
         self._invoker = _Invoker()
 
     def post(self, callback: Callable[..., Any], *args: Any) -> None:
