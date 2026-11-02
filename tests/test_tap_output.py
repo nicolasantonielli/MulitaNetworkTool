@@ -1,6 +1,7 @@
 import json
 import unittest
 from types import SimpleNamespace
+from pathlib import PurePosixPath
 
 from tests.qt_support import qt_app
 
@@ -17,7 +18,7 @@ class TapOutputTest(unittest.TestCase):
 
     def setUp(self):
         self.controller = TapController(BridgeContext(
-            config=AppConfig(),
+            config=AppConfig(capture_dir=PurePosixPath('/root/capturas')),
             services=SimpleNamespace(tap=SimpleNamespace(is_running=False)),
             dispatcher=QtDispatcher(),
             notifier=Notifier()))

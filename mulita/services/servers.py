@@ -14,7 +14,7 @@ from mulita.core.errors import AlreadyRunningError, CommandFailedError, Validati
 from mulita.core.parsers import parse_default_gateway, parse_interface_ipv4
 from mulita.core.ports import CommandRunner, ExitListener, OutputListener
 from mulita.core.servers import KINDS, NO, YES, kind_by_id
-from mulita.presentation.i18n import tr
+from mulita.core.messages import message
 from mulita.services.base import ProcessSession
 
 USER_MARK = 'Mulita SFTP temporal'
@@ -70,7 +70,7 @@ class ServerService:
         definition = kind_by_id(kind)
         session = self._sessions[definition.id]
         if session.is_running:
-            raise AlreadyRunningError(tr('serverRunning', name=tr(definition.title)))
+            raise AlreadyRunningError(message('serverRunning', name=message(definition.title)))
         merged = {**definition.defaults(), **{key: str(value) for key, value in values.items()}}
         plan = self._builders[definition.id](merged)
         if plan.cleanup:
@@ -106,49 +106,49 @@ class ServerService:
     def save(self, kind: str, rows: list[dict], filename: str) -> str:
         definition = kind_by_id(kind)
         if not rows:
-            raise ValidationError(tr('serverNoRows'))
+            raise ValidationError(message('serverNoRows'))
         name = validation.trace_filename(filename)
         folder = self._servers_dir / 'registros'
         self._make_dir(folder, 'serverFolder')
         path = folder / name
         if path.parent.resolve() != folder.resolve():
-            raise ValidationError(tr('badStoredName'))
+            raise ValidationError(message('badStoredName'))
         if path.exists():
-            raise ValidationError(tr('nameExists'))
+            raise ValidationError(message('nameExists'))
         try:
             with path.open('w', encoding='utf-8', newline='') as handle:
                 writer = csv.writer(handle, lineterminator='\n')
-                writer.writerow([tr(column.title) for column in definition.columns])
+                writer.writerow([column.key for column in definition.columns])
                 for row in rows:
                     writer.writerow([row.get(column.key, '') for column in definition.columns])
         except OSError as exc:
-            raise CommandFailedError(tr('serverSaveFailed')) from exc
+            raise CommandFailedError(message('serverSaveFailed')) from exc
         if hasattr(os, 'sync'):
             os.sync()
         return name
 
     # --- Ajustes comunes ----------------------------------------------------------------
 
-    def _make_dir(self, path: Path, message: str) -> None:
+    def _make_dir(self, path: Path, error_key: str) -> None:
         if not self._posix:
             return
         try:
             path.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            raise CommandFailedError(tr(message)) from exc
+            raise CommandFailedError(message(error_key)) from exc
 
     def _interface(self, values: Mapping[str, str], required: bool) -> tuple[str, str, int]:
         """Interfaz elegida, su direccion IPv4 y el prefijo. Vacia si el servidor escucha en todas."""
         name = (values.get('iface') or '').strip()
         if not name:
             if required:
-                raise ValidationError(tr('serverNeedIface'))
+                raise ValidationError(message('serverNeedIface'))
             return '', '', 24
         name = validation.interface_name(name)
         result = self._runner.run(self._commands.interface_ipv4(name))
         address, prefix = parse_interface_ipv4(result.stdout) if result.ok else ('', 24)
         if not address:
-            raise ValidationError(tr('serverNoAddress', interface=name))
+            raise ValidationError(message('serverNoAddress', interface=name))
         return name, address, prefix
 
     @staticmethod
@@ -156,7 +156,7 @@ class ServerService:
         return str(values.get(key, NO)).strip() == YES
 
     def _port(self, values: Mapping[str, str], key: str = 'port', label: str = 'fieldPort') -> int:
-        return validation.port_number(values.get(key, ''), tr(label))
+        return validation.port_number(values.get(key, ''), message(label))
 
     def _folder(self, name: str) -> Path:
         path = self._servers_dir / name
@@ -182,18 +182,18 @@ class ServerService:
 
     def _ntp(self, values: Mapping[str, str]) -> _Plan:
         _name, address, _prefix = self._interface(values, required=False)
-        stratum = validation.integer_between(values.get('stratum', ''), 1, 15, tr('serverStratum'))
+        stratum = validation.integer_between(values.get('stratum', ''), 1, 15, message('serverStratum'))
         return _Plan(self._commands.ntp_server(self._port(values), stratum, address))
 
     def _web(self, values: Mapping[str, str]) -> _Plan:
         _name, address, _prefix = self._interface(values, required=False)
         mode = values.get('mode', 'http')
         if mode not in ('http', 'https', 'both'):
-            raise ValidationError(tr('badMode', value=mode))
+            raise ValidationError(message('badMode', value=mode))
         http_port = self._port(values, 'http_port', 'serverHttpPort') if mode != 'https' else 0
         https_port = self._port(values, 'https_port', 'serverHttpsPort') if mode != 'http' else 0
         if http_port and http_port == https_port:
-            raise ValidationError(tr('serverPortsEqual'))
+            raise ValidationError(message('serverPortsEqual'))
         certificate = key = ''
         if https_port:
             certificate, key = self._certificate()
@@ -207,16 +207,16 @@ class ServerService:
         if self._posix and not (certificate.exists() and key.exists()):
             result = self._runner.run(self._commands.tls_certificate(str(certificate), str(key)))
             if not result.ok:
-                raise CommandFailedError(tr('serverPrepare', detail=_first_line(result.text)), result)
+                raise CommandFailedError(message('serverPrepare', detail=_first_line(result.text)), result)
         return str(certificate), str(key)
 
     def _dns(self, values: Mapping[str, str]) -> _Plan:
         _name, address, _prefix = self._interface(values, required=True)
         name = validation.dns_name(values.get('name', ''))
         answer_text = (values.get('answer') or '').strip()
-        answer = validation.ipv4_address(answer_text, tr('serverAnswer')) if answer_text else address
+        answer = validation.ipv4_address(answer_text, message('serverAnswer')) if answer_text else address
         upstream_text = (values.get('upstream') or '').strip()
-        upstream = validation.ipv4_address(upstream_text, tr('serverUpstream')) if upstream_text else ''
+        upstream = validation.ipv4_address(upstream_text, message('serverUpstream')) if upstream_text else ''
         pid = self._state('dns') / 'dnsmasq.pid'
         return _Plan(self._commands.dns_server(
             address, self._port(values), name, answer, upstream, str(pid)))
@@ -225,14 +225,14 @@ class ServerService:
         name, address, prefix = self._interface(values, required=True)
         route = self._runner.run(self._commands.interface_gateway(name))
         if route.ok and parse_default_gateway(route.stdout):
-            raise ValidationError(tr('dhcpUplink', interface=name))
+            raise ValidationError(message('dhcpUplink', interface=name))
         network = ipaddress.IPv4Network(f'{address}/{prefix}', strict=False)
         if network.prefixlen > 29:
-            raise ValidationError(tr('dhcpSmallNet', interface=name))
+            raise ValidationError(message('dhcpSmallNet', interface=name))
         first, last = _dhcp_range(network, address, values)
-        gateway = _optional_ip(values.get('gateway'), tr('fieldGateway'), address)
+        gateway = _optional_ip(values.get('gateway'), message('fieldGateway'), address)
         dns = _optional_ip(values.get('dns'), 'DNS', address)
-        hours = validation.integer_between(values.get('hours', ''), 1, 168, tr('serverLease'))
+        hours = validation.integer_between(values.get('hours', ''), 1, 168, message('serverLease'))
         folder = self._state('dhcp')
         return _Plan(self._commands.dhcp_server(
             name, first, last, str(network.netmask), hours, gateway, dns,
@@ -248,7 +248,7 @@ class ServerService:
         entry = self._runner.run(self._commands.user_entry(user))
         if entry.ok and entry.stdout.strip():
             if USER_MARK not in entry.stdout:
-                raise ValidationError(tr('sftpUserTaken', user=user))
+                raise ValidationError(message('sftpUserTaken', user=user))
         else:
             self._must(self._commands.user_add(user, USER_MARK))
 
@@ -297,13 +297,13 @@ class ServerService:
         try:
             path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
         except OSError as exc:
-            raise CommandFailedError(tr('serverFolder')) from exc
+            raise CommandFailedError(message('serverFolder')) from exc
 
     def _must(self, argv: list[str], input_text: str | None = None) -> None:
         result = (self._runner.run(argv, input_text=input_text) if input_text is not None
                   else self._runner.run(argv))
         if not result.ok:
-            raise CommandFailedError(tr('serverPrepare', detail=_first_line(result.text)), result)
+            raise CommandFailedError(message('serverPrepare', detail=_first_line(result.text)), result)
 
 
 def _first_line(text: str) -> str:
@@ -324,13 +324,13 @@ def _dhcp_range(network: ipaddress.IPv4Network, address: str,
     end = min(start + 50, top - 1)
     first_text = (values.get('first') or '').strip()
     last_text = (values.get('last') or '').strip()
-    first = int(ipaddress.IPv4Address(validation.ipv4_address(first_text, tr('serverFrom')))) if first_text else start
-    last = int(ipaddress.IPv4Address(validation.ipv4_address(last_text, tr('serverTo')))) if last_text else end
+    first = int(ipaddress.IPv4Address(validation.ipv4_address(first_text, message('serverFrom')))) if first_text else start
+    last = int(ipaddress.IPv4Address(validation.ipv4_address(last_text, message('serverTo')))) if last_text else end
     if first_text and not last_text:
         last = min(first + 50, top - 1)
     if last_text and not first_text:
         first = max(base + 1, last - 50)
     inside = base < first <= last < top
     if not inside or first <= own <= last:
-        raise ValidationError(tr('dhcpRange'))
+        raise ValidationError(message('dhcpRange'))
     return str(ipaddress.IPv4Address(first)), str(ipaddress.IPv4Address(last))

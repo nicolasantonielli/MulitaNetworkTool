@@ -9,7 +9,7 @@ from tests.fakes import FakeRunner
 from mulita.config import Binaries
 from mulita.core.commands import CommandFactory
 from mulita.core.models import CommandResult, MISSING_COMMAND_CODE
-from mulita.presentation.i18n import tr, use
+from mulita.presentation.i18n import tr, Translator
 from mulita.services.servers import ServerService
 from mulita.ui.qt.bridge.base import BridgeContext, Notifier
 from mulita.ui.qt.bridge.servers import ServersController
@@ -35,7 +35,6 @@ class ServersControllerTest(unittest.TestCase):
         cls.app = qt_app()
 
     def setUp(self):
-        use('es')
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         root = Path(self.tmp.name)

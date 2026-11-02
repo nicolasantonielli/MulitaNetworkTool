@@ -1,3 +1,4 @@
+from mulita.presentation.i18n import Translator
 import json
 import tempfile
 import time
@@ -13,9 +14,8 @@ from mulita.config import Binaries
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import AlreadyRunningError, ValidationError
 from mulita.core.models import MISSING_COMMAND_CODE
-from mulita.core.tls import (grouped, mode_flags, parse_report, parse_target,
-                             summarize, test_label)
-from mulita.presentation.i18n import use
+from mulita.core.tls import (mode_flags, parse_report, parse_target)
+from mulita.presentation.tls import (grouped, summarize, test_label)
 from mulita.services.tls import TlsService
 from mulita.ui.qt.bridge.base import BridgeContext, Notifier
 from mulita.ui.qt.bridge.tls import TlsController
@@ -42,7 +42,7 @@ def report_text(entries=REPORT):
 
 class TargetTest(unittest.TestCase):
     def setUp(self):
-        use('es')
+        pass
 
     def test_host_uses_the_default_port(self):
         target = parse_target('example.com')
@@ -76,7 +76,7 @@ class TargetTest(unittest.TestCase):
 
 class ReportTest(unittest.TestCase):
     def setUp(self):
-        use('es')
+        pass
 
     def test_parses_the_flat_report(self):
         found = parse_report(report_text())
@@ -128,8 +128,7 @@ class ReportTest(unittest.TestCase):
         self.assertEqual(test_label(found[('cert_commonName', 2)]), 'Nombre común (CN) #2')
         self.assertEqual(test_label(found[('TLS1', 0)]), 'TLS 1.0')
         self.assertEqual(test_label(found[('SWEET32', 0)]), 'SWEET32')
-        use('en')
-        self.assertEqual(test_label(found[('cert_commonName', 0)]), 'Common name (CN)')
+        self.assertEqual(test_label(found[('cert_commonName', 0)], Translator('en')), 'Common name (CN)')
 
     def test_groups_by_section_with_headers(self):
         rows = grouped(parse_report(report_text()))
@@ -168,7 +167,6 @@ class CommandTest(unittest.TestCase):
 
 class ServiceTest(unittest.TestCase):
     def setUp(self):
-        use('es')
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.runner = FakeRunner()
@@ -246,10 +244,10 @@ class ServiceTest(unittest.TestCase):
         name = self.service.save(findings, 'analisis')
         self.assertEqual(name, 'analisis.csv')
         lines = (Path(self.tmp.name) / 'tls' / name).read_text(encoding='utf-8').splitlines()
-        self.assertEqual(lines[0], 'Sección,Prueba,Severidad,Resultado,CVE')
+        self.assertEqual(lines[0], 'section,test,severity,result,cve')
         self.assertEqual(len(lines), 9)
-        self.assertIn('Certificado,Nombre común (CN),Correcto,example.com,', lines)
-        self.assertIn('Vulnerabilidades,SWEET32,Bajo,VULNERABLE,CVE-2016-2183', lines)
+        self.assertIn('certificate,cert_commonName,OK,example.com,', lines)
+        self.assertIn('vulnerabilities,SWEET32,LOW,VULNERABLE,CVE-2016-2183', lines)
 
     def test_save_rejects_empty_duplicates_and_bad_names(self):
         findings = parse_report(report_text())
@@ -268,7 +266,6 @@ class ControllerTest(unittest.TestCase):
         cls.app = qt_app()
 
     def setUp(self):
-        use('es')
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.runner = FakeRunner()

@@ -12,7 +12,7 @@ from pathlib import Path
 from mulita.core import validation
 from mulita.core.errors import CommandFailedError
 from mulita.core.switchport import parse_frame
-from mulita.presentation.i18n import tr
+from mulita.core.messages import message
 
 
 def read_link(interface: str, root: Path = Path('/sys/class/net')) -> dict:
@@ -41,7 +41,7 @@ class SwitchPortService:
     def scan(self, interface: str, seconds: int, cancelled: threading.Event,
              update, simulated: bool = False) -> dict:
         interface = validation.interface_name(interface)
-        seconds = validation.integer_between(str(seconds), 5, 180, tr('switchDuration'))
+        seconds = validation.integer_between(str(seconds), 5, 180, message('switchDuration'))
         started = time.monotonic()
         report = {'interface': interface, 'started': datetime.now().isoformat(timespec='seconds'),
                   'elapsed': 0, 'simulated': simulated, 'neighbors': [], 'vlans': [],
@@ -58,7 +58,7 @@ class SwitchPortService:
             update(json.loads(json.dumps(report)))
             return report
         if not hasattr(socket, 'AF_PACKET'):
-            raise CommandFailedError(tr('switchLinux'))
+            raise CommandFailedError(message('switchLinux'))
         neighbors: dict[tuple, tuple[float, dict]] = {}
         observed: set[int] = set()
         last_update = -1.0
@@ -101,9 +101,9 @@ class SwitchPortService:
                         update(json.loads(json.dumps(report)))
                         last_update = now
         except PermissionError as exc:
-            raise CommandFailedError(tr('switchPermission')) from exc
+            raise CommandFailedError(message('switchPermission')) from exc
         except OSError as exc:
-            raise CommandFailedError(tr('switchFailed', detail=str(exc))) from exc
+            raise CommandFailedError(message('switchFailed', detail=str(exc))) from exc
         now = time.monotonic()
         report.update(elapsed=int(now - started), cancelled=cancelled.is_set(), link=read_link(interface),
                       neighbors=[value[1] for value in neighbors.values() if value[0] > now], vlans=sorted(observed))

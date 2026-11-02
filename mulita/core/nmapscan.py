@@ -15,7 +15,7 @@ from xml.etree import ElementTree
 
 from mulita.core import validation
 from mulita.core.errors import ValidationError
-from mulita.presentation.i18n import tr
+from mulita.core.messages import message
 
 TLS_PORTS = '443,465,636,853,993,995,8443'
 HTTP_PORTS = '80,443,8080,8443'
@@ -177,7 +177,7 @@ def profile_by_id(profile_id: str) -> Profile:
     try:
         return _BY_ID[profile_id]
     except KeyError:
-        raise ValidationError(tr('nmapBadProfile', value=profile_id or tr('empty'))) from None
+        raise ValidationError(message('nmapBadProfile', value=profile_id or message('empty'))) from None
 
 
 def profiles_view(user_profiles: list[dict]) -> list[dict]:
@@ -235,7 +235,7 @@ def compile_scan(data: dict, user_profiles: dict[str, dict] | None = None,
         profile_by_id(profile_id)
     timing = str(data.get('timing') or 'T3')
     if timing not in _TIMING:
-        raise ValidationError(tr('nmapBadTiming', value=timing))
+        raise ValidationError(message('nmapBadTiming', value=timing))
     notes: list[str] = []
     if profile is not None and not profile.custom:
         compiled = _compile_builtin(profile, data, timing, notes)
@@ -247,8 +247,8 @@ def compile_scan(data: dict, user_profiles: dict[str, dict] | None = None,
         compiled = _compile_custom(line, str(data.get('targets') or ''), resolve_file, notes)
         compiled.profile_id = profile_id or 'custom'
     if data.get('noDiscovery') or data.get('no_discovery'):
-        notes.append(tr('nmapPnWarn'))
-    notes.append(tr('nmapReportsNote'))
+        notes.append(message('nmapPnWarn'))
+    notes.append(message('nmapReportsNote'))
     compiled.notes = notes
     compiled.command = 'nmap ' + ' '.join(shlex.quote(part) for part in compiled.display)
     return compiled
@@ -298,7 +298,7 @@ def _compile_custom(line: str, targets_field: str, resolve_file: Resolver, notes
             continue
         if token in _TAKES_VALUE:
             if index + 1 >= len(parsed):
-                raise ValidationError(tr('nmapOptionNeedsValue', option=token))
+                raise ValidationError(message('nmapOptionNeedsValue', option=token))
             value = parsed[index + 1]
             _reject_output_option(token)
             shown, real = _resolve_option(token, value, resolve_file)
@@ -319,14 +319,14 @@ def _compile_custom(line: str, targets_field: str, resolve_file: Resolver, notes
         inline_targets.append(_one_target(token))
         index += 1
     if inline_targets:
-        notes.append(tr('nmapTargetInLine'))
+        notes.append(message('nmapTargetInLine'))
         targets = inline_targets
     elif listed:
-        notes.append(tr('nmapTargetInFile'))
+        notes.append(message('nmapTargetInFile'))
         targets = []
     else:
         targets = parse_targets(targets_field)
-        notes.append(tr('nmapTargetInField'))
+        notes.append(message('nmapTargetInField'))
     _runtime_flags(resolved)
     _runtime_flags(display)
     return Compiled('custom', '', resolved + targets, display + targets, len(targets),
@@ -349,34 +349,34 @@ def parse_custom(line: str) -> list[str]:
             text = text[len(prefix):].strip()
             break
     if not text:
-        raise ValidationError(tr('nmapNeedArgs'))
+        raise ValidationError(message('nmapNeedArgs'))
     try:
         args = shlex.split(text, posix=True)
     except ValueError as exc:
-        raise ValidationError(tr('nmapBadArgs', value=exc)) from exc
+        raise ValidationError(message('nmapBadArgs', value=exc)) from exc
     if not args:
-        raise ValidationError(tr('nmapNeedArgs'))
+        raise ValidationError(message('nmapNeedArgs'))
     return args
 
 
 def parse_targets(text: str) -> list[str]:
     tokens = (text or '').split()
     if not tokens:
-        raise ValidationError(tr('nmapNeedTarget'))
+        raise ValidationError(message('nmapNeedTarget'))
     return [_one_target(token) for token in tokens]
 
 
 def parse_ports(text: str) -> str:
     value = (text or '').replace(' ', '')
     if not value or not _PORT.fullmatch(value):
-        raise ValidationError(tr('nmapBadPort', value=value or tr('empty')))
+        raise ValidationError(message('nmapBadPort', value=value or message('empty')))
     for part in value.split(','):
         if '-' in part:
             start, end = (int(piece) for piece in part.split('-', 1))
             if not 1 <= start <= end <= 65535:
-                raise ValidationError(tr('nmapBadPort', value=part))
+                raise ValidationError(message('nmapBadPort', value=part))
         elif not 1 <= int(part) <= 65535:
-            raise ValidationError(tr('nmapBadPort', value=part))
+            raise ValidationError(message('nmapBadPort', value=part))
     return value
 
 
@@ -387,29 +387,29 @@ def privilege_error(text: str) -> bool:
 
 def _one_target(token: str) -> str:
     if token.startswith('-') or any(char in token for char in ';&|$`<>\'"\\'):
-        raise ValidationError(tr('nmapBadTarget', value=token))
+        raise ValidationError(message('nmapBadTarget', value=token))
     if '/' in token:
         try:
             ipaddress.ip_network(token, strict=False)
         except ValueError:
-            raise ValidationError(tr('nmapBadTarget', value=token)) from None
+            raise ValidationError(message('nmapBadTarget', value=token)) from None
         return token
     if ':' in token:
         try:
             ipaddress.ip_address(token.split('%', 1)[0])
         except ValueError:
-            raise ValidationError(tr('nmapBadTarget', value=token)) from None
+            raise ValidationError(message('nmapBadTarget', value=token)) from None
         return token
     ranged = _RANGE.fullmatch(token)
     if ranged:
         try:
             ipaddress.ip_address(ranged.group(1))
         except ValueError:
-            raise ValidationError(tr('nmapBadTarget', value=token)) from None
+            raise ValidationError(message('nmapBadTarget', value=token)) from None
         start = int(ranged.group(1).rsplit('.', 1)[1])
         end = int(ranged.group(2))
         if not 0 <= end <= 255 or start > end:
-            raise ValidationError(tr('nmapBadTarget', value=token))
+            raise ValidationError(message('nmapBadTarget', value=token))
         return token
     try:
         ipaddress.ip_address(token)
@@ -418,7 +418,7 @@ def _one_target(token: str) -> str:
         pass
     if _HOST.fullmatch(token):
         return token
-    raise ValidationError(tr('nmapBadTarget', value=token))
+    raise ValidationError(message('nmapBadTarget', value=token))
 
 
 def _with_timing(flags: list[str], timing: str, always: bool) -> list[str]:
@@ -448,7 +448,7 @@ def _insert_ports(args: list[str], profile: Profile, data: dict) -> None:
         elif mode == 'top20':
             extra = ['--top-ports', '20']
         else:
-            raise ValidationError(tr('nmapBadUdp', value=mode))
+            raise ValidationError(message('nmapBadUdp', value=mode))
     else:
         raw = str(data.get('ports') or profile.port_default)
         if profile.ports == 'previous' and raw.strip() in ('', '*'):
@@ -467,12 +467,12 @@ def _insert_ports(args: list[str], profile: Profile, data: dict) -> None:
 
 def _catalog_scripts(chosen) -> tuple[str, ...]:
     if not isinstance(chosen, list) or not chosen:
-        raise ValidationError(tr('nmapNeedScript'))
+        raise ValidationError(message('nmapNeedScript'))
     names = []
     for item in chosen:
         name = str(item)
         if name not in _CHECK_IDS:
-            raise ValidationError(tr('nmapBadScript', value=name))
+            raise ValidationError(message('nmapBadScript', value=name))
         if name not in names:
             names.append(name)
     return tuple(names)
@@ -486,7 +486,7 @@ def _modifiers(args: list[str], profile: Profile, data: dict) -> None:
     interface = str(data.get('interface') or '').strip()
     if profile.needs_interface or interface:
         if not interface and profile.needs_interface:
-            raise ValidationError(tr('nmapNeedIface'))
+            raise ValidationError(message('nmapNeedIface'))
         if interface:
             args.extend(['-e', validation.interface_name(interface)])
     exclude = str(data.get('exclude') or '').replace(',', ' ')
@@ -506,7 +506,7 @@ def _runtime_flags(args: list[str]) -> None:
 
 def _reject_output_option(token: str) -> None:
     if token in _FORBIDDEN or token.startswith(('-oN', '-oX', '-oG', '-oA', '-oS')):
-        raise ValidationError(tr('nmapOutputManaged'))
+        raise ValidationError(message('nmapOutputManaged'))
 
 
 def _resolve_option(option: str, value: str, resolve_file: Resolver) -> tuple[str, str]:
@@ -521,12 +521,12 @@ def _resolve_option(option: str, value: str, resolve_file: Resolver) -> tuple[st
                 shown.append(name)
                 real.append(_existing_file(name, resolve_file))
             elif not _SCRIPT.fullmatch(name) or name == 'vuln':
-                raise ValidationError(tr('nmapBadScript', value=name or tr('empty')))
+                raise ValidationError(message('nmapBadScript', value=name or message('empty')))
             else:
                 shown.append(name)
                 real.append(name)
         if not shown:
-            raise ValidationError(tr('nmapNeedScript'))
+            raise ValidationError(message('nmapNeedScript'))
         return ','.join(shown), ','.join(real)
     return value, value
 
@@ -534,7 +534,7 @@ def _resolve_option(option: str, value: str, resolve_file: Resolver) -> tuple[st
 def _existing_file(value: str, resolve_file: Resolver) -> str:
     resolved = resolve_file(value)
     if not resolved:
-        raise ValidationError(tr('nmapBadFile', name=value))
+        raise ValidationError(message('nmapBadFile', name=value))
     return resolved
 
 

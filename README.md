@@ -13,6 +13,7 @@ The project also includes a Windows environment for interface development and se
 - [Starting and updating the application](#starting-and-updating-the-application)
 - [Application settings](#application-settings)
 - [Files and exported results](#files-and-exported-results)
+- [Localization and export compatibility](#localization-and-export-compatibility)
 - [Windows development environment](#windows-development-environment)
 - [Verification and troubleshooting](#verification-and-troubleshooting)
 - [Project structure](#project-structure)
@@ -300,6 +301,31 @@ In this document, `<captures>` denotes `capture_dir` from `/etc/mulita/config.js
 - **Test servers:** `servidores/tftp`, `servidores/web`, and `servidores/registros`; SFTP uploads use `respaldos`.
 
 The file manager provides access to supported result directories. Press and hold text or a table cell to open the copy menu. Right-click and text selection also support copying. Editable fields offer Paste when clipboard content is available.
+
+## Localization and Export Compatibility
+
+Starting with version 3.1, domain models, validation errors, and service results
+do not depend on a process-wide interface language. Each interface controller
+uses an explicit translator associated with its own settings. Preferences are
+saved before language-change notifications are published; a failed write leaves
+the previous language active.
+
+New CSV exports use stable technical field identifiers and status codes rather
+than translated headings. Examples include `ssid`, `address`, `gateway`,
+`severity`, and `open|filtered`. Existing export files are not rewritten.
+Integrations that previously matched Spanish or English CSV headings must be
+updated for the version 3.1 schema. File names and storage locations are unchanged.
+
+On-screen labels remain translated. Wi-Fi facts and TLS labels are formatted in
+the presentation layer, while exported domain values remain independent of the
+selected language. Output originating from external tools retains its original
+content and may use the language of the external tool.
+
+Domain errors expose a stable `code` and structured `parameters`. Their string
+representation is intended for diagnostics; user interfaces render them through
+their own translator. New domain and service modules must not import UI or
+presentation modules. Automated checks in `tests/test_localization.py` enforce
+this dependency direction and verify instance isolation and persistence failures.
 
 ## Windows Development Environment
 

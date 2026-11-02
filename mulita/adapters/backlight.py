@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from mulita.core.errors import CommandFailedError
-from mulita.presentation.i18n import tr
+from mulita.core.messages import message
 
 log = logging.getLogger(__name__)
 _CLOEXEC = getattr(os, 'O_CLOEXEC', 0)
@@ -60,7 +60,7 @@ class SysfsBacklight:
         try:
             _write_sysfs(device / 'brightness', str(level).encode('ascii'))
         except OSError as exc:
-            raise CommandFailedError(tr('brightnessFailed')) from exc
+            raise CommandFailedError(message('brightnessFailed')) from exc
 
     def _device(self) -> Path | None:
         if not self._root.is_dir():
@@ -102,16 +102,16 @@ class MailboxBacklight:
         try:
             handle = os.open(self._device, os.O_RDWR | _CLOEXEC)
         except OSError as exc:
-            raise CommandFailedError(tr('brightnessFailed')) from exc
+            raise CommandFailedError(message('brightnessFailed')) from exc
         try:
             self._call(handle, words)
         except OSError as exc:
-            raise CommandFailedError(tr('brightnessFailed')) from exc
+            raise CommandFailedError(message('brightnessFailed')) from exc
         finally:
             os.close(handle)
         returned = ctypes.c_int32(words[5]).value
         if words[1] != _MAILBOX_OK or returned < 0:
-            raise CommandFailedError(tr('brightnessFailed'))
+            raise CommandFailedError(message('brightnessFailed'))
 
     def _call(self, handle: int, words: ctypes.Array) -> None:
         ioctl = self._ioctl

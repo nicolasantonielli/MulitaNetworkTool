@@ -6,7 +6,6 @@ from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.errors import ValidationError
 from mulita.core.models import AddressMode, EthernetConfig
-from mulita.presentation.i18n import tr
 from mulita.ui.qt.bridge.base import TaskController
 
 
@@ -54,10 +53,10 @@ class InternalEthernetController(TaskController):
     @pyqtProperty(str, notify=loaded)
     def summary(self) -> str:
         if self._config.mode is AddressMode.ESTATICA and self._config.address:
-            return tr('inUseStatic', address=self._config.address, prefix=self._config.prefix)
+            return self._tr('inUseStatic', address=self._config.address, prefix=self._config.prefix)
         if self._config.address:
-            return tr('inUseDhcpAddr', address=self._config.address)
-        return tr('inUseDhcp')
+            return self._tr('inUseDhcpAddr', address=self._config.address)
+        return self._tr('inUseDhcp')
 
     @pyqtProperty('QVariantList', constant=True)
     def modes(self) -> list[dict]:
@@ -77,7 +76,7 @@ class InternalEthernetController(TaskController):
             return
         def ok(config):
             self._show(config)
-            self._ctx.notifier.success(tr('ethInternal'), tr('vlanApplied'))
+            self._ctx.notifier.success(self._tr('ethInternal'), self._tr('vlanApplied'))
         self._task(lambda: self._network.apply_with_vlan(
             mode, address, netmask, gateway, dns, enabled, vlan), ok)
 
@@ -85,17 +84,17 @@ class InternalEthernetController(TaskController):
     def apply(self, mode: str, address: str, netmask: str, gateway: str, dns: str) -> None:
         if mode == AddressMode.DHCP.value:
             task = self._network.apply_dhcp
-            done = tr('dhcpOn')
+            done = self._tr('dhcpOn')
         elif mode == AddressMode.ESTATICA.value:
             task = lambda: self._network.apply_static(address, netmask, gateway, dns)
-            done = tr('staticApplied')
+            done = self._tr('staticApplied')
         else:
-            self._fail(ValidationError(tr('invalidMode', mode=mode)))
+            self._fail(ValidationError(self._tr('invalidMode', mode=mode)))
             return
 
         def ok(config: EthernetConfig) -> None:
             self._show(config)
-            self._ctx.notifier.success(tr('wifiIp' if self._wifi else 'ethInternal'), done)
+            self._ctx.notifier.success(self._tr('wifiIp' if self._wifi else 'ethInternal'), done)
 
         self._task(task, ok)
 

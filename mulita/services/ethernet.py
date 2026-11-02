@@ -5,7 +5,7 @@ import json
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
-from mulita.presentation.i18n import tr
+from mulita.core.messages import message
 from mulita.core.models import AddressMode, EthernetConfig
 from mulita.core.parsers import (parse_connection_name, parse_default_gateway,
                                 parse_interface_ipv4, parse_nmcli_device_ipv4,
@@ -37,13 +37,13 @@ class EthernetService:
         if result.returncode == 10:
             return 0
         if not result.ok:
-            raise CommandFailedError(tr('vlanFailed'), result)
+            raise CommandFailedError(message('vlanFailed'), result)
         try:
             value = int(result.stdout.strip())
         except ValueError as exc:
-            raise ValidationError(tr('vlanFailed')) from exc
+            raise ValidationError(message('vlanFailed')) from exc
         if not 1 <= value <= 4094:
-            raise ValidationError(tr('vlanFailed'))
+            raise ValidationError(message('vlanFailed'))
         return value
 
     def read_with_vlan(self) -> EthernetConfig:
@@ -51,13 +51,13 @@ class EthernetService:
         return self.read()
 
     def _remove_tagged_interfaces(self) -> None:
-        result = self._checked(self._commands.detailed_links(), tr('vlanFailed'))
+        result = self._checked(self._commands.detailed_links(), message('vlanFailed'))
         try:
             links = json.loads(result.stdout)
             if not isinstance(links, list) or any(not isinstance(link, dict) for link in links):
                 raise ValueError('Invalid link list')
         except (ValueError, TypeError) as exc:
-            raise CommandFailedError(tr('vlanFailed')) from exc
+            raise CommandFailedError(message('vlanFailed')) from exc
         parent_index = next((link.get('ifindex') for link in links
                              if link.get('ifname') == self._interface), None)
         for link in links:
@@ -68,28 +68,28 @@ class EthernetService:
                 continue
             name = link.get('ifname')
             if not isinstance(name, str) or not name or name == self._interface:
-                raise CommandFailedError(tr('vlanFailed'))
-            self._checked(self._commands.delete_link(name), tr('vlanFailed'))
+                raise CommandFailedError(message('vlanFailed'))
+            self._checked(self._commands.delete_link(name), message('vlanFailed'))
 
     def apply_with_vlan(self, mode: str, address: str, netmask: str, gateway: str,
                         dns: str, enabled: bool, vlan: str) -> EthernetConfig:
         if mode not in ('dhcp', 'static'):
-            raise ValidationError(tr('invalidMode', mode=mode))
+            raise ValidationError(message('invalidMode', mode=mode))
         config = validation.static_ethernet(address, netmask, gateway, dns) if mode == 'static' else None
         try:
             tag = int(vlan) if enabled else 0
         except ValueError as exc:
-            raise ValidationError(tr('vlanInvalid')) from exc
+            raise ValidationError(message('vlanInvalid')) from exc
         if enabled and not 1 <= tag <= 4094:
-            raise ValidationError(tr('vlanInvalid'))
+            raise ValidationError(message('vlanInvalid'))
         existing = self._stored_vlan()
         if enabled:
             command = (self._commands.modify_vlan if existing else self._commands.add_vlan)
-            self._checked(command(self._vlan_name, self._interface, tag), tr('vlanFailed'))
+            self._checked(command(self._vlan_name, self._interface, tag), message('vlanFailed'))
             self._vlan_id = tag
         else:
             if existing:
-                self._checked(self._commands.delete_connection(self._vlan_name), tr('vlanFailed'))
+                self._checked(self._commands.delete_connection(self._vlan_name), message('vlanFailed'))
             self._remove_tagged_interfaces()
             self._vlan_id = 0
         if config:
@@ -154,8 +154,8 @@ class EthernetService:
                       'No se pudo crear la conexion')
         return self._connection_name
 
-    def _checked(self, argv: list[str], message: str):
+    def _checked(self, argv: list[str], error_message: str):
         result = self._runner.run(argv)
         if not result.ok:
-            raise CommandFailedError(f'{message}: {result.text}', result)
+            raise CommandFailedError(message('commandFailure', message=error_message, detail=result.text), result)
         return result

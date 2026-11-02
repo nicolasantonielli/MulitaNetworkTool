@@ -46,7 +46,7 @@ class ToolsScreen(Screen):
                                self._wake_done, self._wake_done)
 
     def _wake_done(self, output) -> None:
-        self._wol_output.show(f'{output}')
+        self._wol_output.show(f'{self.render(output)}')
         self._mac.set_busy(False)
 
     # Pestaña Temperatura ambiente
@@ -99,7 +99,7 @@ class ToolsScreen(Screen):
         self._speed_button.configure(state='normal')
 
     def _speed_failed(self, error: Exception) -> None:
-        self._measuring.config(text=str(error))
+        self._measuring.config(text=self.render(error))
         self._speed_button.configure(state='normal')
 
     # Pestaña Ip Publica
@@ -113,4 +113,4 @@ class ToolsScreen(Screen):
     def _lookup_public_ip(self) -> None:
         self.run_in_background(self.services.public_ip.lookup,
                                lambda info: self._public_ip.config(text=texts.public_ip(info.ip)),
-                               lambda error: self._public_ip.config(text=str(error)))
+                               lambda error: self._public_ip.config(text=self.render(error)))

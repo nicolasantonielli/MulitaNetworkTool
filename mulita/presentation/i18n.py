@@ -1,9 +1,9 @@
-"""Textos de la interfaz en español e inglés. El idioma activo se elige en configuración."""
+"""Catálogos de presentación en español e inglés y traductores por instancia."""
 from __future__ import annotations
 
-_LANGUAGE = 'es'
-
 _PAIRS: tuple[tuple[str, str, str], ...] = (
+    ('commandFailure', '{message}: {detail}', '{message}: {detail}'),
+    ('settingsSaveFailed', 'No se pudo guardar la configuración.', 'Could not save settings.'),
     ('switchTitle', 'Puerto de switch', 'Switch port'),
     ('switchSubtitle', 'Switch, boca y VLAN · LLDP/CDP', 'Switch, port and VLAN · LLDP/CDP'),
     ('switchDuration', 'Duración (segundos)', 'Duration (seconds)'),
@@ -826,22 +826,37 @@ ES = {key: es for key, es, _en in _PAIRS}
 EN = {key: en for key, _es, en in _PAIRS}
 
 
-def use(language: str) -> None:
-    global _LANGUAGE
-    _LANGUAGE = 'en' if language == 'en' else 'es'
+def pack(language: str = 'es') -> dict[str, str]:
+    """Devuelve un catálogo independiente sin modificar el idioma del proceso."""
+    return dict(EN if language == 'en' else ES)
 
 
-def language() -> str:
-    return _LANGUAGE
+class Translator:
+    """Traductor de presentación con idioma explícito y sin estado global."""
+    def __init__(self, language: str = 'es'):
+        self.language = 'en' if language == 'en' else 'es'
+
+    def tr(self, key: str, /, **parameters) -> str:
+        catalog = EN if self.language == 'en' else ES
+        template = catalog.get(key) or ES.get(key) or key
+        return template.format(**{k: self.render(v) for k, v in parameters.items()}) if parameters else template
+
+    def render(self, value):
+        from mulita.core.messages import Message
+        from mulita.core.errors import MulitaError
+        if isinstance(value, MulitaError):
+            return self.render(value.message)
+        if isinstance(value, Message):
+            return self.tr(value.code, **value.parameters)
+        if isinstance(value, dict):
+            return {key: self.render(item) for key, item in value.items()}
+        if isinstance(value, (tuple, list)):
+            return [self.render(item) for item in value]
+        if isinstance(value, Exception):
+            return str(value)
+        return value
 
 
-def pack(language: str | None = None) -> dict[str, str]:
-    chosen = language or _LANGUAGE
-    return EN if chosen == 'en' else ES
-
-
-def tr(key: str, **kwargs) -> str:
-    template = pack().get(key) or ES.get(key) or key
-    if not kwargs:
-        return template
-    return template.format(**kwargs)
+def tr(key: str, *, language: str = 'es', **parameters) -> str:
+    """Atajo sin estado para textos independientes de una instancia de interfaz."""
+    return Translator(language).tr(key, **parameters)

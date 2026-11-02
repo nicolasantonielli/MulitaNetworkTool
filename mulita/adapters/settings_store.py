@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 
 from mulita.core.ports import SettingsStore
+from mulita.core.errors import CommandFailedError
+from mulita.core.messages import message
 from mulita.core.settings import Settings, settings_from_dict
 
 log = logging.getLogger(__name__)
@@ -28,10 +30,18 @@ class JsonSettingsStore(SettingsStore):
 
     def save(self, settings: Settings) -> None:
         """Escritura atomica: un corte de luz no deja el archivo a medias."""
-        self._path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self._path.with_suffix('.tmp')
-        temporary.write_text(json.dumps(settings.to_dict(), indent=2), encoding='utf-8')
-        os.replace(temporary, self._path)
+        try:
+            self._path.parent.mkdir(parents=True, exist_ok=True)
+            temporary.write_text(json.dumps(settings.to_dict(), indent=2), encoding='utf-8')
+            os.replace(temporary, self._path)
+        except OSError as exc:
+            raise CommandFailedError(message('settingsSaveFailed')) from exc
+        finally:
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 class MemorySettingsStore(SettingsStore):

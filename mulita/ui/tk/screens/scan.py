@@ -71,7 +71,7 @@ class ScanScreen(Screen):
             discovery.start(on_output=self.ctx.dispatcher.wrap(self._discovery_output.append),
                             on_exit=self.ctx.dispatcher.wrap(self._discovery_finished))
         except MulitaError as exc:
-            self._discovery_output.show(f'{exc}\n')
+            self._discovery_output.show(f'{self.render(exc)}\n')
             return
         self._discovery_button.set_active(True)
 

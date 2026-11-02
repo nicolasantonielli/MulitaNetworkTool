@@ -7,7 +7,6 @@ from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.errors import MulitaError
 from mulita.core.servers import KINDS, RANDOM, ServerLog, kind_by_id
-from mulita.presentation.i18n import tr
 from mulita.services.servers import suggest_password
 from mulita.ui.qt.bridge.base import BridgeContext, Controller
 
@@ -44,11 +43,11 @@ class ServersController(Controller):
                 if field['default'] == RANDOM:
                     field['default'] = self._password
             items.append(item)
-        return json.dumps(items)
+        return self._json(items)
 
     @pyqtProperty(str, notify=statesChanged)
     def statesJson(self) -> str:
-        return json.dumps(self._states)
+        return self._json(self._states)
 
     @pyqtProperty(bool, notify=statesChanged)
     def anyRunning(self) -> bool:
@@ -61,7 +60,7 @@ class ServersController(Controller):
     @pyqtProperty(str, notify=rowsChanged)
     def rowsJson(self) -> str:
         log = self._logs.get(self._current)
-        return json.dumps(log.newest_first() if log else [])
+        return self._json(log.newest_first() if log else [])
 
     # --- Acciones -----------------------------------------------------------------------
 
@@ -126,7 +125,7 @@ class ServersController(Controller):
         except MulitaError as exc:
             self._fail(exc)
             return
-        self._ctx.notifier.success(tr(kind_by_id(kind).title), name)
+        self._ctx.notifier.success(self._tr(kind_by_id(kind).title), name)
 
     # --- Respuestas del proceso ---------------------------------------------------------
 
@@ -182,5 +181,5 @@ class ServersController(Controller):
         self._stopping.discard(kind)
         self._set_state(kind, IDLE)
         if code != 0 and not stopped:
-            detail = '\n'.join(self._logs[kind].tail) or tr('serverFailed', code=code)
-            self._ctx.notifier.error(detail, title=tr(kind_by_id(kind).title))
+            detail = '\n'.join(self._logs[kind].tail) or self._tr('serverFailed', code=code)
+            self._ctx.notifier.error(detail, title=self._tr(kind_by_id(kind).title))

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from collections import deque
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
@@ -9,7 +8,6 @@ from mulita.core.errors import MulitaError
 from mulita.core.models import PING_COUNT, PING_INTERVAL, PING_SIZE, PingSummary, Range
 from mulita.core.parsers import parse_discovery_line, read_ping_line
 from mulita.presentation import texts
-from mulita.presentation.i18n import tr
 from mulita.ui.qt.bridge.base import (BridgeContext, SessionController,
                                       TaskController)
 
@@ -27,7 +25,7 @@ class TraceController(TaskController):
 
     @pyqtProperty(str, notify=hopsChanged)
     def hopsJson(self) -> str:
-        return json.dumps([{
+        return self._json([{
             'hop': item.hop,
             'address': item.address,
             'loss': item.loss,
@@ -59,10 +57,10 @@ class TraceController(TaskController):
         self._hops = tuple(hops)
         self.hopsChanged.emit()
         if not self._hops:
-            self._ctx.notifier.info(tr('tracesTitle'), tr('noHops'))
+            self._ctx.notifier.info(self._tr('tracesTitle'), self._tr('noHops'))
 
     def _saved(self, name: str) -> None:
-        self._ctx.notifier.success(tr('tracesTitle'), name)
+        self._ctx.notifier.success(self._tr('tracesTitle'), name)
 
 
 class PingController(SessionController):
@@ -81,7 +79,7 @@ class PingController(SessionController):
 
     @pyqtProperty(str, notify=repliesChanged)
     def repliesJson(self) -> str:
-        return json.dumps([{
+        return self._json([{
             'seq': item.seq,
             'source': item.source,
             'ttl': item.ttl,
@@ -95,7 +93,7 @@ class PingController(SessionController):
         item = self._summary
         if not item.ready and not item.target:
             return ''
-        return json.dumps({
+        return self._json({
             'target': item.target,
             'transmitted': item.transmitted,
             'received': item.received,
@@ -137,7 +135,7 @@ class PingController(SessionController):
             self._fail(exc)
             return
         statics = name[:-4] + '.statics.csv' if name.endswith('.csv') else name
-        self._ctx.notifier.success(tr('pingTitle'), tr('pingSaved', table=name, statics=statics))
+        self._ctx.notifier.success(self._tr('pingTitle'), self._tr('pingSaved', table=name, statics=statics))
 
     def _output(self, text: str) -> None:
         self._pending += text.replace('\r', '')
@@ -173,7 +171,7 @@ class PortScanController(TaskController):
 
     @pyqtProperty(str, notify=portsChanged)
     def portsJson(self) -> str:
-        return json.dumps([{
+        return self._json([{
             'host': item.host,
             'port': item.port,
             'protocol': item.protocol,
@@ -201,10 +199,10 @@ class PortScanController(TaskController):
         self._ports = tuple(found)
         self.portsChanged.emit()
         if not self._ports:
-            self._ctx.notifier.info(tr('scanTitle'), tr('noPorts'))
+            self._ctx.notifier.info(self._tr('scanTitle'), self._tr('noPorts'))
 
     def _saved(self, name: str) -> None:
-        self._ctx.notifier.success(tr('scanTitle'), name)
+        self._ctx.notifier.success(self._tr('scanTitle'), name)
 
 
 class DiscoveryController(SessionController):
@@ -219,7 +217,7 @@ class DiscoveryController(SessionController):
 
     @pyqtProperty(str, notify=hostsChanged)
     def hostsJson(self) -> str:
-        return json.dumps([{
+        return self._json([{
             'ip': item.ip,
             'mac': item.mac,
             'count': item.count,
@@ -260,7 +258,7 @@ class DiscoveryController(SessionController):
         except MulitaError as exc:
             self._fail(exc)
             return
-        self._ctx.notifier.success(tr('discoverTitle'), name)
+        self._ctx.notifier.success(self._tr('discoverTitle'), name)
 
     def _output(self, text: str) -> None:
         self._pending += text.replace('\r', '')
@@ -275,8 +273,8 @@ class DiscoveryController(SessionController):
             self._pending = ''
             self.hostsChanged.emit()
         if code != 0 and not self._stopping:
-            detail = '\n'.join(self._diagnostics) or tr('discoverFailed', code=code)
-            self._ctx.notifier.error(detail, title=tr('discoverTitle'))
+            detail = '\n'.join(self._diagnostics) or self._tr('discoverFailed', code=code)
+            self._ctx.notifier.error(detail, title=self._tr('discoverTitle'))
 
     def _take(self, line: str) -> None:
         found = parse_discovery_line(line)

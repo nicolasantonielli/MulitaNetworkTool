@@ -9,6 +9,7 @@ from mulita.ui.tk.assets import Icon
 from mulita.ui.tk.context import ScreenContext
 from mulita.ui.tk.navigation import ScreenId
 from mulita.ui.tk.widgets import TopBar
+from mulita.presentation.i18n import Translator
 
 
 class Screen(ABC):
@@ -35,7 +36,11 @@ class Screen(ABC):
         self.ctx.dispatcher.background(task, on_success, on_error or self.show_error)
 
     def show_error(self, error: Exception) -> None:
-        self.ctx.notifier.error(str(error))
+        self.ctx.notifier.error(self.render(error))
+
+    def render(self, value):
+        translator = Translator(self.services.settings.current.language.value)
+        return translator.render(value)
 
     @staticmethod
     def notebook(parent: tk.Misc, **options) -> ttk.Notebook:

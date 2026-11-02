@@ -11,11 +11,11 @@ from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.models import (HostSighting, PingReply, PingRequest, PingSummary,
                                 PortFinding, TraceHop)
 from mulita.core.parsers import interface_network, parse_port_scan, parse_trace
-from mulita.presentation.i18n import tr
+from mulita.core.messages import message
 from mulita.core.ports import CommandRunner, ExitListener, OutputListener
 from mulita.services.base import ProcessSession
 
-_CSV_HEADER = ('Salto', 'Direccion', 'Perdida', 'Envios', 'Ultimo', 'Media', 'Mejor', 'Peor', 'Desvio')
+_CSV_HEADER = ('hop', 'address', 'loss', 'sent', 'last', 'average', 'best', 'worst', 'deviation')
 
 
 class TraceService:
@@ -34,19 +34,19 @@ class TraceService:
             return hops
         if not result.ok:
             detail = _trace_error(result.stderr or result.stdout)
-            raise CommandFailedError(detail or tr('traceFailed'), result)
+            raise CommandFailedError(detail or message('traceFailed'), result)
         return ()
 
     def save(self, hops: tuple[TraceHop, ...], filename: str) -> str:
         if not hops:
-            raise ValidationError(tr('noTrace'))
+            raise ValidationError(message('noTrace'))
         name = validation.trace_filename(filename)
         self._ensure_directory()
         path = self._directory / name
         if path.parent.resolve() != self._directory.resolve():
-            raise ValidationError(tr('badStoredName'))
+            raise ValidationError(message('badStoredName'))
         if path.exists():
-            raise ValidationError(tr('nameExists'))
+            raise ValidationError(message('nameExists'))
         try:
             with path.open('w', encoding='utf-8', newline='') as handle:
                 writer = csv.writer(handle, lineterminator='\n')
@@ -57,7 +57,7 @@ class TraceService:
                         hop.last, hop.average, hop.best, hop.worst, hop.deviation,
                     ])
         except OSError as exc:
-            raise CommandFailedError(tr('saveTraceFailed')) from exc
+            raise CommandFailedError(message('saveTraceFailed')) from exc
         return name
 
     def _ensure_directory(self) -> None:
@@ -66,15 +66,11 @@ class TraceService:
         try:
             self._directory.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            raise CommandFailedError(tr('traceFolder')) from exc
+            raise CommandFailedError(message('traceFolder')) from exc
 
 
 def _ping_status(reply: PingReply) -> str:
-    if reply.status == 'ok':
-        return tr('pingOk')
-    if reply.status == 'dup':
-        return tr('pingDup')
-    return reply.detail or tr('pingFail')
+    return reply.status if reply.status in ('ok', 'dup') else reply.detail or reply.status or 'error'
 
 
 def _trace_error(text: str) -> str:
@@ -88,9 +84,9 @@ def _write_statics(path: Path, summary: PingSummary) -> None:
     with path.open('w', encoding='utf-8', newline='') as handle:
         writer = csv.writer(handle, lineterminator='\n')
         writer.writerow([
-            tr('pingTarget'), tr('pingSentLabel'), tr('pingReceivedLabel'), tr('pingLossLabel'),
-            tr('pingElapsedLabel'), tr('pingMinLabel'), tr('pingAvgLabel'),
-            tr('pingMaxLabel'), tr('pingDevLabel'),
+            'target', 'transmitted', 'received', 'loss',
+            'elapsed', 'minimum', 'average',
+            'maximum', 'deviation',
         ])
         writer.writerow([
             summary.target, summary.transmitted, summary.received, summary.loss, summary.elapsed,
@@ -108,7 +104,7 @@ class PingService(ProcessSession):
 
     def save(self, replies: tuple[PingReply, ...], summary: PingSummary | None, filename: str) -> str:
         if not replies and not (summary and summary.ready):
-            raise ValidationError(tr('noPing'))
+            raise ValidationError(message('noPing'))
         stem = validation.ping_basename(filename)
         base = stem + validation.PING_TABLE_EXTENSION
         statics = stem + validation.PING_STATICS_SUFFIX
@@ -118,14 +114,14 @@ class PingService(ProcessSession):
         statics_path = folder / statics
         for path in (table_path, statics_path):
             if path.parent.resolve() != folder.resolve():
-                raise ValidationError(tr('badStoredName'))
+                raise ValidationError(message('badStoredName'))
             if path.exists():
-                raise ValidationError(tr('nameExists'))
+                raise ValidationError(message('nameExists'))
         try:
             with table_path.open('w', encoding='utf-8', newline='') as handle:
                 writer = csv.writer(handle, lineterminator='\n')
                 writer.writerow([
-                    tr('pingSeq'), tr('pingFrom'), tr('pingTtl'), tr('pingTime'), tr('pingState'),
+                    'sequence', 'source', 'ttl', 'time', 'status',
                 ])
                 for reply in replies:
                     writer.writerow([
@@ -133,7 +129,7 @@ class PingService(ProcessSession):
                     ])
             _write_statics(statics_path, summary or PingSummary())
         except OSError as exc:
-            raise CommandFailedError(tr('savePingFailed')) from exc
+            raise CommandFailedError(message('savePingFailed')) from exc
         if hasattr(os, 'sync'):
             os.sync()
         return base
@@ -144,7 +140,7 @@ class PingService(ProcessSession):
         try:
             self._directory.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            raise CommandFailedError(tr('pingFolder')) from exc
+            raise CommandFailedError(message('pingFolder')) from exc
 
     def start(self, target: str, count: float, interval: float, size: float,
               on_output: Optional[OutputListener] = None,
@@ -173,29 +169,29 @@ class PortScanService:
             return found
         if not result.ok:
             detail = (result.text or '').strip()
-            raise CommandFailedError(detail or tr('scanFailed'), result)
+            raise CommandFailedError(detail or message('scanFailed'), result)
         return ()
 
     def save(self, findings: tuple[PortFinding, ...], filename: str) -> str:
         if not findings:
-            raise ValidationError(tr('noPorts'))
+            raise ValidationError(message('noPorts'))
         name = validation.trace_filename(filename)
         self._ensure_directory()
         path = self._directory / name
         if path.parent.resolve() != self._directory.resolve():
-            raise ValidationError(tr('badStoredName'))
+            raise ValidationError(message('badStoredName'))
         if path.exists():
-            raise ValidationError(tr('nameExists'))
+            raise ValidationError(message('nameExists'))
         try:
             with path.open('w', encoding='utf-8', newline='') as handle:
                 writer = csv.writer(handle, lineterminator='\n')
                 writer.writerow([
-                    tr('scanHost'), tr('scanPort'), tr('scanProto'), tr('scanState'), tr('scanService'),
+                    'host', 'port', 'protocol', 'state', 'service',
                 ])
                 for item in findings:
                     writer.writerow([item.host, item.port, item.protocol, item.state, item.service])
         except OSError as exc:
-            raise CommandFailedError(tr('saveScanFailed')) from exc
+            raise CommandFailedError(message('saveScanFailed')) from exc
         if hasattr(os, 'sync'):
             os.sync()
         return name
@@ -206,7 +202,7 @@ class PortScanService:
         try:
             self._directory.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            raise CommandFailedError(tr('scanFolder')) from exc
+            raise CommandFailedError(message('scanFolder')) from exc
 
 
 class DiscoveryService(ProcessSession):
@@ -226,32 +222,32 @@ class DiscoveryService(ProcessSession):
     def _network(self, interface: str) -> str:
         listed = self._runner.run(self._commands.interfaces())
         if not listed.ok:
-            raise CommandFailedError(tr('speedNoIface'))
+            raise CommandFailedError(message('speedNoIface'))
         network = interface_network(listed.stdout, interface)
         if not network:
-            raise ValidationError(tr('discoverNoAddress', interface=interface))
+            raise ValidationError(message('discoverNoAddress', interface=interface))
         return network
 
     def save(self, hosts: tuple[HostSighting, ...], filename: str) -> str:
         if not hosts:
-            raise ValidationError(tr('noHosts'))
+            raise ValidationError(message('noHosts'))
         name = validation.trace_filename(filename)
         self._ensure_directory()
         path = self._directory / name
         if path.parent.resolve() != self._directory.resolve():
-            raise ValidationError(tr('badStoredName'))
+            raise ValidationError(message('badStoredName'))
         if path.exists():
-            raise ValidationError(tr('nameExists'))
+            raise ValidationError(message('nameExists'))
         try:
             with path.open('w', encoding='utf-8', newline='') as handle:
                 writer = csv.writer(handle, lineterminator='\n')
                 writer.writerow([
-                    tr('discoverIp'), tr('discoverMac'), tr('discoverCount'), tr('discoverVendor'),
+                    'ip', 'mac', 'count', 'vendor',
                 ])
                 for item in hosts:
                     writer.writerow([item.ip, item.mac, item.count, item.vendor])
         except OSError as exc:
-            raise CommandFailedError(tr('saveDiscoverFailed')) from exc
+            raise CommandFailedError(message('saveDiscoverFailed')) from exc
         if hasattr(os, 'sync'):
             os.sync()
         return name
@@ -262,4 +258,4 @@ class DiscoveryService(ProcessSession):
         try:
             self._directory.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            raise CommandFailedError(tr('discoverFolder')) from exc
+            raise CommandFailedError(message('discoverFolder')) from exc

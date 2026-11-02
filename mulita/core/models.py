@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from mulita.presentation.i18n import tr
 
 MISSING_COMMAND_CODE = 127
 TIMEOUT_CODE = 124
@@ -111,38 +110,38 @@ class WifiLink:
 
     def facts(self) -> list[tuple[str, str]]:
         rows = (
-            (tr('factSsid'), self.ssid),
-            (tr('factBssid'), self.bssid),
-            (tr('factSecurity'), self.security),
-            (tr('factMode'), self.mode),
-            (tr('factIface'), self.interface),
-            (tr('factMac'), self.mac),
-            (tr('factIp'), self.address),
-            (tr('factMask'), self.netmask),
-            (tr('factGateway'), self.gateway),
-            (tr('factDns'), self.dns),
-            (tr('factIpv6'), self.ipv6),
-            (tr('factBand'), self.band),
-            (tr('factChannel'), self.channel),
-            (tr('factFreq'), self.frequency),
-            (tr('factWidth'), self.width),
-            (tr('factCenter'), self.center),
-            (tr('factSignal'), self.signal),
-            (tr('factNoise'), self.noise),
-            (tr('factSnr'), self.snr),
-            (tr('factRateRx'), self.rate_rx),
-            (tr('factRateTx'), self.rate_tx),
-            (tr('factMcsRx'), self.mcs_rx),
-            (tr('factMcsTx'), self.mcs_tx),
-            (tr('factTxPower'), self.tx_power),
-            (tr('factUptime'), self.uptime),
-            (tr('factBeacon'), self.beacon),
-            (tr('factDtim'), self.dtim),
-            (tr('factRetries'), self.retries),
-            (tr('factFailed'), self.failed),
-            (tr('factBeaconLoss'), self.beacon_loss),
-            (tr('factRx'), self.rx),
-            (tr('factTx'), self.tx),
+            ('ssid', self.ssid),
+            ('bssid', self.bssid),
+            ('security', self.security),
+            ('mode', self.mode),
+            ('interface', self.interface),
+            ('mac', self.mac),
+            ('address', self.address),
+            ('netmask', self.netmask),
+            ('gateway', self.gateway),
+            ('dns', self.dns),
+            ('ipv6', self.ipv6),
+            ('band', self.band),
+            ('channel', self.channel),
+            ('frequency', self.frequency),
+            ('width', self.width),
+            ('center', self.center),
+            ('signal', self.signal),
+            ('noise', self.noise),
+            ('snr', self.snr),
+            ('rate_rx', self.rate_rx),
+            ('rate_tx', self.rate_tx),
+            ('mcs_rx', self.mcs_rx),
+            ('mcs_tx', self.mcs_tx),
+            ('tx_power', self.tx_power),
+            ('uptime', self.uptime),
+            ('beacon', self.beacon),
+            ('dtim', self.dtim),
+            ('retries', self.retries),
+            ('failed', self.failed),
+            ('beacon_loss', self.beacon_loss),
+            ('rx', self.rx),
+            ('tx', self.tx),
         )
         return [(label, value) for label, value in rows if value]
 
@@ -307,16 +306,16 @@ class PublicAddress:
 
     def facts(self) -> list[tuple[str, str]]:
         rows = (
-            (tr('pubIp'), self.ip),
-            (tr('pubVersion'), self.version),
-            (tr('pubAsn'), self.asn),
-            (tr('pubOrg'), self.organization),
-            (tr('pubIsp'), self.isp),
-            (tr('pubDomain'), self.domain),
-            (tr('pubCountry'), self.country),
-            (tr('pubRegion'), self.region),
-            (tr('pubCity'), self.city),
-            (tr('pubCoords'), self.coordinates),
-            (tr('pubZone'), self.timezone),
+            ('ip', self.ip),
+            ('version', self.version),
+            ('asn', self.asn),
+            ('organization', self.organization),
+            ('isp', self.isp),
+            ('domain', self.domain),
+            ('country', self.country),
+            ('region', self.region),
+            ('city', self.city),
+            ('coordinates', self.coordinates),
+            ('timezone', self.timezone),
         )
         return [(label, value) for label, value in rows if value]

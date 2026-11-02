@@ -13,8 +13,8 @@ from mulita.core.errors import (AlreadyRunningError, CommandFailedError,
                                 ValidationError)
 from mulita.core.ports import CommandRunner, ExitListener, OutputListener
 from mulita.core.tls import (TlsFinding, TlsTarget, mode_flags, parse_report,
-                             parse_target, section_label, severity_label, test_label)
-from mulita.presentation.i18n import tr
+                             parse_target)
+from mulita.core.messages import message
 from mulita.services.base import ProcessSession
 
 
@@ -66,24 +66,23 @@ class TlsService(ProcessSession):
 
     def save(self, findings: tuple[TlsFinding, ...], filename: str) -> str:
         if not findings:
-            raise ValidationError(tr('noTlsRows'))
+            raise ValidationError(message('noTlsRows'))
         name = validation.trace_filename(filename)
         self._ensure_directory()
         path = self._directory / name
         if path.parent.resolve() != self._directory.resolve():
-            raise ValidationError(tr('badStoredName'))
+            raise ValidationError(message('badStoredName'))
         if path.exists():
-            raise ValidationError(tr('nameExists'))
+            raise ValidationError(message('nameExists'))
         try:
             with path.open('w', encoding='utf-8', newline='') as handle:
                 writer = csv.writer(handle, lineterminator='\n')
-                writer.writerow([tr('tlsSection'), tr('tlsTest'), tr('tlsSeverity'),
-                                 tr('tlsResult'), 'CVE'])
+                writer.writerow(['section', 'test', 'severity', 'result', 'cve'])
                 for item in findings:
-                    writer.writerow([section_label(item.section), test_label(item),
-                                     severity_label(item.severity), item.text, item.cve])
+                    writer.writerow([item.section, item.id + (f' #{item.copy}' if item.copy else ''),
+                                     item.severity, item.text, item.cve])
         except OSError as exc:
-            raise CommandFailedError(tr('tlsSaveFailed')) from exc
+            raise CommandFailedError(message('tlsSaveFailed')) from exc
         if hasattr(os, 'sync'):
             os.sync()
         return name
@@ -94,4 +93,4 @@ class TlsService(ProcessSession):
         try:
             self._directory.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            raise CommandFailedError(tr('tlsFolder')) from exc
+            raise CommandFailedError(message('tlsFolder')) from exc

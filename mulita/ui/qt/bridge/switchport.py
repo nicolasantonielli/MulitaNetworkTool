@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import json
 import os
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
-from mulita.presentation.i18n import tr
 from mulita.ui.qt.bridge.base import Controller
 
 
@@ -25,7 +23,7 @@ class SwitchPortController(Controller):
 
     @pyqtProperty(str, notify=changed)
     def reportJson(self):
-        return json.dumps(self._report)
+        return self._json(self._report)
 
     @pyqtProperty(str, notify=changed)
     def status(self):
@@ -42,7 +40,7 @@ class SwitchPortController(Controller):
         self._cancelled.clear()
         self._report = {}
         self._running = True
-        self._status = tr('switchListening')
+        self._status = self._tr('switchListening')
         self.changed.emit()
         dispatcher = self._ctx.dispatcher
         dispatcher.background(
@@ -52,7 +50,7 @@ class SwitchPortController(Controller):
     @pyqtSlot()
     def stop(self):
         self._cancelled.set()
-        self._status = tr('switchStopping')
+        self._status = self._tr('switchStopping')
         self.changed.emit()
 
     @pyqtSlot()
@@ -72,7 +70,7 @@ class SwitchPortController(Controller):
         except OSError as exc:
             self._fail(exc)
             return
-        self._ctx.notifier.success(tr('switchTitle'), path.name)
+        self._ctx.notifier.success(self._tr('switchTitle'), path.name)
 
     def _updated(self, report):
         self._report = report
@@ -81,11 +79,11 @@ class SwitchPortController(Controller):
     def _finished(self, report):
         self._report = report
         self._running = False
-        self._status = tr('switchCancelled' if report['cancelled'] else 'switchComplete')
+        self._status = self._tr('switchCancelled' if report['cancelled'] else 'switchComplete')
         self.changed.emit()
 
     def _failed(self, error):
         self._running = False
-        self._status = str(error)
+        self._status = self._render(error)
         self.changed.emit()
         self._fail(error)

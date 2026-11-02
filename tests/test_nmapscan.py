@@ -12,7 +12,6 @@ from mulita.core.errors import ValidationError
 from mulita.core.models import MISSING_COMMAND_CODE, CommandResult
 from mulita.core.nmapscan import (Progress, compare_scans, compile_scan, parse_xml,
                                   script_kind, update_progress)
-from mulita.presentation.i18n import use
 from mulita.services.nmapscan import NmapScanService
 
 TODAY = date(2026, 10, 28)
@@ -66,7 +65,7 @@ def args_of(data, **kwargs):
 
 class CompileTest(unittest.TestCase):
     def setUp(self):
-        use('es')
+        pass
 
     def test_profiles_match_the_requested_commands(self):
         cases = {
@@ -101,7 +100,7 @@ class CompileTest(unittest.TestCase):
             '-v', '--stats-every', '5s', '-sT', '-T4', '-p', '22,80,443', '--reason',
             '-n', '-Pn', '-e', 'eth0', '--exclude', '10.0.0.1',
             '10.0.0.5', 'ejemplo.com', '192.168.1.0/24', '192.168.1.10-20'])
-        self.assertTrue(any('subred' in note for note in compiled.notes))
+        self.assertIn('nmapPnWarn', compiled.notes)
 
     def test_dns_flag_is_not_repeated(self):
         compiled = compile_scan(options(profile='discover', noDns=True))
@@ -146,10 +145,10 @@ class CompileTest(unittest.TestCase):
         self.assertEqual(compiled.args[-1], '192.168.1.10')
         self.assertNotIn('10.0.0.5', compiled.args)
         self.assertNotIn('nmap', compiled.args)
-        self.assertTrue(any('línea' in note for note in compiled.notes))
+        self.assertIn('nmapTargetInLine', compiled.notes)
         added = compile_scan(options(profile='custom', custom='-sV -p 22', targets='10.0.0.8'))
         self.assertEqual(added.args[-1], '10.0.0.8')
-        self.assertTrue(any('campo' in note for note in added.notes))
+        self.assertIn('nmapTargetInField', added.notes)
 
     def test_custom_output_options_and_shell_characters_are_rejected(self):
         for line in ('-sV -oX informe.xml 10.0.0.5', '-oN out 10.0.0.5', '--append-output -sV 10.0.0.5',
@@ -221,7 +220,7 @@ class CompileTest(unittest.TestCase):
 
 class XmlTest(unittest.TestCase):
     def setUp(self):
-        use('es')
+        pass
 
     def test_reads_hosts_even_without_open_ports_and_keeps_ambiguous_states(self):
         document = parse_xml(XML, TODAY)
@@ -287,7 +286,6 @@ class XmlTest(unittest.TestCase):
 
 class ServiceTest(unittest.TestCase):
     def setUp(self):
-        use('es')
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         root = Path(self.tmp.name)
@@ -317,7 +315,7 @@ class ServiceTest(unittest.TestCase):
         self.assertIn('aviso', (folder / 'errores.txt').read_text(encoding='utf-8'))
         self.assertNotIn('<nmaprun', (folder / 'progreso.txt').read_text(encoding='utf-8'))
         csv_text = (folder / 'puertos.csv').read_text(encoding='utf-8')
-        self.assertIn('Abierto o filtrado', csv_text)
+        self.assertIn('open|filtered', csv_text)
         self.assertIn('192.168.1.11', csv_text)
         meta = json.loads((folder / 'meta.json').read_text(encoding='utf-8'))
         self.assertEqual(meta['status'], 'ok')
@@ -392,7 +390,7 @@ class ServiceTest(unittest.TestCase):
         saved = self.service.save_user('', 'Oficina', 'SSH de la oficina', '-sV -p 22')
         self.assertEqual(saved['id'], 'user-1')
         copy = self.service.duplicate_user('user-1')
-        self.assertEqual(copy['name'], 'Oficina copia')
+        self.assertEqual(copy['name'], 'Oficina (copy)')
         compiled = compile_scan(options(profile='user-2', targets='10.0.0.9'),
                                 {item['id']: item for item in self.service.users()})
         self.assertEqual(compiled.args[-1], '10.0.0.9')

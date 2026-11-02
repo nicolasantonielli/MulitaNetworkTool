@@ -8,7 +8,6 @@ import threading
 from typing import Optional, Sequence
 
 from mulita.core.models import MISSING_COMMAND_CODE, TIMEOUT_CODE, CommandResult
-from mulita.presentation.i18n import tr
 from mulita.core.ports import (CommandRunner, ExitListener, OutputListener,
                                RunningCommand)
 
@@ -16,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 def _missing_message(executable: str) -> str:
-    return tr('missingCommand', name=executable) + '\n'
+    return f'Executable not found: {executable}\n'
 
 
 def _as_text(value: str | bytes | None) -> str:

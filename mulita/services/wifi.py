@@ -13,7 +13,7 @@ from mulita.core.parsers import (build_wifi_link, parse_wifi_device, parse_wifi_
                                 parse_nmcli_ipv4, parse_interface_ipv4, parse_default_gateway,
                                 parse_nmcli_device_ipv4)
 from mulita.core.ports import CommandRunner
-from mulita.presentation.i18n import tr
+from mulita.core.messages import message
 
 
 class WifiService:
@@ -40,22 +40,22 @@ class WifiService:
     def save(self, link: WifiLink, moment: datetime | None = None) -> str:
         facts = link.facts()
         if not facts:
-            raise ValidationError(tr('noWifiSave'))
+            raise ValidationError(message('noWifiSave'))
         when = moment or datetime.now()
         name = f"wifi-info-{when.strftime('%Y%m%d-%H%M%S')}.csv"
         self._ensure_directory()
         path = self._directory / name
         if path.parent.resolve() != self._directory.resolve():
-            raise ValidationError(tr('badStoredName'))
+            raise ValidationError(message('badStoredName'))
         if path.exists():
-            raise ValidationError(tr('nameExists'))
+            raise ValidationError(message('nameExists'))
         try:
             with path.open('w', encoding='utf-8', newline='') as handle:
                 writer = csv.writer(handle, lineterminator='\n')
                 for label, value in facts:
                     writer.writerow([label, value])
         except OSError as exc:
-            raise CommandFailedError(tr('saveWifiFailed')) from exc
+            raise CommandFailedError(message('saveWifiFailed')) from exc
         if hasattr(os, 'sync'):
             os.sync()
         return name
@@ -66,7 +66,7 @@ class WifiService:
         try:
             self._directory.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            raise CommandFailedError(tr('wifiFolder')) from exc
+            raise CommandFailedError(message('wifiFolder')) from exc
 
     def status(self) -> WifiLink:
         """Dirección y radio del enlace, sin disparar un escaneo de redes."""
@@ -115,10 +115,10 @@ class WifiService:
         name = validation.wifi_ssid(ssid)
         device = self.interface()
         if not device:
-            raise ValidationError(tr('noWifi'))
+            raise ValidationError(message('noWifi'))
         for profile in self.saved():
             result = self._checked(self._commands.wifi_profile_ssid(profile['uuid']),
-                                   tr('wifiSavedFailed'))
+                                   message('wifiSavedFailed'))
             if result.stdout.rstrip('\r\n') != name:
                 continue
             activated = self._runner.run(self._commands.wifi_up_uuid(profile['uuid'], device))
@@ -129,35 +129,35 @@ class WifiService:
     def forget(self) -> None:
         device = self.interface()
         if not device:
-            raise ValidationError(tr('noWifi'))
-        result = self._checked(self._commands.wifi_active_uuid(device), tr('wifiForgetFailed'))
+            raise ValidationError(message('noWifi'))
+        result = self._checked(self._commands.wifi_active_uuid(device), message('wifiForgetFailed'))
         uuid = result.stdout.strip()
         if not uuid or uuid == '--':
-            raise ValidationError(tr('noConnection'))
-        self._checked(self._commands.wifi_delete_uuid(uuid), tr('wifiForgetFailed'))
+            raise ValidationError(message('noConnection'))
+        self._checked(self._commands.wifi_delete_uuid(uuid), message('wifiForgetFailed'))
 
     def saved(self) -> list[dict[str, str]]:
-        result = self._checked(self._commands.wifi_saved(), tr('wifiSavedFailed'))
+        result = self._checked(self._commands.wifi_saved(), message('wifiSavedFailed'))
         return parse_saved_wifi(result.stdout)
 
     def forget_saved(self, uuid: str) -> None:
         if not any(profile['uuid'] == uuid for profile in self.saved()):
-            raise ValidationError(tr('wifiSavedMissing'))
-        self._checked(self._commands.wifi_delete_uuid(uuid), tr('wifiForgetFailed'))
+            raise ValidationError(message('wifiSavedMissing'))
+        self._checked(self._commands.wifi_delete_uuid(uuid), message('wifiForgetFailed'))
 
     def disconnect(self) -> None:
         device = self.interface()
         if not device:
-            raise ValidationError(tr('noWifi'))
-        self._checked(self._commands.wifi_disconnect(device), tr('wifiDisconnectFailed'))
+            raise ValidationError(message('noWifi'))
+        self._checked(self._commands.wifi_disconnect(device), message('wifiDisconnectFailed'))
 
     def _ip_profile(self) -> tuple[str, str]:
         device = self.interface()
         if not device:
-            raise ValidationError(tr('noWifi'))
-        uuid = self._checked(self._commands.wifi_active_uuid(device), tr('wifiIpFailed')).stdout.strip()
+            raise ValidationError(message('noWifi'))
+        uuid = self._checked(self._commands.wifi_active_uuid(device), message('wifiIpFailed')).stdout.strip()
         if not uuid or uuid == '--':
-            raise ValidationError(tr('wifiIpConnectFirst'))
+            raise ValidationError(message('wifiIpConnectFirst'))
         return device, uuid
 
     def _lease(self, device: str) -> EthernetConfig:
@@ -169,24 +169,24 @@ class WifiService:
 
     def read(self) -> EthernetConfig:
         device, uuid = self._ip_profile()
-        config = parse_nmcli_ipv4(self._checked(self._commands.wifi_ipv4(uuid), tr('wifiIpFailed')).stdout)
+        config = parse_nmcli_ipv4(self._checked(self._commands.wifi_ipv4(uuid), message('wifiIpFailed')).stdout)
         return self._lease(device) if config.mode is AddressMode.DHCP else config
 
     def apply_static(self, address: str, netmask: str, gateway: str = '', dns: str = '') -> EthernetConfig:
         config = validation.static_ethernet(address, netmask, gateway, dns)
         device, uuid = self._ip_profile()
-        self._checked(self._commands.wifi_set_ipv4(uuid, config), tr('wifiIpFailed'))
-        self._checked(self._commands.wifi_up_uuid(uuid, device), tr('wifiIpFailed'))
+        self._checked(self._commands.wifi_set_ipv4(uuid, config), message('wifiIpFailed'))
+        self._checked(self._commands.wifi_up_uuid(uuid, device), message('wifiIpFailed'))
         return config
 
     def apply_dhcp(self) -> EthernetConfig:
         device, uuid = self._ip_profile()
-        self._checked(self._commands.wifi_set_ipv4(uuid), tr('wifiIpFailed'))
-        self._checked(self._commands.wifi_up_uuid(uuid, device), tr('wifiIpFailed'))
+        self._checked(self._commands.wifi_set_ipv4(uuid), message('wifiIpFailed'))
+        self._checked(self._commands.wifi_up_uuid(uuid, device), message('wifiIpFailed'))
         return self._lease(device)
 
-    def _checked(self, argv: list[str], message: str):
+    def _checked(self, argv: list[str], error_message: str):
         result = self._runner.run(argv)
         if not result.ok:
-            raise CommandFailedError(f'{message}: {result.text}', result)
+            raise CommandFailedError(message('commandFailure', message=error_message, detail=result.text), result)
         return result

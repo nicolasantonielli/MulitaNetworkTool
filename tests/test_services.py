@@ -152,7 +152,7 @@ class BlockingServicesTest(unittest.TestCase):
             hops = services.trace.trace('8.8.8.8')
             self.assertEqual(services.trace.save(hops, 'ruta'), 'ruta.csv')
             saved = (Path(folder) / 'ruta.csv').read_text(encoding='utf-8')
-            self.assertTrue(saved.startswith('Salto,Direccion,Perdida,Envios,Ultimo,Media,Mejor,Peor,Desvio\n'))
+            self.assertTrue(saved.startswith('hop,address,loss,sent,last,average,best,worst,deviation\n'))
             self.assertIn('1,10.0.0.1,0.0%,6,1.2,1.3,1.0,1.8,0.3\n', saved)
             with self.assertRaises(ValidationError):
                 services.trace.save(hops, 'ruta')
@@ -173,10 +173,10 @@ class BlockingServicesTest(unittest.TestCase):
             services.ping._directory = Path(folder)
             self.assertEqual(services.ping.save(replies, summary, 'prueba'), 'prueba.csv')
             statics = (Path(folder) / 'prueba.statics.csv').read_text(encoding='utf-8')
-            self.assertTrue(statics.startswith('Destino,Enviados,Recibidos,Pérdida,Tiempo,Mínimo,Media,Máximo,Desvío\n'))
+            self.assertTrue(statics.startswith('target,transmitted,received,loss,elapsed,minimum,average,maximum,deviation\n'))
             self.assertIn('8.8.8.8,2,2,0%,1001 ms,19.4,20.1,21.0,0.2\n', statics)
             table = (Path(folder) / 'prueba.csv').read_text(encoding='utf-8')
-            self.assertIn('1,8.8.8.8,117,20.1,Respuesta', table)
+            self.assertIn('1,8.8.8.8,117,20.1,ok', table)
             with self.assertRaises(ValidationError):
                 services.ping.save(replies, summary, 'prueba')
 
@@ -250,10 +250,10 @@ class BlockingServicesTest(unittest.TestCase):
             name = services.public_ip.save(info, datetime(2026, 10, 26, 0, 6, 30))
             self.assertEqual(name, 'publicIP-20261026-000630.csv')
             saved = (Path(folder) / name).read_text(encoding='utf-8')
-            self.assertTrue(saved.startswith('Dirección,181.1.2.3\n'))
-            self.assertIn('Versión,IPv4\n', saved)
-            self.assertIn('ASN,AS7303\n', saved)
-            self.assertIn('Organización,Telecom\n', saved)
+            self.assertTrue(saved.startswith('ip,181.1.2.3\n'))
+            self.assertIn('version,IPv4\n', saved)
+            self.assertIn('asn,AS7303\n', saved)
+            self.assertIn('organization,Telecom\n', saved)
 
     def test_wifi_info_saves_a_csv_named_with_the_moment(self):
         import tempfile
@@ -269,8 +269,8 @@ class BlockingServicesTest(unittest.TestCase):
             self.assertEqual(name, 'wifi-info-20261026-001030.csv')
             saved = (Path(folder) / name).read_text(encoding='utf-8')
             self.assertNotIn('Dato,Valor', saved)
-            self.assertTrue(saved.startswith('Red,Oficina\n'))
-            self.assertIn('Dirección IP,192.168.1.20\n', saved)
+            self.assertTrue(saved.startswith('ssid,Oficina\n'))
+            self.assertIn('address,192.168.1.20\n', saved)
 
     def test_public_ip_without_answer_fails(self):
         runner = FakeRunner({'/bin/curl': CommandResult(28, '', '')})
@@ -287,11 +287,11 @@ class BlockingServicesTest(unittest.TestCase):
         missing = FakeRunner({'/bin/curl': CommandResult(0, 'Not Found\n404')})
         with self.assertRaises(CommandFailedError) as unknown:
             services_with(missing).mac_vendor.lookup('aa:bb:cc:dd:ee:ff')
-        self.assertIn('fabricante', str(unknown.exception).lower())
+        self.assertEqual(unknown.exception.code, 'vendorMiss')
         limited = FakeRunner({'/bin/curl': CommandResult(0, '\n429')})
         with self.assertRaises(CommandFailedError) as capped:
             services_with(limited).mac_vendor.lookup('aa:bb:cc:dd:ee:ff')
-        self.assertIn('consultas', str(capped.exception).lower())
+        self.assertEqual(capped.exception.code, 'vendorLimit')
 
     def test_mac_vendor_rejects_a_bad_address_before_calling_out(self):
         runner = FakeRunner()
@@ -397,7 +397,7 @@ class SubprocessRunnerTest(unittest.TestCase):
                                    on_output=lines.append, on_exit=lambda code: done.set())
         self.assertTrue(done.wait(5))
         self.assertFalse(handle.running)
-        self.assertIn('No se encontro', lines[0])
+        self.assertIn('Executable not found:', lines[0])
 
     def test_terminate_long_process(self):
         done = threading.Event()

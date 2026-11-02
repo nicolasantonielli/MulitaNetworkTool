@@ -7,7 +7,25 @@ if TYPE_CHECKING:
 
 
 class MulitaError(Exception):
-    """Error de negocio con un mensaje apto para mostrar en pantalla."""
+    """Error de negocio cuyo mensaje estructurado se presenta fuera del dominio."""
+
+    @property
+    def message(self):
+        return self.args[0] if self.args else ''
+
+    @property
+    def code(self) -> str:
+        return str(self.message)
+
+    @property
+    def parameters(self):
+        return getattr(self.message, 'parameters', {})
+
+    def __str__(self) -> str:
+        if not self.parameters:
+            return str(self.message)
+        details = ', '.join(f'{key}={value!r}' for key, value in sorted(self.parameters.items()))
+        return f'{self.code} ({details})'
 
 
 class ValidationError(MulitaError):

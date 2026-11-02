@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import json
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.errors import MulitaError
 from mulita.core.models import WifiLink, WifiNetwork
-from mulita.presentation.i18n import tr
+from mulita.presentation.facts import wifi_facts
 from mulita.ui.qt.bridge.base import TaskController
 
 
@@ -38,7 +37,7 @@ class WifiController(TaskController):
         return [{
             'ssid': network.ssid,
             'signal': network.signal,
-            'security': network.security or tr('wifiOpen'),
+            'security': network.security or self._tr('wifiOpen'),
             'secure': network.secure,
             'active': network.active,
         } for network in self._networks]
@@ -49,7 +48,7 @@ class WifiController(TaskController):
 
     @pyqtProperty(str, notify=networksChanged)
     def savedJson(self) -> str:
-        return json.dumps(self._saved)
+        return self._json(self._saved)
 
     @pyqtSlot()
     def loadSaved(self) -> None:
@@ -68,7 +67,7 @@ class WifiController(TaskController):
             self._networks = ()
             self._saved = [profile for profile in self._saved if profile['uuid'] != uuid]
             self.networksChanged.emit()
-            self._ctx.notifier.success('Wi-Fi', tr('wifiForgotten'))
+            self._ctx.notifier.success('Wi-Fi', self._tr('wifiForgotten'))
             self.loadSaved()
 
         self._task(lambda: self._services.wifi.forget_saved(uuid), forgotten)
@@ -79,19 +78,19 @@ class WifiController(TaskController):
             self._link = WifiLink()
             self._networks = ()
             self.networksChanged.emit()
-            self._ctx.notifier.success('Wi-Fi', tr('wifiDisconnected'))
+            self._ctx.notifier.success('Wi-Fi', self._tr('wifiDisconnected'))
             self.refresh()
 
         self._task(self._services.wifi.disconnect, disconnected)
 
     @pyqtProperty(str, notify=networksChanged)
     def networksJson(self) -> str:
-        return json.dumps(self._rows())
+        return self._json(self._rows())
 
     @pyqtProperty(str, notify=networksChanged)
     def linkJson(self) -> str:
-        return json.dumps([
-            {'label': label, 'value': value} for label, value in self._link.facts()
+        return self._json([
+            {'label': label, 'value': value} for label, value in wifi_facts(self._link, self.translator)
         ])
 
     @pyqtSlot()
@@ -111,12 +110,12 @@ class WifiController(TaskController):
         except MulitaError as exc:
             self._fail(exc)
             return
-        self._ctx.notifier.success(tr('wifiInfo'), name)
+        self._ctx.notifier.success(self._tr('wifiInfo'), name)
 
     @pyqtSlot(str, str, bool)
     def connectTo(self, ssid: str, password: str, secure: bool) -> None:
         def connected(name: str) -> None:
-            self._ctx.notifier.success('Wi-Fi', tr('wifiConnected', name=name))
+            self._ctx.notifier.success('Wi-Fi', self._tr('wifiConnected', name=name))
             self.refresh()
 
         self._task(lambda: self._services.wifi.connect(ssid, password, secure), connected)
@@ -129,7 +128,7 @@ class WifiController(TaskController):
 
         def finished(connected: bool) -> None:
             if connected:
-                self._ctx.notifier.success('Wi-Fi', tr('wifiConnected', name=ssid))
+                self._ctx.notifier.success('Wi-Fi', self._tr('wifiConnected', name=ssid))
                 self.refresh()
             else:
                 self.passwordRequested.emit(ssid, secure)

@@ -11,7 +11,6 @@ from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 from mulita.core.errors import MulitaError, ValidationError
 from mulita.core.nmapscan import (Progress, checks_view, compile_scan, open_tcp_ports,
                                   profiles_view, update_progress)
-from mulita.presentation.i18n import tr
 from mulita.ui.qt.bridge.base import BridgeContext, SessionController
 
 
@@ -49,11 +48,11 @@ class NmapController(SessionController):
 
     @pyqtProperty(str, notify=profilesChanged)
     def profilesJson(self) -> str:
-        return json.dumps(profiles_view(self._services.nmap.users()))
+        return self._json(profiles_view(self._services.nmap.users()))
 
     @pyqtProperty(str, constant=True)
     def checksJson(self) -> str:
-        return json.dumps(checks_view())
+        return self._json(checks_view())
 
     @pyqtProperty(str, notify=runChanged)
     def phase(self) -> str:
@@ -93,16 +92,16 @@ class NmapController(SessionController):
 
     @pyqtProperty(str, notify=progressChanged)
     def progressJson(self) -> str:
-        return json.dumps(self._progress.view())
+        return self._json(self._progress.view())
 
     @pyqtProperty(str, notify=hostsChanged)
     def hostsJson(self) -> str:
-        return json.dumps(self._hosts)
+        return self._json(self._hosts)
 
     @pyqtProperty(str, notify=hostsChanged)
     def summaryJson(self) -> str:
         ports = [port for host in self._hosts for port in host.get('ports', [])]
-        return json.dumps({
+        return self._json({
             'hosts': len(self._hosts),
             'up': sum(1 for host in self._hosts if host.get('state') == 'up'),
             'open': sum(1 for port in ports if port.get('state') == 'open'),
@@ -110,25 +109,25 @@ class NmapController(SessionController):
 
     @pyqtProperty(str, notify=historyChanged)
     def historyJson(self) -> str:
-        return json.dumps(self._services.nmap.history())
+        return self._json(self._services.nmap.history())
 
     @pyqtProperty(str, notify=compareChanged)
     def compareJson(self) -> str:
-        return json.dumps(self._compare)
+        return self._json(self._compare)
 
     @pyqtProperty(str, notify=filesChanged)
     def filesJson(self) -> str:
-        return json.dumps(self._files)
+        return self._json(self._files)
 
     @pyqtSlot(str, result=str)
     def commandPreview(self, payload: str) -> str:
         try:
             compiled = compile_scan(self._options(payload), self._saved(), self._services.nmap.resolve)
         except MulitaError as exc:
-            return json.dumps({'ok': False, 'command': '', 'notes': [], 'error': str(exc)})
+            return self._json({'ok': False, 'command': '', 'notes': [], 'error': self._render(exc)})
         except (TypeError, ValueError):
-            return json.dumps({'ok': False, 'command': '', 'notes': [], 'error': tr('nmapBadArgs', value='')})
-        return json.dumps({'ok': True, 'command': compiled.command, 'notes': compiled.notes, 'error': ''})
+            return self._json({'ok': False, 'command': '', 'notes': [], 'error': self._tr('nmapBadArgs', value='')})
+        return self._json({'ok': True, 'command': compiled.command, 'notes': compiled.notes, 'error': ''})
 
     @pyqtSlot()
     def refresh(self) -> None:
@@ -136,7 +135,7 @@ class NmapController(SessionController):
             try:
                 self._services.nmap.probe()
             except MulitaError as exc:
-                return str(exc)
+                return self._render(exc)
             return ''
 
         self._ctx.dispatcher.background(task, self._probed, lambda _error: None)
@@ -191,7 +190,7 @@ class NmapController(SessionController):
     @pyqtSlot(str, str)
     def compareRuns(self, first: str, second: str) -> None:
         if not first or not second or first == second:
-            self._fail(ValidationError(tr('nmapCompareNeed')))
+            self._fail(ValidationError(self._tr('nmapCompareNeed')))
             return
         self._ctx.dispatcher.background(
             lambda: self._services.nmap.compare(first, second), self._compared, self._fail)
@@ -207,7 +206,7 @@ class NmapController(SessionController):
             self._fail(exc)
             return
         self.profilesChanged.emit()
-        self._ctx.notifier.success(tr('cyberNmap'), saved['name'])
+        self._ctx.notifier.success(self._tr('cyberNmap'), saved['name'])
 
     @pyqtSlot(str)
     def deleteProfile(self, profile_id: str) -> None:
@@ -226,7 +225,7 @@ class NmapController(SessionController):
             self._fail(exc)
             return
         self.profilesChanged.emit()
-        self._ctx.notifier.success(tr('cyberNmap'), saved['name'])
+        self._ctx.notifier.success(self._tr('cyberNmap'), saved['name'])
 
     def _saved(self) -> dict[str, dict]:
         return {item['id']: item for item in self._services.nmap.users()}
@@ -235,9 +234,9 @@ class NmapController(SessionController):
         try:
             data = json.loads(payload or '{}')
         except ValueError as exc:
-            raise ValidationError(tr('nmapBadArgs', value=exc)) from exc
+            raise ValidationError(self._tr('nmapBadArgs', value=exc)) from exc
         if not isinstance(data, dict):
-            raise ValidationError(tr('nmapBadArgs', value=''))
+            raise ValidationError(self._tr('nmapBadArgs', value=''))
         return data
 
     def _probed(self, error: str) -> None:
@@ -285,7 +284,7 @@ class NmapController(SessionController):
         self._stopping = False
         if outcome is None:
             self._phase = 'error'
-            self._fail(ValidationError(tr('nmapFailed', code=code)))
+            self._fail(ValidationError(self._tr('nmapFailed', code=code)))
         else:
             self._hosts = outcome.hosts
             self._partial = outcome.partial
@@ -294,7 +293,7 @@ class NmapController(SessionController):
             if outcome.privilege and outcome.profile_id == 'syn':
                 self._fallback = 'tcp-standard'
             if outcome.status == 'error':
-                self._ctx.notifier.error(outcome.tail or tr('nmapFailed', code=code), title=tr('cyberNmap'))
+                self._ctx.notifier.error(outcome.tail or self._tr('nmapFailed', code=code), title=self._tr('cyberNmap'))
         self.hostsChanged.emit()
         self.runChanged.emit()
         self.historyChanged.emit()
@@ -312,7 +311,7 @@ class NmapController(SessionController):
         self.runChanged.emit()
 
     def _compared(self, found: dict) -> None:
-        found['note'] = tr('nmapCompareNote')
+        found['note'] = self._tr('nmapCompareNote')
         found['ready'] = True
         self._compare = found
         self.compareChanged.emit()

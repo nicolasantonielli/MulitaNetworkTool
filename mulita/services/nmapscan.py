@@ -17,7 +17,7 @@ from mulita.core.models import MISSING_COMMAND_CODE
 from mulita.core.nmapscan import (Compiled, compare_scans, compile_scan, open_tcp_ports,
                                   parse_xml, privilege_error, saved_arguments)
 from mulita.core.ports import CommandRunner, ExitListener, OutputListener
-from mulita.presentation.i18n import tr
+from mulita.core.messages import message
 from mulita.services.base import ProcessSession
 
 _RUN = re.compile(r'^[0-9]{8}-[0-9]{6}(?:-\d+)?$')
@@ -189,7 +189,7 @@ class NmapScanService(ProcessSession):
         line = _saved_line(arguments)
         about = (description or '').strip()
         if len(about) > 240:
-            raise ValidationError(tr('nmapBadName'))
+            raise ValidationError(message('nmapBadName'))
         items = self.users()
         if profile_id.startswith('user-') and any(item['id'] == profile_id for item in items):
             saved = {'id': profile_id, 'name': clean, 'description': about, 'arguments': line}
@@ -205,14 +205,14 @@ class NmapScanService(ProcessSession):
     def delete_user(self, profile_id: str) -> None:
         items = [item for item in self.users() if item['id'] != profile_id]
         if len(items) == len(self.users()):
-            raise ValidationError(tr('nmapBadProfile', value=profile_id))
+            raise ValidationError(message('nmapBadProfile', value=profile_id))
         self._write_users(items)
 
     def duplicate_user(self, profile_id: str) -> dict:
         source = next((item for item in self.users() if item['id'] == profile_id), None)
         if source is None:
-            raise ValidationError(tr('nmapBadProfile', value=profile_id))
-        return self.save_user('', f"{source['name']} {tr('nmapCopy')}", source.get('description', ''),
+            raise ValidationError(message('nmapBadProfile', value=profile_id))
+        return self.save_user('', f"{source['name']} (copy)", source.get('description', ''),
                               source.get('arguments', ''))
 
     def list_files(self) -> list[dict]:
@@ -258,11 +258,11 @@ class NmapScanService(ProcessSession):
         binary = self._commands.nmap([])[0]
         result = self._runner.run([binary, '--version'], timeout=20)
         if result.returncode == MISSING_COMMAND_CODE:
-            raise CommandFailedError(tr('nmapMissing'))
+            raise CommandFailedError(message('nmapMissing'))
         found = _VERSION.search(result.stdout or '')
         self.version = found.group(1) if found else ''
         if result.returncode != 0 and not self.version:
-            raise CommandFailedError((result.text or '').strip() or tr('nmapMissing'))
+            raise CommandFailedError((result.text or '').strip() or message('nmapMissing'))
 
     def _ensure_scripts(self, scripts: tuple[str, ...]) -> None:
         missing = []
@@ -277,7 +277,7 @@ class NmapScanService(ProcessSession):
             else:
                 self._known.add(name)
         if missing:
-            raise CommandFailedError(tr('nmapScriptMissing', names=', '.join(missing)))
+            raise CommandFailedError(message('nmapScriptMissing', names=', '.join(missing)))
 
     def _finish(self, prepared: Prepared, code: int) -> None:
         folder = prepared.folder
@@ -309,9 +309,9 @@ class NmapScanService(ProcessSession):
         with path.open('w', encoding='utf-8', newline='') as handle:
             writer = csv.writer(handle, lineterminator='\n')
             writer.writerow([
-                tr('nmapHost'), tr('nmapNames'), tr('nmapState'), tr('nmapMac'), tr('nmapVendor'),
-                tr('nmapOs'), tr('scanPort'), tr('scanProto'), tr('nmapPortState'), tr('nmapReason'),
-                tr('scanService'), tr('nmapProduct'), tr('nmapDetectedVersion'), tr('nmapScripts'),
+                'host', 'names', 'state', 'mac', 'vendor',
+                'os', 'port', 'protocol', 'port_state', 'reason',
+                'service', 'product', 'version', 'scripts',
             ])
             for host in hosts:
                 ports = host['ports'] or [None]
@@ -363,10 +363,10 @@ class NmapScanService(ProcessSession):
 
     def _folder(self, run_id: str) -> Path:
         if not _RUN.fullmatch(run_id or ''):
-            raise ValidationError(tr('nmapRunMissing'))
+            raise ValidationError(message('nmapRunMissing'))
         folder = self._directory / run_id
         if not folder.is_dir() or folder.parent.resolve() != self._directory.resolve():
-            raise ValidationError(tr('nmapRunMissing'))
+            raise ValidationError(message('nmapRunMissing'))
         return folder
 
     def _read_meta(self, folder: Path) -> dict:
@@ -396,7 +396,7 @@ class NmapScanService(ProcessSession):
         try:
             folder.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            raise CommandFailedError(tr('nmapFolder')) from exc
+            raise CommandFailedError(message('nmapFolder')) from exc
 
     def _keep(self, path: Path, text: str, emit) -> None:
         # Cada bloque queda escrito antes de notificar a la pantalla. Solo se
@@ -412,14 +412,13 @@ class NmapScanService(ProcessSession):
 
 
 def _label(state: str) -> str:
-    key = _STATE.get(state)
-    return tr(key) if key else state
+    return state
 
 
 def _profile_name(name: str) -> str:
     clean = ' '.join((name or '').split())
     if not clean or len(clean) > 40:
-        raise ValidationError(tr('nmapBadName'))
+        raise ValidationError(message('nmapBadName'))
     return clean
 
 

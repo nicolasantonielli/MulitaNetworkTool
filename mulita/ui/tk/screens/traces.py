@@ -90,7 +90,7 @@ class TracesScreen(Screen):
                        on_output=self.ctx.dispatcher.wrap(self._ping_output.append),
                        on_exit=self.ctx.dispatcher.wrap(self._ping_finished))
         except MulitaError as exc:
-            self._ping_output.show(f'{exc}\n')
+            self._ping_output.show(f'{self.render(exc)}\n')
             return
         self._ping_target.toggle.set_active(True)
 

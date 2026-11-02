@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ipaddress
-import json
 import time
 from collections import deque
 
@@ -153,11 +152,10 @@ class CaptureController(SessionController):
 
     def _finished(self, code: int) -> None:
         if code != 0 and not self._stopping:
-            from mulita.presentation.i18n import tr
-            detail = ''.join(self._last_output).strip() or tr('captureEnded', code=code)
+            detail = ''.join(self._last_output).strip() or self._tr('captureEnded', code=code)
             folder = str(self._ctx.config.capture_dir)
-            detail = detail.replace(folder + '/', '').replace(folder, tr('captureFolder'))
-            self._ctx.notifier.error(detail, title=tr('captureTitle'))
+            detail = detail.replace(folder + '/', '').replace(folder, self._tr('captureFolder'))
+            self._ctx.notifier.error(detail, title=self._tr('captureTitle'))
 
 
 class TapController(Controller):
@@ -177,7 +175,7 @@ class TapController(Controller):
 
     @pyqtProperty(str, notify=linesChanged)
     def linesJson(self) -> str:
-        return json.dumps(self._lines)
+        return self._json(self._lines)
 
     @pyqtProperty(str, constant=True)
     def defaultFilename(self) -> str:
@@ -233,5 +231,4 @@ class TapController(Controller):
             self._pending = ''
             self.linesChanged.emit()
         if code != 0 and self._services.tap.is_running:
-            from mulita.presentation.i18n import tr
-            self._ctx.notifier.error(tr('tapStopped'), title='TAP')
+            self._ctx.notifier.error(self._tr('tapStopped'), title='TAP')

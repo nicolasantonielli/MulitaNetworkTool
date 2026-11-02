@@ -7,7 +7,7 @@ import json
 import re
 
 from mulita.core.errors import CommandFailedError
-from mulita.presentation.i18n import tr
+from mulita.core.messages import message
 from mulita.core.models import (AddressMode, EthernetConfig, HostSighting,
                                 NetworkInterface, PingReply, PingSummary, PortFinding,
                                 PublicAddress, SpeedTestResult, TraceHop, WifiLink,
@@ -295,13 +295,6 @@ _NSS = re.compile(r'(?:EHT-|HE-|VHT-)?NSS\s+(\d+)', re.IGNORECASE)
 _WIDTH = re.compile(r'(\d+)\s*MHz', re.IGNORECASE)
 _HE_GI = re.compile(r'(?:HE|EHT)-GI\s+(\d+)', re.IGNORECASE)
 _GI_US = {'0': '0.8 µs', '1': '1.6 µs', '2': '3.2 µs'}
-_MODE = {
-    'managed': 'wifiModeInfra',
-    'AP': 'wifiModeAp',
-    'monitor': 'wifiModeMonitor',
-    'mesh point': 'wifiModeMesh',
-    'IBSS': 'wifiModeAdhoc',
-}
 
 
 def _lines(text: str) -> dict[str, str]:
@@ -357,9 +350,9 @@ def _bitrate(line: str) -> tuple[str, str]:
     if width:
         parts.append(f'{width.group(1)} MHz')
     if re.search(r'short GI', line or '', re.IGNORECASE):
-        parts.append(tr('wifiShortGi'))
+        parts.append('short GI')
     elif re.search(r'long GI', line or '', re.IGNORECASE):
-        parts.append(tr('wifiLongGi'))
+        parts.append('long GI')
     else:
         gi = _HE_GI.search(line or '')
         if gi:
@@ -371,10 +364,10 @@ def _duration(seconds: int) -> str:
     minutes, sec = divmod(seconds, 60)
     hours, minutes = divmod(minutes, 60)
     if hours:
-        return tr('durationHours', hours=hours, minutes=minutes)
+        return f'{hours} h {minutes} min'
     if minutes:
-        return tr('durationMinutes', minutes=minutes, sec=sec)
-    return tr('durationSeconds', sec=sec)
+        return f'{minutes} min {sec} s'
+    return f'{sec} s'
 
 
 def _size(amount: int) -> str:
@@ -474,7 +467,7 @@ def build_wifi_link(interface: str, addr: str, route: str, lease: str, details: 
     if dbm is not None:
         signal = f'{dbm} dBm'
         if avg_match and int(avg_match.group(1)) != dbm:
-            signal += tr('signalAvg', value=avg_match.group(1))
+            signal += f' · avg {avg_match.group(1)} dBm'
         if percent:
             signal += f' · {percent}'
     elif percent:
@@ -489,7 +482,7 @@ def build_wifi_link(interface: str, addr: str, route: str, lease: str, details: 
     rx = re.search(r'(\d+)', link.get('rx', ''))
     tx = re.search(r'(\d+)', link.get('tx', ''))
     kind_name = kind.group(1).strip() if kind else ''
-    mode = tr(_MODE[kind_name]) if kind_name in _MODE else kind_name
+    mode = kind_name
     info_name = info_ssid.group(1).strip() if info_ssid else ''
     return WifiLink(
         interface=interface,
@@ -531,19 +524,19 @@ def parse_mac_vendor(text: str) -> str:
     """Cuerpo y codigo HTTP de `curl -w '\\n%{http_code}'` contra MACVendors."""
     body, separator, code = (text or '').rpartition('\n')
     if not separator:
-        raise CommandFailedError(tr('vendorFail'))
+        raise CommandFailedError(message('vendorFail'))
     try:
         status = int(code.strip())
     except ValueError as exc:
-        raise CommandFailedError(tr('vendorFail')) from exc
+        raise CommandFailedError(message('vendorFail')) from exc
     name = body.strip()
     if status == 200 and name:
         return name
     if status == 404:
-        raise CommandFailedError(tr('vendorMiss'))
+        raise CommandFailedError(message('vendorMiss'))
     if status == 429:
-        raise CommandFailedError(tr('vendorLimit'))
-    raise CommandFailedError(tr('vendorStatus', status=status))
+        raise CommandFailedError(message('vendorLimit'))
+    raise CommandFailedError(message('vendorStatus', status=status))
 
 
 _TRACE_HOP = re.compile(
@@ -728,18 +721,18 @@ def parse_public_address(text: str) -> PublicAddress:
     """JSON de ipwho.is, o una sola linea con la direccion."""
     body = (text or '').strip()
     if not body:
-        raise CommandFailedError(tr('pubFail'))
+        raise CommandFailedError(message('pubFail'))
     if not body.startswith('{'):
         address = body.splitlines()[0].strip()
         if not _ip_text(address):
-            raise CommandFailedError(tr('pubFail'))
+            raise CommandFailedError(message('pubFail'))
         return PublicAddress(ip=address, version=_ip_version(address))
     try:
         data = json.loads(body)
     except json.JSONDecodeError as exc:
-        raise CommandFailedError(tr('pubFail')) from exc
+        raise CommandFailedError(message('pubFail')) from exc
     if not isinstance(data, dict) or data.get('success') is False or not data.get('ip'):
-        raise CommandFailedError(tr('pubFail'))
+        raise CommandFailedError(message('pubFail'))
     connection = data.get('connection') if isinstance(data.get('connection'), dict) else {}
     zone = data.get('timezone') if isinstance(data.get('timezone'), dict) else {}
     asn = connection.get('asn')

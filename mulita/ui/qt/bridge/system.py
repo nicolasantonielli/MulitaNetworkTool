@@ -22,7 +22,7 @@ class SystemController(TaskController):
         if not text:
             return
         QGuiApplication.clipboard().setText(text)
-        self._ctx.notifier.success(i18n.tr('copy'), i18n.tr('textCopied'))
+        self._ctx.notifier.success(self._tr('copy'), self._tr('textCopied'))
 
     @pyqtProperty(str, constant=True)
     def version(self) -> str:
@@ -31,7 +31,7 @@ class SystemController(TaskController):
     @pyqtSlot()
     def update(self) -> None:
         self._task(self._services.maintenance.update,
-                   lambda _result: self._ctx.notifier.success(i18n.tr('updateWord'), i18n.tr('updateDone')))
+                   lambda _result: self._ctx.notifier.success(self._tr('updateWord'), self._tr('updateDone')))
 
     @pyqtSlot()
     def reset(self) -> None:
@@ -48,7 +48,7 @@ class SystemController(TaskController):
     @pyqtSlot(str)
     def share(self, source: str) -> None:
         self._services.share.share(source)
-        self._ctx.notifier.info(i18n.tr('share'), i18n.tr('shareSoon'))
+        self._ctx.notifier.info(self._tr('share'), self._tr('shareSoon'))
 
 
 class SettingsController(Controller):
@@ -71,8 +71,8 @@ class SettingsController(Controller):
     @pyqtProperty('QVariantList', notify=changed)
     def themes(self) -> list[dict]:
         return [
-            {'label': i18n.tr('themeDark'), 'value': Theme.OSCURO.value},
-            {'label': i18n.tr('themeLight'), 'value': Theme.CLARO.value},
+            {'label': self._tr('themeDark'), 'value': Theme.OSCURO.value},
+            {'label': self._tr('themeLight'), 'value': Theme.CLARO.value},
         ]
 
     @pyqtProperty(float, notify=changed)
@@ -148,19 +148,19 @@ class SettingsController(Controller):
             screens = json.loads(order_json or '[]')
             self._services.settings.set_home_screens(screens)
         except (MulitaError, ValueError) as exc:
-            self._fail(exc if isinstance(exc, MulitaError) else ValidationError(i18n.tr('badTileOrder')))
+            self._fail(exc if isinstance(exc, MulitaError) else ValidationError(self._tr('badTileOrder')))
 
     @pyqtSlot()
     def resetTileOrder(self) -> None:
         self._services.settings.reset_tile_order()
-        self._ctx.notifier.success(i18n.tr('tileOrderTitle'), i18n.tr('tileOrderResetDone'))
+        self._ctx.notifier.success(self._tr('tileOrderTitle'), self._tr('tileOrderResetDone'))
 
     @pyqtSlot(float)
     def setBrightness(self, value: float) -> None:
         try:
             self._services.settings.set_brightness(value)
         except MulitaError as exc:
-            message = str(exc)
+            message = self._render(exc)
             if message != self._brightness_error:
                 self._brightness_error = message
                 self._fail(exc)
@@ -175,12 +175,10 @@ class I18nController(Controller):
     def __init__(self, ctx: BridgeContext):
         super().__init__(ctx)
         self._language = ctx.services.settings.current.language.value
-        i18n.use(self._language)
         ctx.services.settings.subscribe(self._apply)
 
     def _apply(self, settings: Settings) -> None:
         chosen = settings.language.value
-        i18n.use(chosen)
         if chosen == self._language:
             return
         self._language = chosen

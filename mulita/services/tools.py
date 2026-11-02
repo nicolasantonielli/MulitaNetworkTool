@@ -12,7 +12,7 @@ from pathlib import Path, PurePosixPath
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
-from mulita.presentation.i18n import tr
+from mulita.core.messages import message
 from mulita.core.models import Calibration, ClimateReading, SpeedTestResult
 from mulita.core.parsers import (parse_default_gateway, parse_interfaces,
                                 parse_mac_vendor, parse_public_address, parse_speed_test)
@@ -40,7 +40,7 @@ class WakeOnLanService:
         result = self._runner.run(self._commands.wake_on_lan(normalized))
         if not result.ok:
             detail = (result.text or '').strip()
-            raise CommandFailedError(detail or tr('wolFailed'), result)
+            raise CommandFailedError(detail or message('wolFailed'), result)
         found = _WAKE_TARGET.search(result.stdout or '')
         target, port = found.groups() if found else ('255.255.255.255', '9')
         return MagicPacket(normalized.upper(), target, port)
@@ -74,7 +74,7 @@ class SpeedTestService:
             source = self._source_address(name)
             gateway = self._gateway(name)
             if not gateway:
-                raise ValidationError(tr('speedNoGateway', interface=name))
+                raise ValidationError(message('speedNoGateway', interface=name))
         try:
             if source:
                 self._pin(source, name, gateway)
@@ -89,7 +89,7 @@ class SpeedTestService:
     def _gateway(self, interface: str) -> str:
         result = self._runner.run(self._commands.interface_gateway(interface))
         if not result.ok:
-            raise CommandFailedError(tr('speedNoIface'), result)
+            raise CommandFailedError(message('speedNoIface'), result)
         return parse_default_gateway(result.stdout)
 
     def _pin(self, source: str, interface: str, gateway: str) -> None:
@@ -98,11 +98,11 @@ class SpeedTestService:
         self._runner.run(commands.rule_del_from(source, _SPEED_TABLE))
         route = self._runner.run(commands.route_replace_default(gateway, interface, _SPEED_TABLE))
         if not route.ok:
-            raise CommandFailedError(tr('speedRoute', interface=interface), route)
+            raise CommandFailedError(message('speedRoute', interface=interface), route)
         rule = self._runner.run(commands.rule_add_from(source, _SPEED_TABLE))
         if not rule.ok:
             self._runner.run(commands.route_flush_table(_SPEED_TABLE))
-            raise CommandFailedError(tr('speedRoute', interface=interface), rule)
+            raise CommandFailedError(message('speedRoute', interface=interface), rule)
 
     def _unpin(self, source: str) -> None:
         commands = self._commands
@@ -113,7 +113,7 @@ class SpeedTestService:
         name = (interface or '').strip()
         listed = self._runner.run(self._commands.interfaces())
         if not listed.ok:
-            raise CommandFailedError(tr('speedNoIface'), listed)
+            raise CommandFailedError(message('speedNoIface'), listed)
         for item in parse_interfaces(listed.stdout):
             if item.name != name:
                 continue
@@ -124,7 +124,7 @@ class SpeedTestService:
                     continue
                 if ip.version == 4 and not ip.is_loopback and not ip.is_link_local:
                     return address
-        raise ValidationError(tr('speedNoAddress', interface=name))
+        raise ValidationError(message('speedNoAddress', interface=name))
 
 
 class PublicIpService:
@@ -140,20 +140,20 @@ class PublicIpService:
     def lookup(self) -> PublicAddress:
         result = self._runner.run(self._commands.public_ip(self._url, self._timeout))
         if not result.ok or not (result.stdout or '').strip():
-            raise CommandFailedError(tr('pubFail'), result)
+            raise CommandFailedError(message('pubFail'), result)
         return parse_public_address(result.stdout)
 
     def save(self, info: PublicAddress, moment: datetime | None = None) -> str:
         if not info.ip:
-            raise ValidationError(tr('noPublic'))
+            raise ValidationError(message('noPublic'))
         when = moment or datetime.now()
         name = f"publicIP-{when.strftime('%Y%m%d-%H%M%S')}.csv"
         self._ensure_directory()
         path = self._directory / name
         if path.parent.resolve() != self._directory.resolve():
-            raise ValidationError(tr('badStoredName'))
+            raise ValidationError(message('badStoredName'))
         if path.exists():
-            raise ValidationError(tr('nameExists'))
+            raise ValidationError(message('nameExists'))
         facts = info.facts()
         try:
             with path.open('w', encoding='utf-8', newline='') as handle:
@@ -161,7 +161,7 @@ class PublicIpService:
                 for label, value in facts:
                     writer.writerow([label, value])
         except OSError as exc:
-            raise CommandFailedError(tr('savePublicFailed')) from exc
+            raise CommandFailedError(message('savePublicFailed')) from exc
         if hasattr(os, 'sync'):
             os.sync()
         return name
@@ -172,7 +172,7 @@ class PublicIpService:
         try:
             self._directory.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            raise CommandFailedError(tr('publicFolder')) from exc
+            raise CommandFailedError(message('publicFolder')) from exc
 
 
 class MacVendorService:

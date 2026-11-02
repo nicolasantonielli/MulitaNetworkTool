@@ -3,12 +3,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
+import json
 
 from PyQt5.QtCore import QObject, pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.config import AppConfig
 from mulita.core.errors import MulitaError
 from mulita.presentation.dispatcher import UiDispatcher
+from mulita.presentation.i18n import Translator
 from mulita.services import Services
 
 
@@ -57,8 +59,22 @@ class Controller(QObject):
         self._ctx = ctx
         self._services = ctx.services
 
+    @property
+    def translator(self) -> Translator:
+        settings = getattr(self._services, 'settings', None)
+        return Translator(settings.current.language.value if settings is not None else 'es')
+
+    def _tr(self, code: str, /, **parameters) -> str:
+        return self.translator.tr(code, **parameters)
+
+    def _render(self, value):
+        return self.translator.render(value)
+
+    def _json(self, value) -> str:
+        return json.dumps(self._render(value))
+
     def _fail(self, error: Exception) -> None:
-        self._ctx.notifier.error(str(error))
+        self._ctx.notifier.error(self._render(error))
 
 
 class TaskController(Controller):
@@ -144,7 +160,7 @@ class SessionController(Controller):
         self._console.append(text)
 
     def _rejected(self, error: MulitaError) -> None:
-        self._console.show(f'{error}\n')
+        self._console.show(f'{self._render(error)}\n')
 
     def _exited(self, code: int) -> None:
         if not self._session.is_running:

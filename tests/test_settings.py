@@ -151,14 +151,14 @@ class SettingsServiceTest(unittest.TestCase):
         self.assertIs(self.service.set_theme('light').theme, Theme.CLARO)
 
     def test_language_switches_to_english(self):
-        from mulita.presentation.i18n import tr
+        from mulita.presentation.i18n import Translator
         updated = self.service.set_language('en')
         self.assertIs(updated.language, Language.EN)
         self.assertIs(self.store.load().language, Language.EN)
-        self.assertEqual(tr('trace'), 'Trace')
+        self.assertEqual(Translator(self.service.current.language.value).tr('trace'), 'Trace')
         self.assertIs(rules.settings_from_dict({'language': 'en'}).language, Language.EN)
         self.assertIs(self.service.set_language('es').language, Language.ES)
-        self.assertEqual(tr('trace'), 'Trazar')
+        self.assertEqual(Translator(self.service.current.language.value).tr('trace'), 'Trazar')
 
     def test_set_scale_saves_and_notifies(self):
         updated = self.service.set_scale(1.25)

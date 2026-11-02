@@ -5,6 +5,7 @@ import os
 from typing import Callable
 
 from mulita.core.commands import CommandFactory
+from mulita.core.messages import message
 from mulita.core.errors import CommandFailedError
 from mulita.core.models import CommandResult
 from mulita.core.ports import CommandRunner
@@ -41,10 +42,10 @@ class MaintenanceService:
     def poweroff(self) -> CommandResult:
         return self._checked(self._commands.poweroff(), 'No se pudo apagar')
 
-    def _checked(self, argv: list[str], message: str) -> CommandResult:
+    def _checked(self, argv: list[str], error_message: str) -> CommandResult:
         result = self._runner.run(argv)
         if not result.ok:
-            raise CommandFailedError(f'{message}: {result.text}', result)
+            raise CommandFailedError(message('commandFailure', message=error_message, detail=result.text), result)
         return result
 
 

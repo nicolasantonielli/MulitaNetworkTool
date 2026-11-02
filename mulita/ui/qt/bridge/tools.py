@@ -5,9 +5,10 @@ import json
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.models import ClimateReading, SpeedTestResult
+from mulita.core.messages import message
 from mulita.core.errors import MulitaError, ValidationError
 from mulita.presentation import texts
-from mulita.presentation.i18n import tr
+from mulita.presentation.facts import public_facts
 from mulita.ui.qt.bridge.base import BridgeContext, TaskController
 
 
@@ -62,7 +63,7 @@ class WakeOnLanController(TaskController):
 
     def _failed(self, error: Exception) -> None:
         self._phase = 'error'
-        self._detail = str(error)
+        self._detail = self._render(error)
         self.changed.emit()
 
 
@@ -122,7 +123,7 @@ class SpeedTestController(TaskController):
     def measure(self, interface: str) -> None:
         self._set_status(texts.MEASURING)
         self._task(lambda: self._services.speed_test.measure(interface),
-                   self._show, lambda error: self._set_status(str(error)))
+                   self._show, lambda error: self._set_status(self._render(error)))
 
     def _show(self, result: SpeedTestResult) -> None:
         self._result = result
@@ -150,8 +151,8 @@ class PublicIpController(TaskController):
     def factsJson(self) -> str:
         if self._info is None:
             return '[]'
-        return json.dumps([
-            {'label': label, 'value': value} for label, value in self._info.facts()
+        return self._json([
+            {'label': label, 'value': value} for label, value in public_facts(self._info, self.translator)
         ])
 
     @pyqtProperty(str, notify=addressChanged)
@@ -172,14 +173,14 @@ class PublicIpController(TaskController):
         except MulitaError as exc:
             self._fail(exc)
             return
-        self._ctx.notifier.success(tr('pubTitle'), name)
+        self._ctx.notifier.success(self._tr('pubTitle'), name)
 
     def _show(self, info) -> None:
         self._info, self._status = info, ''
         self.addressChanged.emit()
 
     def _failed(self, error: Exception) -> None:
-        self._status = str(error)
+        self._status = self._render(error)
         self.addressChanged.emit()
 
 
@@ -208,7 +209,7 @@ class MacVendorController(TaskController):
         self.vendorChanged.emit()
 
     def _failed(self, error: Exception) -> None:
-        self._vendor, self._status = '', str(error)
+        self._vendor, self._status = '', self._render(error)
         self.vendorChanged.emit()
 
 
@@ -216,17 +217,17 @@ def _picked(payload: str) -> list[tuple[str, str]]:
     try:
         data = json.loads(payload or '[]')
     except json.JSONDecodeError as exc:
-        raise ValidationError(tr('noFilesSelected')) from exc
+        raise ValidationError(message('noFilesSelected')) from exc
     items = []
     for row in data if isinstance(data, list) else []:
         if not isinstance(row, dict):
             continue
-        place = str(row.get('place') or '')
-        name = str(row.get('name') or '')
+        place = smessage(row.get('place') or '')
+        name = smessage(row.get('name') or '')
         if place and name:
             items.append((place, name))
     if not items:
-        raise ValidationError(tr('noFilesSelected'))
+        raise ValidationError(message('noFilesSelected'))
     return items
 
 
@@ -241,7 +242,7 @@ class FilesController(TaskController):
 
     @pyqtProperty(str, notify=filesChanged)
     def filesJson(self) -> str:
-        return json.dumps([{
+        return self._json([{
             'place': item.place,
             'placeLabel': item.place_label,
             'name': item.name,
@@ -251,7 +252,7 @@ class FilesController(TaskController):
 
     @pyqtProperty(str, notify=drivesChanged)
     def drivesJson(self) -> str:
-        return json.dumps([
+        return self._json([
             {'label': item.label, 'value': item.device} for item in self._drives
         ])
 
@@ -296,5 +297,5 @@ class FilesController(TaskController):
         self.drivesChanged.emit()
 
     def _done(self, _name) -> None:
-        self._ctx.notifier.success(tr('filesTitle'), tr('filesReady'))
+        self._ctx.notifier.success(self._tr('filesTitle'), self._tr('filesReady'))
         self.refresh()

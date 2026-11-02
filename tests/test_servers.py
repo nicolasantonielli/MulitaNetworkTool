@@ -13,7 +13,7 @@ from mulita.core.commands import CommandFactory
 from mulita.core.errors import AlreadyRunningError, CommandFailedError, ValidationError
 from mulita.core.models import CommandResult
 from mulita.core.servers import KINDS, RANDOM, ServerLog, kind_by_id
-from mulita.presentation.i18n import ES, EN, tr, use
+from mulita.presentation.i18n import ES, EN, tr, Translator
 from mulita.services.servers import USER_MARK, ServerService
 
 BIN = Binaries()
@@ -135,7 +135,6 @@ class ServerLogTest(unittest.TestCase):
 class ServerServiceTest(unittest.TestCase):
 
     def setUp(self):
-        use('es')
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
@@ -299,7 +298,6 @@ class ServerServiceTest(unittest.TestCase):
 class SftpTest(unittest.TestCase):
 
     def setUp(self):
-        use('es')
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
@@ -391,7 +389,6 @@ class SftpTest(unittest.TestCase):
 class SaveLogTest(unittest.TestCase):
 
     def setUp(self):
-        use('es')
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
@@ -404,7 +401,7 @@ class SaveLogTest(unittest.TestCase):
         self.assertEqual(name, 'consultas.csv')
         with (self.root / 'servidores' / 'registros' / name).open(encoding='utf-8') as handle:
             rows = list(csv.reader(handle))
-        self.assertEqual(rows, [[tr('srvTime'), tr('srvClient'), tr('srvEvent')],
+        self.assertEqual(rows, [['time', 'client', 'event'],
                                 ['10:00:00', '192.168.1.20', 'A mulita.test']])
 
     def test_refuses_empty_logs_bad_names_and_overwrites(self):

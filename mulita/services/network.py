@@ -12,7 +12,7 @@ from mulita.core.errors import AlreadyRunningError, CommandFailedError, Validati
 from mulita.core.models import CaptureRequest, NetworkInterface, TapConfig
 from mulita.core.parsers import parse_interfaces
 from mulita.core.ports import CommandRunner, ExitListener, OutputListener
-from mulita.presentation.i18n import tr
+from mulita.core.messages import message
 from mulita.services.base import ProcessSession
 
 log = logging.getLogger(__name__)
@@ -147,13 +147,13 @@ class TapService:
         saliente = (config.saliente or '').strip()
         mirror = (config.mirror or '').strip()
         if not entrante:
-            raise ValidationError(tr('needTapIn'))
+            raise ValidationError(message('needTapIn'))
         if not saliente:
-            raise ValidationError(tr('needTapOut'))
+            raise ValidationError(message('needTapOut'))
         if entrante == saliente or entrante == 'lo' or saliente == 'lo' or mirror == 'lo':
-            raise ValidationError(tr('tapSame'))
+            raise ValidationError(message('tapSame'))
         if mirror and mirror in (entrante, saliente):
-            raise ValidationError(tr('tapMirror'))
+            raise ValidationError(message('tapMirror'))
         return _TapLinks(entrante, saliente, mirror)
 
     def _connect(self, links: _TapLinks) -> None:
@@ -187,10 +187,10 @@ class TapService:
         self._quiet(commands.link_promisc(links.bridge, False))
         self._quiet(commands.link_delete(links.bridge))
 
-    def _checked(self, argv: list[str], message: str) -> None:
+    def _checked(self, argv: list[str], error_message: str) -> None:
         result = self._runner.run(argv)
         if not result.ok:
-            raise CommandFailedError(f'{message}: {result.text}', result)
+            raise CommandFailedError(message('commandFailure', message=error_message, detail=result.text), result)
 
     def _quiet(self, argv: list[str]) -> None:
         self._runner.run(argv)

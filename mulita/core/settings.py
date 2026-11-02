@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Any, Mapping
 
 from mulita.core.errors import ValidationError
-from mulita.presentation.i18n import tr
+from mulita.core.messages import message
 
 MM_PER_INCH = 25.4
 
@@ -102,21 +102,21 @@ def language(value: Any) -> Language:
     try:
         return Language(value)
     except ValueError as exc:
-        raise ValidationError(tr('badLanguage', value=value)) from exc
+        raise ValidationError(message('badLanguage', value=value)) from exc
 
 
 def theme(value: Any) -> Theme:
     try:
         return Theme(value)
     except ValueError as exc:
-        raise ValidationError(tr('badTheme', value=value)) from exc
+        raise ValidationError(message('badTheme', value=value)) from exc
 
 
 def brightness(value: Any) -> int:
     try:
         number = int(round(float(value)))
     except (TypeError, ValueError) as exc:
-        raise ValidationError(tr('badBrightness', value=value)) from exc
+        raise ValidationError(message('badBrightness', value=value)) from exc
     return min(BRIGHTNESS_MAX, max(BRIGHTNESS_MIN, number))
 
 
@@ -124,7 +124,7 @@ def ui_scale(value: Any) -> float:
     try:
         number = float(value)
     except (TypeError, ValueError) as exc:
-        raise ValidationError(tr('badScale', value=value)) from exc
+        raise ValidationError(message('badScale', value=value)) from exc
     number = min(UI_SCALE_MAX, max(UI_SCALE_MIN, number))
     steps = round((number - UI_SCALE_MIN) / UI_SCALE_STEP)
     return round(UI_SCALE_MIN + steps * UI_SCALE_STEP, 2)
@@ -253,7 +253,7 @@ def with_brightness(settings: Settings, level: float) -> Settings:
 
 def with_home_screens(settings: Settings, screens: Any) -> Settings:
     if not isinstance(screens, list):
-        raise ValidationError(tr('badTileOrder'))
+        raise ValidationError(message('badTileOrder'))
     return replace(settings, home=HomeOrder(screens=normalize_screens(screens)))
 
 

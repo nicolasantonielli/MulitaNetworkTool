@@ -9,7 +9,7 @@ from mulita.core.errors import MulitaError, ValidationError
 from mulita.core.ports import SettingsStore
 from mulita.core.settings import Settings
 from mulita.adapters.backlight import PanelBacklight
-from mulita.presentation import i18n
+from mulita.core.messages import message
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +29,6 @@ class SettingsService:
         self._store = store
         self._backlight = backlight or PanelBacklight()
         self._current = store.load()
-        i18n.use(self._current.language.value)
         self._listeners: list[SettingsListener] = []
         self._restore_brightness()
 
@@ -54,7 +53,7 @@ class SettingsService:
 
     def set_rotation(self, angle: int) -> Settings:
         if type(angle) is not int or angle not in (0, 90, 180, 270):
-            raise ValidationError(i18n.tr('rotationInvalid'))
+            raise ValidationError(message('rotationInvalid'))
         return self._commit(replace(self._current, display=replace(self._current.display, rotation=angle)))
 
     def backlight_ready(self) -> bool:
@@ -79,7 +78,6 @@ class SettingsService:
 
     def _commit(self, settings: Settings) -> Settings:
         if settings != self._current:
-            i18n.use(settings.language.value)
             self._store.save(settings)
             self._current = settings
             for listener in self._listeners:
