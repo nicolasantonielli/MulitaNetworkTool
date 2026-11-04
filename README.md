@@ -243,7 +243,8 @@ bash run.sh --no-keyboard
 For application-only changes, run these commands as the repository owner:
 
 ```bash
-git pull origin v3
+git switch v3.1
+git pull origin v3.1
 sudo systemctl restart mulita
 ```
 

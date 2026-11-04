@@ -143,6 +143,6 @@ class InstallationPathsTest(unittest.TestCase):
         self.assertEqual(list(self.root.glob('.mulita-*')), [])
 
     def test_update_can_run_as_repository_owner(self):
-        command = CommandFactory(Binaries()).update(str(self.repo), 'origin', 'v3', 'nico')
+        command = CommandFactory(Binaries()).update(str(self.repo), 'origin', 'v3.1', 'nico')
         self.assertEqual(command[:4], ['/usr/sbin/runuser', '-u', 'nico', '--'])
-        self.assertEqual(command[4:], ['/usr/bin/git', '-C', str(self.repo), 'pull', 'origin', 'v3'])
+        self.assertEqual(command[4:], ['/usr/bin/git', '-C', str(self.repo), 'pull', 'origin', 'v3.1'])

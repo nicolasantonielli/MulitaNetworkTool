@@ -303,7 +303,7 @@ class BlockingServicesTest(unittest.TestCase):
         runner = FakeRunner()
         services_with(runner).maintenance.update()
         self.assertEqual(runner.runs[-1],
-                         ['/usr/bin/git', '-C', AppConfig().repository_dir, 'pull', 'origin', 'v3'])
+                         ['/usr/bin/git', '-C', AppConfig().repository_dir, 'pull', 'origin', 'v3.1'])
 
     def test_restart_uses_systemd_when_it_is_the_service(self):
         runner = FakeRunner()

@@ -82,7 +82,7 @@ class AppConfig:
     internal_interface: str = 'eth0'
     internal_connection: str = 'mulita-interna'
     update_remote: str = 'origin'
-    update_branch: str = 'v3'
+    update_branch: str = 'v3.1'
     service_name: str = 'mulita'
     binaries: Binaries = field(default_factory=Binaries)
     sensor: SensorSettings = field(default_factory=SensorSettings)

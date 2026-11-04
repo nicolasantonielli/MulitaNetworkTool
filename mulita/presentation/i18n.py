@@ -430,7 +430,7 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('system', 'Sistema', 'System'),
     ('update', 'Actualizar', 'Update'),
     ('updateTitle', 'Actualizar Mulita', 'Update Mulita'),
-    ('updateBody', 'Se descarga la rama v3 del repositorio. Reinicie la aplicación para aplicarla.', 'Downloads the v3 branch. Restart the app to apply it.'),
+    ('updateBody', 'Se descarga la rama v3.1 del repositorio. Reinicie la aplicación para aplicarla.', 'Downloads the v3.1 branch. Restart the app to apply it.'),
     ('restartApp', 'Reiniciar app', 'Restart app'),
     ('restartTitle', 'Reiniciar la aplicación', 'Restart the application'),
     ('restartBody', 'Se detienen las capturas y pruebas en curso.', 'Captures and tests that are running will stop.'),

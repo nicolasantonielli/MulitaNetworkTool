@@ -19,7 +19,7 @@ class MaintenanceService:
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
                  repository_dir: str, service_name: str,
-                 update_remote: str = 'origin', update_branch: str = 'v3', installation_user: str = ''):
+                 update_remote: str = 'origin', update_branch: str = 'v3.1', installation_user: str = ''):
         self._runner = runner
         self._commands = commands
         self._repository_dir = repository_dir
