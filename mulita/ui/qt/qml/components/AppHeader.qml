@@ -84,17 +84,17 @@ Rectangle {
             onClicked: root.share()
         }
 
-        RowLayout {
-            spacing: Math.round(ui.gap * 0.4)
+        ColumnLayout {
+            spacing: 0
 
-            Icon {
-                name: network.primaryAddress !== "" ? "network" : "network-off"
-                color: network.primaryAddress !== "" ? ui.success : ui.textMuted
-                size: Math.round(ui.icon * 0.8)
+            Text {
+                text: "Wi-Fi  " + (network.wifiAddress || "—")
+                color: network.wifiAddress ? ui.text : ui.textMuted
+                font.pixelSize: ui.fontSmall
             }
             Text {
-                text: network.primaryAddress !== "" ? network.primaryAddress : i18n.pack.noNetwork
-                color: ui.textMuted
+                text: "Ethernet  " + (network.ethernetAddress || "—")
+                color: network.ethernetAddress ? ui.text : ui.textMuted
                 font.pixelSize: ui.fontSmall
             }
         }

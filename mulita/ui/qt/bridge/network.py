@@ -14,6 +14,7 @@ from collections import deque
 from PyQt5.QtCore import QObject, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.models import CaptureDirection, NetworkInterface, TapConfig
+from mulita.core.parsing.network import is_wifi_interface
 from mulita.ui.qt.bridge.base import (BridgeContext, Console, Controller,
                                       SessionController)
 
@@ -30,15 +31,11 @@ def _interface_ipv4(interface: NetworkInterface) -> str:
 
 
 def primary_address(interfaces: list[NetworkInterface]) -> str:
-    """Primera IPv4 util: la que el tecnico necesita ver en la barra de estado."""
+    """Primera IPv4 util entre todas las interfaces."""
     for interface in interfaces:
-        for address in interface.addresses:
-            try:
-                ip = ipaddress.ip_address(address)
-            except ValueError:
-                continue
-            if ip.version == 4 and not ip.is_loopback and not ip.is_link_local:
-                return address
+        address = _interface_ipv4(interface)
+        if address:
+            return address
     return ''
 
 
@@ -58,6 +55,23 @@ class NetworkController(Controller):
     @pyqtProperty('QVariantList', notify=interfacesChanged)
     def interfaces(self) -> list[dict]:
         return self._interfaces
+
+    @pyqtProperty(str, notify=interfacesChanged)
+    def wifiAddress(self) -> str:
+        return next((row['address'] for row in self._interfaces
+                     if row['address'] and is_wifi_interface(row['value'])), '')
+
+    @pyqtProperty(str, notify=interfacesChanged)
+    def ethernetAddress(self) -> str:
+        preferred = self._ctx.config.internal_interface
+        fallback = ''
+        for row in self._interfaces:
+            name = row['value']
+            if name == preferred and row['address']:
+                return row['address']
+            if not fallback and name.startswith(('eth', 'en')):
+                fallback = row['address']
+        return fallback
 
     @pyqtProperty(str, notify=primaryAddressChanged)
     def primaryAddress(self) -> str:

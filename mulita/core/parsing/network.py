@@ -8,9 +8,13 @@ from mulita.core.errors import CommandFailedError
 from mulita.core.models import AddressMode, EthernetConfig, NetworkInterface
 
 
+def is_wifi_interface(name: str) -> bool:
+    return name.startswith(('wl', 'wifi'))
+
+
 def cable_connected(name: str, flags: list, operstate: str) -> bool:
     """Ethernet administrativamente arriba y con cable. Wi-Fi y loopback no cuentan."""
-    if name == 'lo' or name.startswith(('wlan', 'wlp', 'wlx', 'wifi')):
+    if name == 'lo' or is_wifi_interface(name):
         return False
     present = {str(flag).upper() for flag in flags or []}
     state = (operstate or '').upper()
