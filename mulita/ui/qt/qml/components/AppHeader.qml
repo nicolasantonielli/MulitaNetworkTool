@@ -7,6 +7,7 @@ Rectangle {
     property string title: ""
     property bool showBack: false
     property bool showShare: false
+    readonly property bool narrow: width < ui.mm * 85
     signal back()
     signal share()
 
@@ -24,7 +25,7 @@ Rectangle {
         anchors.fill: parent
         anchors.leftMargin: root.showBack ? Math.round(ui.gap * 0.5) : ui.padding
         anchors.rightMargin: ui.padding
-        spacing: ui.gap
+        spacing: root.narrow ? Math.round(ui.gap * 0.4) : ui.gap
 
         IconButton {
             visible: root.showBack
@@ -33,6 +34,7 @@ Rectangle {
         }
 
         RowLayout {
+            Layout.fillWidth: true
             visible: !root.showBack
             spacing: Math.round(ui.gap * 0.7)
 
@@ -50,6 +52,10 @@ Rectangle {
                 }
             }
             Text {
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                Layout.maximumWidth: implicitWidth
+                elide: Text.ElideRight
                 text: "MULITA"
                 color: ui.text
                 font.pixelSize: ui.fontTitle
@@ -57,25 +63,24 @@ Rectangle {
                 font.letterSpacing: ui.mm * 0.4
             }
             Text {
+                visible: root.width > ui.mm * 150
                 text: "Network Tool"
                 color: ui.textMuted
                 font.pixelSize: ui.fontSmall
                 Layout.alignment: Qt.AlignVCenter
             }
+            Item { Layout.fillWidth: true }
         }
 
         Text {
             Layout.fillWidth: true
+            Layout.minimumWidth: 0
             visible: root.showBack
             text: root.title
             color: ui.text
             font.pixelSize: ui.fontTitle
             font.weight: Font.DemiBold
             elide: Text.ElideRight
-        }
-        Item {
-            Layout.fillWidth: true
-            visible: !root.showBack
         }
 
         IconButton {
@@ -84,23 +89,36 @@ Rectangle {
             onClicked: root.share()
         }
 
-        ColumnLayout {
-            spacing: 0
+        RowLayout {
+            spacing: root.narrow ? 2 : ui.gap
 
-            Text {
-                text: "Wi-Fi  " + (network.wifiAddress || "—")
-                color: network.wifiAddress ? ui.text : ui.textMuted
-                font.pixelSize: ui.fontSmall
-            }
-            Text {
-                text: "Ethernet  " + (network.ethernetAddress || "—")
-                color: network.ethernetAddress ? ui.text : ui.textMuted
-                font.pixelSize: ui.fontSmall
+            Repeater {
+                model: ["wifi", "ethernet"]
+                RowLayout {
+                    readonly property string address: modelData === "wifi" ? network.wifiAddress : network.ethernetAddress
+                    spacing: Math.round(ui.gap * 0.4)
+                    Icon {
+                        name: modelData
+                        color: address ? ui.success : ui.textMuted
+                        size: Math.round(ui.icon * (root.narrow ? 0.5 : 0.8))
+                    }
+                    Text {
+                        text: address || "—"
+                        color: ui.textMuted
+                        Layout.preferredWidth: Math.min(implicitWidth, root.width * (root.narrow ? 0.21 : 0.22))
+                        font.pixelSize: ui.fontSmall
+                        fontSizeMode: Text.HorizontalFit
+                        minimumPixelSize: 6
+                    }
+                }
             }
         }
 
         Text {
             id: clock
+            Layout.preferredWidth: root.narrow ? Math.min(implicitWidth, root.width * 0.1) : implicitWidth
+            fontSizeMode: Text.HorizontalFit
+            minimumPixelSize: 8
             text: Qt.formatTime(new Date(), "HH:mm")
             color: ui.text
             font.pixelSize: ui.fontBody
