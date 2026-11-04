@@ -11,10 +11,10 @@ Item {
     property var pages: [
         { id: "general", label: "navGeneral", icon: "info", component: generalPage },
         { id: "display", label: "navDisplay", icon: "display", component: displayPage },
+        { id: "interface", label: "navInterface", icon: "settings", component: interfacePage },
         { id: "wifi", label: "navWifi", icon: "wifi", component: wifiPage },
         { id: "ethernet", label: "navEthIn", icon: "ethernet", component: ethernetPage },
         { id: "maintenance", label: "navMaint", icon: "wrench", component: maintenancePage },
-        { id: "interface", label: "navInterface", icon: "settings", component: interfacePage },
         { id: "touch", component: touchPage },
         { id: "tiles", component: tilesPage }
     ]
