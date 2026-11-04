@@ -5,10 +5,10 @@ alwaysApply: true
 
 # Versión y push
 
-Al terminar un cambio que modifica `mulita/version.py`, el trabajo no queda listo hasta subirlo.
+Con cada modificación menor, incrementá en una unidad el parche de `mulita/version.py` (por ejemplo, de `3.1.9` a `3.1.10`). Incluí la versión en el mismo commit que la modificación.
 
-- Hacé commit de ese cambio y `git push` a la rama actual (`v3` → `origin/v3`) en el mismo cierre.
+- Hacé commit de ese cambio y `git push` a la rama actual en el mismo cierre.
 - No esperes un pedido aparte de commit o push.
 - No subas si el usuario pidió explícitamente no hacerlo.
-- El mensaje sigue el estilo del repo: `3.0.X: por qué`.
+- El mensaje incluye la nueva versión y el motivo del cambio, por ejemplo `3.1.10: actualizar la barra superior`.
 - En PowerShell, el mensaje va en un archivo y se confirma con `git commit -F`. No uses heredoc.
