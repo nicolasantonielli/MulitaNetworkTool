@@ -48,7 +48,7 @@ class TraceController(TaskController):
 
     @pyqtSlot(str)
     def trace(self, target: str) -> None:
-        self._task(lambda: self._trace.trace(target), self._show, action='tracesTitle', detail=target)
+        self._task(lambda: self._trace.trace(target), lambda hops: self._show(hops, target), action='tracesTitle', detail=target)
 
     @pyqtSlot()
     def clear(self) -> None:
@@ -62,7 +62,9 @@ class TraceController(TaskController):
         hops = self._hops
         self._task(lambda: self._trace.save(hops, filename), self._saved, action='save', detail=filename)
 
-    def _show(self, hops: tuple) -> None:
+    def _show(self, hops: tuple, target: str) -> None:
+        route = '; '.join(f'{h.hop}. {h.address} (pérdida {h.loss}, media {h.average} ms)' for h in hops)
+        self._note(f'Traza a {target}: ' + (route or 'no se obtuvieron saltos.'))
         self._hops = tuple(hops)
         self.hopsChanged.emit()
         if not self._hops:
@@ -182,6 +184,7 @@ class PingController(SessionController):
         replies, summary = tuple(self._replies), self._summary
         def saved(name):
             statics = name[:-4] + '.statics.csv' if name.endswith('.csv') else name
+            self._saved_file(statics)
             self._ctx.notifier.success(self._tr('pingTitle'), self._tr('pingSaved', table=name, statics=statics))
         self._export(lambda: self._ping.save(replies, summary, filename), saved)
 
@@ -199,6 +202,19 @@ class PingController(SessionController):
             self._pending = ''
             self.repliesChanged.emit()
             self.summaryChanged.emit()
+
+        summary = self._summary
+        target = summary.target or self._activity_detail
+        if summary.ready:
+            sent = 'se envió 1 paquete' if summary.transmitted == '1' else f'se enviaron {summary.transmitted} paquetes'
+            received = 'se recibió 1' if summary.received == '1' else f'se recibieron {summary.received}'
+            result = f'{sent} y {received} ({summary.loss} de pérdida).'
+            if summary.average:
+                result += f' Tiempo medio de respuesta: {summary.average} ms.'
+        else:
+            ok = sum(reply.status == 'ok' for reply in self._replies)
+            result = f'Se observaron {ok} respuestas. El proceso terminó sin estadísticas finales.'
+        self._note(f'Resultado del ping a {target}: {result}')
 
     def _take(self, line: str) -> None:
         reply, summary = read_ping_line(line, self._summary)
@@ -246,6 +262,9 @@ class PortScanController(TaskController):
 
     def _show(self, found: tuple) -> None:
         self._ports = tuple(found)
+        rows = '; '.join(f'{item.host} {item.port}/{item.protocol} {item.state} {item.service}'.strip()
+                         for item in self._ports)
+        self._note('Resultado del escaneo de puertos: ' + (rows or 'no se obtuvieron puertos.'))
         self.portsChanged.emit()
         if not self._ports:
             self._ctx.notifier.info(self._tr('scanTitle'), self._tr('noPorts'))
@@ -318,6 +337,9 @@ class DiscoveryController(SessionController):
             self._take(self._pending)
             self._pending = ''
             self.hostsChanged.emit()
+        hosts = '; '.join(f'{item.ip} ({item.mac})' for item in self._hosts)
+        self._note(f'Descubrimiento en {self._activity_detail}: '
+                   + (hosts or 'no se observaron equipos.'))
         if code != 0 and not self._stopping:
             detail = '\n'.join(self._diagnostics) or self._tr('discoverFailed', code=code)
             self._ctx.notifier.error(detail, title=self._tr('discoverTitle'))

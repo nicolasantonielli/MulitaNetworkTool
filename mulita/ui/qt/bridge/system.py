@@ -116,6 +116,18 @@ class SettingsController(Controller):
             self._fail(exc)
 
     @pyqtProperty(bool, notify=changed)
+    def technicalJournal(self) -> bool:
+        return self._current.technical_journal
+
+    @pyqtSlot(bool)
+    def setTechnicalJournal(self, enabled: bool) -> None:
+        try:
+            self._ctx.settings.set_technical_journal(enabled)
+        except MulitaError as exc:
+            self._fail(exc)
+            self.changed.emit()
+
+    @pyqtProperty(bool, notify=changed)
     def activityLogging(self) -> bool:
         return self._current.activity_logging
 

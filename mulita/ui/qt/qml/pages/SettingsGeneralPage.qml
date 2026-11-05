@@ -59,6 +59,19 @@ ScrollPage {
 
     Card {
         Layout.fillWidth: true
+        title: i18n.pack.journalTitle
+        titleIcon: "file"
+        Switch {
+            text: i18n.pack.journalRecord
+            checked: settings.technicalJournal
+            onToggled: settings.setTechnicalJournal(checked)
+            palette.windowText: ui.text
+            implicitHeight: ui.touch
+        }
+    }
+
+    Card {
+        Layout.fillWidth: true
         title: i18n.pack.language
         titleIcon: "globe"
 

@@ -21,15 +21,18 @@ import threading
 import time
 from string import Template
 from pathlib import Path
+from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
 if __package__:
-    from .activity_days import day_path, list_days
+    from .activity_days import append_entry, day_path, list_days, technical_line
     from .remote_page import CONTROL_PAGE, forward
 else:  # Mulita also starts this server by script path.
-    from activity_days import day_path, list_days
+    from activity_days import append_entry, day_path, list_days, technical_line
     from remote_page import CONTROL_PAGE, forward
+
+JOURNALS = {'actividad': ('Registro de actividades', '.log'), 'bitacora': ('Bitácora técnica', '.txt')}
 
 MAX_TEST_MB = 1024
 CHUNK = 64 * 1024
@@ -316,7 +319,7 @@ class Handler(SimpleHTTPRequestHandler):
         if path.rstrip('/') == '/control':
             self._send_data(render_page(CONTROL_PAGE, self.secure), 'text/html; charset=utf-8', send_body)
             return True
-        if path == '/actividad' or path.startswith('/actividad/'):
+        if path.partition('/')[2].partition('/')[0] in JOURNALS:
             self._activity(path, send_body)
             return True
         if path in ('/', ''):
@@ -346,31 +349,35 @@ class Handler(SimpleHTTPRequestHandler):
         if not self.server.captures:
             self.send_error(404)
             return
-        folder = Path(self.server.captures) / 'actividad'
+        journal = path.split('/')[1]
+        title, suffix = JOURNALS[journal]
+        folder = Path(self.server.captures) / journal
         try:
-            if path in ('/actividad', '/actividad/'):
+            if path.rstrip('/') == '/' + journal:
                 rows = ''.join(
-                    f'<li><a class="resource" href="/actividad/{day}">{day}</a></li>'
-                    for day in list_days(folder))
-                content = '<h1>Registro de actividades</h1>' + (
+                    f'<li><a class="resource" href="/{journal}/{day}">{day}</a></li>'
+                    for day in list_days(folder, suffix))
+                content = f'<h1>{title}</h1>' + (
                     f'<ul class="panel file-list">{rows}</ul>' if rows else
                     '<p class="empty">Todavía no hay jornadas registradas.</p>')
             else:
-                parts = path.removeprefix('/actividad/').rstrip('/').split('/')
+                parts = path.removeprefix(f'/{journal}/').rstrip('/').split('/')
                 day = parts[0]
-                filename = day_path(folder, day)
+                filename = day_path(folder, day, suffix)
                 if parts == [day, 'exportar']:
                     data = filename.read_bytes()
                     self._send_data(data, 'text/plain; charset=utf-8', send_body, filename.name)
+                    if send_body:
+                        self._export_note(filename.name)
                     return
                 if parts != [day]:
                     raise FileNotFoundError
                 report = html.escape(filename.read_text(encoding='utf-8'))
                 content = (
-                    '<a class="back-link" href="/actividad/">← Todas las jornadas</a>'
-                    f'<h1>Registro del {day}</h1><div class="journal-actions">'
-                    f'<a class="download" href="/actividad/{day}/exportar">Exportar .log</a>'
-                    f'<form method="post" action="/actividad/{day}/eliminar" '
+                    f'<a class="back-link" href="/{journal}/">← Todas las jornadas</a>'
+                    f'<h1>{title} · {day}</h1><div class="journal-actions">'
+                    f'<a class="download" href="/{journal}/{day}/exportar">Exportar {suffix}</a>'
+                    f'<form method="post" action="/{journal}/{day}/eliminar" '
                     f'onsubmit="return confirm(\'¿Eliminar el registro del {day}?\')">'
                     f'<input type="hidden" name="token" value="{self.server.activity_token}">'
                     '<button type="submit" class="theme">Eliminar jornada</button></form></div>'
@@ -381,12 +388,31 @@ class Handler(SimpleHTTPRequestHandler):
         except OSError:
             self.send_error(403)
 
+    def copyfile(self, source, outputfile):
+        super().copyfile(source, outputfile)
+        if self.server.captures and self.path.startswith('/capturas/') and hasattr(source, 'name'):
+            self._export_note(Path(source.name).name)
+
+    def _export_note(self, name):
+        if not self.server.journal_settings:
+            return
+        try:
+            config = json.loads(Path(self.server.journal_settings).read_text(encoding='utf-8'))
+            if isinstance(config, dict) and config.get('technicalJournal') is True:
+                now = datetime.now().astimezone()
+                entry = technical_line(now, f'Se exportó el archivo {name} desde la web.')
+                append_entry(Path(self.server.captures) / 'bitacora', now, '.txt', entry)
+        except FileNotFoundError:
+            return
+        except (OSError, ValueError) as error:
+            self.log_message('Bitácora: %s', error)
+
     def do_POST(self) -> None:
         parts = urlsplit(self.path).path.split('/')
         if len(parts) == 3 and parts[1] == 'control':
             self._remote(parts[2])
             return
-        if not self.server.captures or len(parts) != 4 or parts[:2] != ['', 'actividad'] or parts[3] != 'eliminar':
+        if not self.server.captures or len(parts) != 4 or parts[1] not in JOURNALS or parts[3] != 'eliminar':
             self.send_error(404)
             return
         try:
@@ -398,7 +424,7 @@ class Handler(SimpleHTTPRequestHandler):
             if form.get('token') != [self.server.activity_token]:
                 self.send_error(403)
                 return
-            day_path(Path(self.server.captures) / 'actividad', parts[2]).unlink()
+            day_path(Path(self.server.captures) / parts[1], parts[2], JOURNALS[parts[1]][1]).unlink()
         except (ValueError, FileNotFoundError):
             self.send_error(404)
             return
@@ -406,7 +432,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_error(403)
             return
         self.send_response(303)
-        self.send_header('Location', '/actividad/')
+        self.send_header('Location', f'/{parts[1]}/')
         self.end_headers()
 
     def _remote(self, action):
@@ -444,6 +470,9 @@ class Handler(SimpleHTTPRequestHandler):
                 '<span class="arrow" aria-hidden="true">›</span></a>')
             captures += ('<a class="panel resource" href="/actividad/"><span><strong>Registro de actividades</strong>'
                          '<small>Consultar jornadas y exportar registros.</small></span>'
+                         '<span class="arrow" aria-hidden="true">›</span></a>')
+            captures += ('<a class="panel resource" href="/bitacora/"><span><strong>Bitácora técnica</strong>'
+                         '<small>Acciones, resultados y archivos exportados por jornada.</small></span>'
                          '<span class="arrow" aria-hidden="true">›</span></a>')
         downloads = ''.join(
             f'<a class="download" href="/prueba/{mb}" download="mulita-prueba-{mb}MB.bin">'
@@ -500,6 +529,7 @@ class Server(ThreadingHTTPServer):
                  context: ssl.SSLContext | None = None):
         self.root = root
         self.captures = captures
+        self.journal_settings = None
         self.activity_token = secrets.token_urlsafe(32)
         self.context = context
         super().__init__(address, handler)
@@ -510,7 +540,7 @@ class Server(ThreadingHTTPServer):
 
 
 def serve(host: str, http_port: int, https_port: int, root: str, captures: str, cert: str, key: str,
-          ready: threading.Event | None = None) -> list[Server]:
+          ready: threading.Event | None = None, journal_settings=None) -> list[Server]:
     servers: list[Server] = []
     try:
         if http_port:
@@ -526,6 +556,8 @@ def serve(host: str, http_port: int, https_port: int, root: str, captures: str, 
             opened.server_close()
         say('', f'No se pudo iniciar el servidor web: {getattr(exc, "strerror", None) or exc}')
         raise SystemExit(1)
+    for server in servers:
+        server.journal_settings = journal_settings
     for extra in servers[1:]:
         threading.Thread(target=extra.serve_forever, daemon=True).start()
     if ready:
@@ -542,13 +574,14 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument('--https-port', type=int, default=0)
     parser.add_argument('--cert', default='')
     parser.add_argument('--key', default='')
+    parser.add_argument('--journal-settings')
     args = parser.parse_args(argv)
     os.makedirs(args.root, exist_ok=True)
     if not args.http_port and not args.https_port:
         say('', 'Ningun puerto elegido')
         sys.exit(1)
     servers = serve(args.bind, args.http_port, args.https_port, args.root, args.captures,
-                    args.cert, args.key)
+                    args.cert, args.key, journal_settings=args.journal_settings)
     try:
         servers[0].serve_forever()
     except KeyboardInterrupt:

@@ -17,7 +17,8 @@ Item {
         { id: "scan", page: 4, icon: "scan", title: i18n.pack.homeScan, subtitle: i18n.pack.homeScanSub },
         { id: "tools", page: 5, icon: "tools", title: i18n.pack.homeTools, subtitle: i18n.pack.homeToolsSub },
         { id: "settings", page: 6, icon: "settings", title: i18n.pack.homeSettings, subtitle: i18n.pack.homeSettingsSub },
-        { id: "activity", page: 12, icon: "file", title: i18n.pack.activityTitle, subtitle: i18n.pack.activitySub }
+        { id: "activity", page: 12, icon: "file", title: i18n.pack.activityTitle, subtitle: i18n.pack.activitySub },
+        { id: "journal", page: 13, icon: "file", title: i18n.pack.journalTitle, subtitle: i18n.pack.journalSub }
     ]
 
     readonly property var catalog: {

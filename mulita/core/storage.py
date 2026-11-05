@@ -23,6 +23,7 @@ PLACES = (
     StoragePlace('descubrimiento', 'descubrimiento', 'placeDiscover', ('.csv',)),
     StoragePlace('tls', 'tls', 'placeTls', ('.csv',)),
     StoragePlace('puerto-switch', 'puerto-switch', 'switchTitle', ('.json',), False),
+    StoragePlace('bitacora', 'bitacora', 'journalTitle', ('.txt',), False),
     StoragePlace('actividad', 'actividad', 'activityTitle', ('.log',), False),
     StoragePlace('servidores', 'servidores', 'pageServers'),
     StoragePlace('nmap', 'nmap', 'cyberNmap'),

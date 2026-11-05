@@ -156,7 +156,7 @@ class CaptureFilesService:
         if place == 'ping':
             chosen = suffix if suffix in ('.csv', '.statics.csv') else _ping_suffix(name)
             filename = validation.named_file(validation.ping_basename(name), chosen)
-        elif place in ('puerto-switch', 'actividad'):
+        elif place in ('puerto-switch', 'actividad', 'bitacora'):
             filename = validation.named_file(name, _PLACES[place][1][0])
         elif place in ('traza', 'publica', 'wifi', 'escaneo', 'descubrimiento', 'tls'):
             filename = validation.trace_filename(name)

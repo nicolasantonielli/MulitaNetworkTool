@@ -5,21 +5,27 @@ import "../components"
 
 ColumnLayout {
     id: root
-    objectName: "activityPage"
+    property bool technical: false
+    readonly property var journal: technical ? technicalJournal : activity
+    readonly property bool recording: technical ? settings.technicalJournal : settings.activityLogging
+    readonly property string suffix: technical ? ".txt" : ".log"
+    objectName: technical ? "technicalJournalPage" : "activityPage"
     spacing: ui.gap
     property string selectedDay: ""
     property string report: ""
+    property string fileRevision: ""
     property var availableDays: []
     property string exportDay: ""
     readonly property var drives: JSON.parse(files.drivesJson)
 
     function refresh() {
-        if (!visible) return
-        var days = activity.days
+        if (!visible || !root.journal) return
+        var days = root.journal.days
         if (days.join() !== availableDays.join()) availableDays = days
         if (days.indexOf(selectedDay) < 0) selectedDay = days.length ? days[0] : ""
         if (days.indexOf(exportDay) < 0) exportDay = ""
-        report = activity.read(selectedDay)
+        fileRevision = root.journal.revision(selectedDay)
+        report = root.journal.read(selectedDay)
     }
     onVisibleChanged: refresh()
     Timer {
@@ -27,11 +33,12 @@ ColumnLayout {
         running: root.visible
         repeat: true
         onTriggered: {
-            if (activity.days.join() !== root.availableDays.join()) root.refresh()
+            if (root.journal.days.join() !== root.availableDays.join() ||
+                    root.journal.revision(root.selectedDay) !== root.fileRevision) root.refresh()
         }
     }
     Connections {
-        target: activity
+        target: root.journal
         function onChanged() { root.refresh() }
     }
 
@@ -42,8 +49,8 @@ ColumnLayout {
         Layout.topMargin: ui.gap
         Text {
             Layout.fillWidth: true
-            text: settings.activityLogging ? i18n.pack.activityOn : i18n.pack.activityOff
-            color: settings.activityLogging ? ui.success : ui.textMuted
+            text: root.recording ? i18n.pack.activityOn : i18n.pack.activityOff
+            color: root.recording ? ui.success : ui.textMuted
             font.pixelSize: ui.fontSmall
             wrapMode: Text.Wrap
         }
@@ -75,9 +82,9 @@ ColumnLayout {
             kind: "danger"
             onClicked: {
                 var day = root.selectedDay
-                confirmation.ask({title: i18n.pack.delete, message: i18n.pack.deleteBody.replace("{name}", day + ".log"),
+                confirmation.ask({title: i18n.pack.delete, message: i18n.pack.deleteBody.replace("{name}", day + root.suffix),
                     confirmText: i18n.pack.delete, cancelText: i18n.pack.cancel,
-                    confirmAction: function() { activity.deleteDay(day) }})
+                    confirmAction: function() { root.journal.deleteDay(day) }})
             }
         }
     }
@@ -106,7 +113,7 @@ ColumnLayout {
             visible: root.drives.length > 0
             enabled: !files.busy && usb.currentIndex >= 0
             onClicked: {
-                files.exportFile("actividad", root.exportDay + ".log", root.drives[usb.currentIndex].value)
+                files.exportFile(root.technical ? "bitacora" : "actividad", root.exportDay + root.suffix, root.drives[usb.currentIndex].value)
                 root.exportDay = ""
             }
         }
@@ -122,7 +129,7 @@ ColumnLayout {
         Layout.rightMargin: ui.padding
         Text {
             Layout.fillWidth: true
-            text: root.report || (i18n.pack.activityEmpty + (settings.activityLogging ? "" : " " + i18n.pack.activityEnableHint))
+            text: root.report || ((root.technical ? i18n.pack.journalEmpty : i18n.pack.activityEmpty) + (root.recording ? "" : " " + i18n.pack.activityEnableHint))
             textFormat: Text.PlainText
             wrapMode: Text.WrapAnywhere
             color: ui.text

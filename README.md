@@ -256,6 +256,12 @@ Enable **Record activities** under **Settings → General**. The **Activity log*
 
 Start Mulita's HTTP or HTTPS server with **Share captures and reports** enabled. Visitors can open **Registro de actividades** from the web home page (`/actividad/`), select a daily page, download its UTF-8 log, or delete that day from the device. The tile and the web server use the same files. If today's log is deleted while recording is enabled, the next recorded action starts a new log for today.
 
+### Technical journal
+
+Enable **Record technical journal** in **Settings → General**. Its switch is independent of the activity log. The **Technical journal** tile and the web page `/bitacora/` show the same daily text files. Select a day to read, copy (on the device), export, or delete it. The web server must have **Share captures and reports** enabled.
+
+Entries use Spanish prose and local time in `YYYY-DD-MM HH:MM` format. Ping entries include the target, packet loss and mean round-trip time when available. Other diagnostics record their findings, and successful exports record the filenames. Daily filenames use `YYYY-MM-DD.txt` so they sort chronologically.
+
 ### Remote control
 
 Start the Mulita web server, preferably with HTTPS. On the device, open **Settings → General → Remote control**, turn it on, then enter the displayed code at `/control` in the browser. The six-digit code is valid for two minutes and pairs one browser. The browser shows the live device screen and accepts taps, drags, and long presses. Use the on-screen keyboard for text. Screen capture runs only for a paired viewer and is limited to four captures per second.

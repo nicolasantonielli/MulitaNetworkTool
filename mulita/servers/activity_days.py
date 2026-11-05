@@ -1,25 +1,35 @@
 """Daily activity files shared by the Qt application and the standalone web server."""
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 
-def day_path(folder: Path, day: str) -> Path:
+def day_path(folder: Path, day: str, suffix: str = '.log') -> Path:
     if date.fromisoformat(day).isoformat() != day:
         raise ValueError('Fecha inválida')
-    path = folder / (day + '.log')
+    path = folder / (day + suffix)
     if folder.is_symlink() or path.is_symlink():
         raise ValueError('Ruta de registro inválida')
     return path
 
 
-def list_days(folder: Path) -> list[str]:
+def list_days(folder: Path, suffix: str = '.log') -> list[str]:
     if folder.is_symlink():
         raise ValueError('Ruta de registro inválida')
     days = []
-    for path in folder.glob('????-??-??.log'):
+    for path in folder.glob('????-??-??' + suffix):
         try:
-            if day_path(folder, path.stem).is_file():
+            if day_path(folder, path.stem, suffix).is_file():
                 days.append(path.stem)
         except ValueError:
             continue
     return sorted(days, reverse=True)
+
+
+def append_entry(folder: Path, now: datetime, suffix: str, line: str):
+    folder.mkdir(parents=True, exist_ok=True)
+    with day_path(folder, now.date().isoformat(), suffix).open('a', encoding='utf-8') as stream:
+        stream.write(line + '\n')
+
+
+def technical_line(now: datetime, sentence: str) -> str:
+    return f"{now:%Y-%d-%m %H:%M} - {' '.join(sentence.split())}"

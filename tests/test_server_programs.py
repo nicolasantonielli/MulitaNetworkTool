@@ -223,9 +223,10 @@ class WebTest(unittest.TestCase):
         self.output = patcher.start()
         self.addCleanup(patcher.stop)
 
-    def serve(self, captures=True, context=None, handler=None):
+    def serve(self, captures=True, context=None, handler=None, journal_settings=None):
         server = web.Server(('127.0.0.1', 0), handler or web.Handler, self.root,
                             self.captures if captures else '', context)
+        server.journal_settings = journal_settings
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         self.addCleanup(lambda: (server.shutdown(), server.server_close(), thread.join(2)))
@@ -250,16 +251,42 @@ class WebTest(unittest.TestCase):
         self.assertEqual(self.get(port, '/', 'HEAD')[1], b'')
 
     def test_daily_activity_view_download_and_confirmed_deletion(self):
-        folder = Path(self.captures) / 'actividad'
+        self.check_daily_management('actividad', '.log')
+
+    def test_technical_journal_view_download_and_confirmed_deletion(self):
+        self.check_daily_management('bitacora', '.txt')
+
+    def test_web_export_records_the_actual_filename_only_when_enabled(self):
+        settings = Path(self.tmp.name) / 'settings.json'
+        port = self.serve(journal_settings=settings)
+        folder = Path(self.captures) / 'bitacora'
+        settings.write_text('{"technicalJournal":false}')
+        self.assertEqual(self.get(port, '/capturas/informe.csv')[0], 200)
+        self.assertFalse(folder.exists())
+        settings.write_text('{"technicalJournal":true}')
+        self.assertEqual(self.get(port, '/capturas/informe.csv', 'HEAD')[0], 200)
+        self.assertFalse(folder.exists())
+        self.assertEqual(self.get(port, '/capturas/informe.csv')[0], 200)
+        # A following request can finish before the download handler closes its log.
+        for _ in range(100):
+            logs = list(folder.glob('*.txt'))
+            if logs and 'informe.csv' in logs[0].read_text(encoding='utf-8'):
+                break
+            time.sleep(0.01)
+        self.assertIn('Se exportó el archivo informe.csv desde la web.', logs[0].read_text(encoding='utf-8'))
+
+    def check_daily_management(self, journal, suffix):
+        folder = Path(self.captures) / journal
         folder.mkdir()
         day = '2026-11-04'
         report = b'Ping <lab>\n'
-        path = folder / (day + '.log')
+        path = folder / (day + suffix)
         path.write_bytes(report)
-        url = '/actividad/' + day
+        index = f'/{journal}/'
+        url = index + day
         port = self.serve()
-        self.assertIn(b'/actividad/', self.get(port, '/')[1])
-        self.assertIn(url.encode(), self.get(port, '/actividad/')[1])
+        self.assertIn(index.encode(), self.get(port, '/')[1])
+        self.assertIn(url.encode(), self.get(port, index)[1])
         status, page = self.get(port, url)
         self.assertEqual(status, 200)
         self.assertIn(b'Ping &lt;lab&gt;', page)
@@ -268,7 +295,7 @@ class WebTest(unittest.TestCase):
         self.addCleanup(conn.close)
         conn.request('GET', url + '/exportar')
         response = conn.getresponse()
-        self.assertIn(day + '.log', response.getheader('Content-Disposition'))
+        self.assertIn(day + suffix, response.getheader('Content-Disposition'))
         self.assertEqual(response.read(), report)
         self.assertEqual(self.get(port, url + '/eliminar')[0], 404)
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
@@ -284,7 +311,7 @@ class WebTest(unittest.TestCase):
         response.read()
         self.assertFalse(path.exists())
         self.assertEqual(self.get(port, url)[0], 404)
-        self.assertEqual(self.get(self.serve(captures=False), '/actividad/')[0], 404)
+        self.assertEqual(self.get(self.serve(captures=False), index)[0], 404)
 
     def test_files_are_served_from_the_root_and_from_archivos(self):
         port = self.serve()

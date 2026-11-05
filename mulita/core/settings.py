@@ -24,9 +24,9 @@ BRIGHTNESS_MAX = 100
 # Orden de fabrica. Cada pantalla del inicio lleva de 1 a 6 cuadros, sin importar el rubro.
 NETWORK_ORDER = ('capture', 'traces', 'tap', 'scan', 'tools', 'settings')
 CYBER_ORDER = ('vuln', 'wifi', 'arp', 'nmap', 'tls', 'servers')
-ALL_TILES = NETWORK_ORDER + CYBER_ORDER + ('switchport', 'activity')
+ALL_TILES = NETWORK_ORDER + CYBER_ORDER + ('switchport', 'activity', 'journal')
 SCREEN_LIMIT = 6
-DEFAULT_SCREENS = (NETWORK_ORDER, CYBER_ORDER, ('switchport', 'activity'))
+DEFAULT_SCREENS = (NETWORK_ORDER, CYBER_ORDER, ('switchport', 'activity', 'journal'))
 
 
 class Theme(Enum):
@@ -84,6 +84,7 @@ class Settings:
     brightness: int = BRIGHTNESS_MAX
     home: HomeOrder = field(default_factory=HomeOrder)
     activity_logging: bool = False
+    technical_journal: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -94,6 +95,7 @@ class Settings:
             'language': self.language.value,
             'brightness': self.brightness,
             'activityLogging': self.activity_logging,
+            'technicalJournal': self.technical_journal,
             'homeOrder': {
                 'screens': [list(screen) for screen in self.home.screens],
             },
@@ -227,6 +229,7 @@ def settings_from_dict(data: Mapping[str, Any]) -> Settings:
     return Settings(display=replace(defaults.display, ui_scale=scale, resize_tiles=resize_tiles, rotation=angle), theme=chosen_theme,
                     language=chosen_language, brightness=level,
                     activity_logging=data.get('activityLogging') is True,
+                    technical_journal=data.get('technicalJournal') is True,
                     home=home_order_from(data.get('homeOrder')))
 
 

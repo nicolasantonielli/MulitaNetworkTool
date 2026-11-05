@@ -66,6 +66,7 @@ class WakeOnLanController(TaskController):
 
     def _sent(self, packet) -> None:
         self._phase = 'sent'
+        self._note(f'Se envió Wake on LAN a {packet.mac} por {packet.target}, puerto {packet.port}.')
         self._mac = packet.mac
         self._target = packet.target
         self._port = packet.port
@@ -107,6 +108,10 @@ class ClimateController(TaskController):
 
     def _show(self, reading: ClimateReading | None) -> None:
         self._reading = reading
+        if reading:
+            self._note(f'El sensor registró {self.temperature} y {self.humidity} de humedad.')
+        else:
+            self._note('Se intentó medir la temperatura y la humedad, pero el sensor no respondió.')
         self._read = True
         self.readingChanged.emit()
 
@@ -140,6 +145,7 @@ class SpeedTestController(TaskController):
 
     def _show(self, result: SpeedTestResult) -> None:
         self._result = result
+        self._note(f'La prueba de velocidad midió {self.download} Mbps de descarga y {self.upload} Mbps de subida.')
         self._set_status('')
 
     def _set_status(self, status: str) -> None:
@@ -187,6 +193,7 @@ class PublicIpController(TaskController):
 
     def _show(self, info) -> None:
         self._info, self._status = info, ''
+        self._note(f'La consulta de IP pública devolvió {info.ip}.')
         self.addressChanged.emit()
 
     def _failed(self, error: Exception) -> None:
@@ -213,9 +220,10 @@ class MacVendorController(TaskController):
 
     @pyqtSlot(str)
     def lookup(self, mac: str) -> None:
-        self._task(lambda: self._mac_vendor.lookup(mac), self._show, self._failed, action='vendor', detail=mac)
+        self._task(lambda: self._mac_vendor.lookup(mac), lambda name: self._show(name, mac), self._failed, action='vendor', detail=mac)
 
-    def _show(self, name: str) -> None:
+    def _show(self, name: str, mac: str) -> None:
+        self._note(f'Fabricante consultado para {mac}: {name or "sin coincidencia"}.')
         self._vendor, self._status = name, ''
         self.vendorChanged.emit()
 
@@ -305,7 +313,11 @@ class FilesController(TaskController):
 
     @pyqtSlot(str, str)
     def exportMany(self, payload: str, drive: str) -> None:
-        self._task(lambda: self._files_service.export_many(_picked(payload), drive), self._done,
+        def exported(count):
+            for _, name in _picked(payload):
+                self._saved_file(name)
+            self._done(count)
+        self._task(lambda: self._files_service.export_many(_picked(payload), drive), exported,
                    action='export')
 
     def _show(self, found: tuple) -> None:

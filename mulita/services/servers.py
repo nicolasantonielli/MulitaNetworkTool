@@ -37,12 +37,14 @@ class ServerService:
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
                  servers_dir: PurePosixPath | Path, state_dir: Path,
-                 capture_dir: PurePosixPath | Path, posix: bool | None = None):
+                 capture_dir: PurePosixPath | Path, posix: bool | None = None,
+                 settings_path: Path | None = None):
         self._runner = runner
         self._commands = commands
         self._servers_dir = Path(servers_dir)
         self._state_dir = Path(state_dir)
         self._capture_dir = capture_dir
+        self._settings_path = settings_path
         # En Windows las rutas /root no existen: no se crean carpetas fuera de la Pi.
         self._posix = os.name == 'posix' if posix is None else posix
         self._sftp_provisioner = SftpProvisioner(runner, commands, self._state_dir, capture_dir, self._posix)
@@ -199,8 +201,11 @@ class ServerService:
         if https_port:
             certificate, key = self._certificate()
         captures = str(self._capture_dir) if self._flag(values, 'share') else ''
-        return _Plan(self._commands.web_server(
-            str(self._folder('web')), http_port, https_port, address, captures, certificate, key))
+        argv = self._commands.web_server(
+            str(self._folder('web')), http_port, https_port, address, captures, certificate, key)
+        if captures and self._settings_path:
+            argv += ['--journal-settings', str(self._settings_path)]
+        return _Plan(argv)
 
     def _certificate(self) -> tuple[str, str]:
         folder = self._state('web')

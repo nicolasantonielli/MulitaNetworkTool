@@ -112,6 +112,47 @@ class ActivityLogTest(unittest.TestCase):
                 dialog.finish(True)
                 self.assertEqual(activity.days, [day])
                 self.assertEqual(page.property('report'), report)
+
+                journal = ctx.contextProperty('technicalJournal')
+                self.assertFalse(settings.technicalJournal)
+                self.assertEqual(journal.days, [])
+                settings.setTechnicalJournal(True)
+                self.assertTrue(JsonSettingsStore(config.settings_path).load().technical_journal)
+                (config.capture_dir / 'ping').mkdir(exist_ok=True)
+                self.assertTrue(ping.start('8.8.8.8', 2, 1, 64))
+                runner.outputs[-1]('2 packets transmitted, 1 received, 50% packet loss, time 1000ms\n'
+                                   'rtt min/avg/max/mdev = 9.0/10.0/11.0/0.2 ms\n')
+                runner.handles[-1].finish()
+                app.app.processEvents()
+                ping.save('ping')
+                for _ in range(100):
+                    QTest.qWait(20)
+                    if not ping.saving:
+                        break
+                text = journal.read(day)
+                self.assertIn(' - Se hizo ping a 8.8.8.8.', text)
+                self.assertIn('se enviaron 2 paquetes y se recibió 1 (50% de pérdida)', text)
+                self.assertIn('Tiempo medio de respuesta: 10.0 ms.', text)
+                self.assertIn('Se exportó el archivo ping.csv.', text)
+                self.assertIn('Se exportó el archivo ping.statics.csv.', text)
+                self.assertEqual(activity.read(day), report)
+
+                tile = next(tile for tile in home.property('catalog').toVariant() if tile['id'] == 'journal')
+                home.open.emit(tile['page'])
+                app.app.processEvents()
+                page = app.root.findChild(QObject, 'technicalJournalPage')
+                self.assertTrue(page.isVisible())
+                self.assertEqual(page.property('report'), text)
+                settings.setTechnicalJournal(False)
+                self.assertTrue(ping.start('192.0.2.99', 1, 1, 64))
+                runner.handles[-1].finish()
+                app.app.processEvents()
+                self.assertEqual(journal.read(day), text)
+                self.assertEqual(services.files.export('bitacora', day + '.txt', 'sda1'), day + '.txt')
+                self.assertEqual((usb / (day + '.txt')).read_text(encoding='utf-8'), text)
+                journal.deleteDay(day)
+                self.assertEqual(journal.days, [])
+                self.assertEqual(activity.days, [day])
             finally:
                 app.dispose()
 

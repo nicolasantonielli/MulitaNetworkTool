@@ -109,6 +109,11 @@ class TlsController(SessionController):
     def _finished(self, code: int) -> None:
         self._findings = self._session.findings
         self.resultChanged.emit()
+        counts = {}
+        for finding in self._findings:
+            counts[finding.severity] = counts.get(finding.severity, 0) + 1
+        result = ', '.join(f'{level}: {count}' for level, count in counts.items()) or 'sin hallazgos registrados'
+        self._note(f'Análisis TLS de {self._target}: {result}.')
         if self._stopping:
             return
         title = self._tr('cyberTls')

@@ -33,7 +33,7 @@ class QtApplication:
         from PyQt5.QtGui import QCursor, QGuiApplication
         from PyQt5.QtQml import QQmlApplicationEngine
 
-        from mulita.ui.qt.bridge.activity import ActivityController
+        from mulita.ui.qt.bridge.activity import ActivityController, TechnicalJournal
         from mulita.ui.qt.bridge.remote import RemoteControl
         from mulita.ui.qt.bridge.base import BridgeContext, Notifier
         from mulita.ui.qt.bridge.ethernet import InternalEthernetController
@@ -91,9 +91,13 @@ class QtApplication:
         activity = ActivityController(ctx)
         self._remote = RemoteControl(lambda: self.root)
         notifier.activityRecorded.connect(activity.record)
+        journal = TechnicalJournal(ctx)
+        notifier.activityRecorded.connect(journal.action)
+        notifier.technicalNote.connect(journal.note)
         self._controllers = {
             'remoteControl': self._remote,
             'activity': activity,
+            'technicalJournal': journal,
             'textCopy': self._text_copy,
             'touchTest': self._touch_test,
             'ui': Appearance(ctx),

@@ -44,6 +44,9 @@ class SettingsService:
     def set_resize_tiles(self, value: bool) -> Settings:
         return self._commit(replace(self._current, display=replace(self._current.display, resize_tiles=value)))
 
+    def set_technical_journal(self, enabled: bool) -> Settings:
+        return self._commit(replace(self._current, technical_journal=enabled))
+
     def set_activity_logging(self, enabled: bool) -> Settings:
         return self._commit(replace(self._current, activity_logging=enabled))
 
