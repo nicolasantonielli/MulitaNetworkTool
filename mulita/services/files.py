@@ -15,6 +15,8 @@ from mulita.core.storage import PLACES, StoragePaths
 from mulita.core.errors import ValidationError
 from mulita.core.platform import RemovableStorage, UsbDrive
 from mulita.core.messages import message
+from mulita.core.journals import JournalFiles
+from typing import Mapping
 
 _DEVICE = re.compile(r'^[A-Za-z0-9]+$')
 
@@ -35,7 +37,8 @@ class CaptureFilesService(EventSource):
 
     def __init__(self, directory: PurePosixPath | Path,
                  capture_active=None, tap_active=None,
-                 storage: RemovableStorage | None = None, journal_flush=None, journal_access=None, journal_csv=None):
+                 storage: RemovableStorage | None = None, journal_flush=None, journal_access=None, journal_csv=None,
+                 journal_files: Mapping[str, JournalFiles] | None = None):
         self._root = Path(directory)
         self._paths = StoragePaths(self._root)
         self._capture_active = capture_active or (lambda: False)
@@ -44,6 +47,11 @@ class CaptureFilesService(EventSource):
         self._journal_flush = journal_flush or (lambda _place: None)
         self._journal_access = journal_access or (lambda _place: nullcontext())
         self._journal_csv = journal_csv
+        self._journal_files = journal_files or {}
+
+    def _require_journal_files(self, place):
+        if place == 'bitacora' and place not in self._journal_files:
+            raise ValidationError(message('fileMissing'))
 
     def list_files(self) -> tuple[StoredCapture, ...]:
         found: list[tuple[float, StoredCapture]] = []
@@ -69,6 +77,11 @@ class CaptureFilesService(EventSource):
     @operation('rename', 'name', 'new_name')
     def rename(self, place: str, name: str, new_name: str) -> str:
         self._guard(place)
+        self._require_journal_files(place)
+        if place in self._journal_files:
+            target = self._destination(place, new_name)
+            self._journal_files[place].rename_file(self._named(place, name).name, target.name)
+            return target.name
         with self._journal_access(place):
             source = self._existing(place, name)
             target = self._destination(place, new_name, self._kept_suffix(place, source))
@@ -77,28 +90,34 @@ class CaptureFilesService(EventSource):
             if target.exists():
                 raise ValidationError(message('nameExists'))
             source.rename(target)
-            self._metadata_file(place, source, target, 'rename')
             return target.name
 
     @operation('copy', 'name', 'new_name')
     def copy(self, place: str, name: str, new_name: str) -> str:
         self._guard(place)
+        self._require_journal_files(place)
+        if place in self._journal_files:
+            target = self._destination(place, new_name)
+            self._journal_files[place].copy_file(self._named(place, name).name, target.name)
+            return target.name
         with self._journal_access(place):
             source = self._existing(place, name)
             target = self._destination(place, new_name, self._kept_suffix(place, source))
             if target.exists():
                 raise ValidationError(message('nameExists'))
             shutil.copyfile(source, target)
-            self._metadata_file(place, source, target, 'copy')
             return target.name
 
     @operation('delete', 'name')
     def delete(self, place: str, name: str) -> None:
         self._guard(place)
+        self._require_journal_files(place)
+        if place in self._journal_files:
+            self._journal_files[place].delete_file(self._named(place, name).name)
+            return
         with self._journal_access(place):
             source = self._existing(place, name)
             source.unlink()
-            self._metadata_file(place, source)
 
     @operation('delete', 'items')
     def delete_many(self, items: list[tuple[str, str]]) -> None:
@@ -107,29 +126,14 @@ class CaptureFilesService(EventSource):
         paths = []
         for place, name in items:
             self._guard(place)
+            self._require_journal_files(place)
             paths.append((place, self._existing(place, name)))
         for place, path in paths:
+            if place in self._journal_files:
+                self._journal_files[place].delete_file(path.name)
+                continue
             with self._journal_access(place):
                 path.unlink()
-                self._metadata_file(place, path)
-
-    @staticmethod
-    def _metadata_file(place, source, target=None, action='delete'):
-        if place != 'bitacora':
-            return
-        metadata = source.with_suffix('.jsonl')
-        if metadata.is_symlink():
-            return
-        if action == 'delete':
-            metadata.unlink(missing_ok=True)
-        elif metadata.exists():
-            destination = target.with_suffix('.jsonl')
-            if destination.is_symlink():
-                raise ValidationError(message('badStoredName'))
-            if action == 'rename':
-                metadata.replace(destination)
-            else:
-                shutil.copyfile(metadata, destination)
 
     @operation('export', context=lambda _: {'place': 'bitacora'})
     def export_journal_csv(self, day: str, drive_id: str) -> str:

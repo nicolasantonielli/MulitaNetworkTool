@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from mulita.adapters.journals import FileJournalRepository
-from mulita.core.events import OperationEvent
+from mulita.services.event_factory import make_event
 from mulita.core.errors import ValidationError
 from mulita.core.journal_entries import journal_csv
 from mulita.core.models import PingSummary
@@ -29,10 +29,10 @@ class TimelineTest(unittest.TestCase):
         self.day = '2026-11-05'
 
     def ping(self, language='es'):
-        event = OperationEvent('ping', 'started', {'target': '8.8.8.8'}, occurred_at=self.now)
+        event = make_event('ping', 'started', {'target': '8.8.8.8'}, occurred_at=self.now)
         self.repo.append(self.now, render_record(event, language))
         summary = PingSummary(target='8.8.8.8', transmitted='2', received='1', loss='50%', average='10')
-        completed = replace(event, phase='completed', result={'summary': summary, 'replies': 1})
+        completed = make_event('ping', 'completed', {'target': '8.8.8.8'}, {'summary': summary, 'replies': 1}, event.operation_id, self.now)
         self.repo.append(self.now, render_record(completed, language))
 
     def test_one_card_per_operation_and_csv_columns(self):
@@ -84,12 +84,12 @@ class TimelineTest(unittest.TestCase):
         usb.mkdir()
         events = []
         service = CaptureFilesService(self.root, storage=FakeStorage((UsbDrive('sda1', 'USB', str(usb)),)),
-                                      journal_access=lambda _: self.repo.transaction(), journal_csv=self.repo.csv_bytes)
+                                      journal_access=lambda _: self.repo.transaction(), journal_csv=self.repo.csv_bytes, journal_files={'bitacora': self.repo})
         service.set_event_sink(events.append)
         name = service.export_journal_csv(self.day, 'sda1')
         self.assertEqual(name, self.day + '.csv')
         self.assertEqual((usb / name).read_bytes(), self.repo.csv_bytes(self.day))
-        self.assertEqual(events[-1].result, name)
+        self.assertEqual(events[-1].result.names, (name,))
         with self.assertRaises(ValidationError):
             service.export_journal_csv(self.day, 'sda1')
         service.copy('bitacora', self.day + '.txt', '2026-11-06.txt')

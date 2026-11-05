@@ -31,6 +31,7 @@ from mulita.servers.remote_page import CONTROL_PAGE, forward
 from mulita.adapters.journals import FileJournalRepository
 from mulita.adapters.settings_store import StoredSettingsReader
 from mulita.core.events import OperationEvent
+from mulita.core.event_payloads import OperationParameters, ExportReport
 from mulita.presentation.journal import render_record
 from mulita.presentation.journal_web import timeline
 from mulita.core.settings import Settings
@@ -459,7 +460,7 @@ class Handler(SimpleHTTPRequestHandler):
         service = TechnicalJournalService(
             StoredSettingsReader(Path(self.server.journal_settings)), render_record,
             FileJournalRepository(Path(self.server.captures) / 'bitacora', '.txt').append)
-        service.record(OperationEvent('web_export', 'completed', {'test': test}, name))
+        service.record(OperationEvent('web_export', 'completed', OperationParameters(test=test or ''), ExportReport((name,))))
 
     def do_POST(self) -> None:
         parts = urlsplit(self.path).path.split('/')

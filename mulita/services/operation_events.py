@@ -4,7 +4,7 @@ from inspect import signature
 from threading import RLock
 from uuid import uuid4
 
-from mulita.core.events import OperationEvent
+from mulita.services.event_factory import publish_event
 from mulita.core.models import PingSummary
 from mulita.core.parsing.ping import read_ping_line
 from mulita.core.parsing.discovery import parse_discovery_line
@@ -25,15 +25,15 @@ def operation(action, *fields, context=None, when=None):
             if context:
                 parameters.update(context(self))
             identifier = uuid4().hex
-            self.emit_event(OperationEvent(action, 'started', parameters, operation_id=identifier))
+            publish_event(self, action, 'started', parameters, operation_id=identifier)
             try:
                 result = method(self, *args, **kwargs)
             except Exception:
-                self.emit_event(OperationEvent(action, 'failed', parameters, operation_id=identifier))
+                publish_event(self, action, 'failed', parameters, operation_id=identifier)
                 raise
             if context:
                 parameters.update(context(self))
-            self.emit_event(OperationEvent(action, 'completed', parameters, result, identifier))
+            publish_event(self, action, 'completed', parameters, result, identifier)
             return result
         return call
     return decorate
@@ -130,13 +130,13 @@ def session(action, *fields):
                     details = {**parameters, 'exit_code': code, 'stopped': stopped[0]}
                     if active.get(key) is token:
                         active.pop(key)
-                    self.emit_event(OperationEvent(action, 'completed', details, result, identifier))
+                    publish_event(self, action, 'completed', details, result, identifier)
                 if exited:
                     exited(code)
 
             bound.arguments['on_output'] = receive
             bound.arguments['on_exit'] = finish
-            self.emit_event(OperationEvent(action, 'started', parameters, operation_id=identifier))
+            publish_event(self, action, 'started', parameters, operation_id=identifier)
             try:
                 returned = method(*bound.args, **bound.kwargs)
             except Exception:
@@ -144,7 +144,7 @@ def session(action, *fields):
                     done = True
                     if active.get(key) is token:
                         active.pop(key)
-                self.emit_event(OperationEvent(action, 'failed', parameters, operation_id=identifier))
+                publish_event(self, action, 'failed', parameters, operation_id=identifier)
                 raise
             with lock:
                 launching = False
@@ -160,4 +160,4 @@ def stop_events(service, key=None):
             getattr(service, '_event_sessions', {}).items()):
         if (key is None or key == session_key) and not stopped[0]:
             stopped[0] = True
-            service.emit_event(OperationEvent(action, 'stop', parameters, operation_id=identifier))
+            publish_event(service, action, 'stop', parameters, operation_id=identifier)

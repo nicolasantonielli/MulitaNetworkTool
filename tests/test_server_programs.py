@@ -339,12 +339,12 @@ class WebTest(unittest.TestCase):
         import csv
         from datetime import datetime
         from mulita.adapters.journals import FileJournalRepository
-        from mulita.core.events import OperationEvent
+        from mulita.services.event_factory import make_event
         from mulita.presentation.journal import render_record
         folder = Path(self.captures) / 'bitacora'
         repo = FileJournalRepository(folder, '.txt')
         now = datetime.fromisoformat('2026-11-05T12:57:00-03:00')
-        repo.append(now, render_record(OperationEvent('web_export', 'completed', {}, 'ping.csv', occurred_at=now), 'en'))
+        repo.append(now, render_record(make_event('web_export', 'completed', {}, 'ping.csv', occurred_at=now), 'en'))
         settings = Path(self.tmp.name) / 'settings.json'
         settings.write_text('{"theme":"light","language":"en"}')
         port = self.serve(journal_settings=settings)

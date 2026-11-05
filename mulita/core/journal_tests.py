@@ -27,6 +27,6 @@ def category(event):
     if event.action == 'ping_export':
         return 'ping'
     if event.action in ('export', 'web_export'):
-        test = event.parameters.get('test') or PLACES.get(event.parameters.get('place'))
+        test = event.parameters.test or PLACES.get(event.parameters.place)
         return test if test in TEST_IDS else None
     return None

@@ -13,7 +13,7 @@ from mulita.adapters.settings_store import JsonSettingsStore
 from mulita.bootstrap import build_services
 from mulita.config import AppConfig
 from mulita.core.models import CommandResult
-from mulita.core.events import OperationEvent
+from mulita.services.event_factory import make_event
 from mulita.core.platform import UsbDrive
 from mulita.services.files import CaptureFilesService
 from mulita.ui.qt.app import QtApplication
@@ -180,7 +180,7 @@ class ActivityLogTest(unittest.TestCase):
                 self.assertIn('The file english.csv was exported.', updated)
                 self.assertIn('The file english.statics.csv was exported.', updated)
                 settings.setLanguage('es')
-                services.journal.record(OperationEvent('wifi_disconnect', 'completed', {}))
+                services.journal.record(make_event('wifi_disconnect', 'completed', {}))
                 text = self.load_journal(journal, day)
                 self.assertEqual(text, updated)
 

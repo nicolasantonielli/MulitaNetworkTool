@@ -11,7 +11,7 @@ from unittest.mock import patch
 from mulita.adapters.settings_store import MemorySettingsStore
 from mulita.bootstrap import build_services
 from mulita.config import AppConfig
-from mulita.core.events import OperationEvent
+from mulita.services.event_factory import make_event
 from mulita.core.errors import AlreadyRunningError, ValidationError
 from mulita.core.models import (CommandResult, PingSummary, TraceHop, PortFinding,
                                 SpeedTestResult, ClimateReading, EthernetConfig)
@@ -77,8 +77,8 @@ class TechnicalJournalTest(unittest.TestCase):
         self.services.ping.stop()
         self.assertEqual([e.phase for e in events], ['started', 'started', 'failed', 'stop', 'completed'])
         self.assertEqual(events[0].operation_id, events[-1].operation_id)
-        self.assertEqual(events[-1].parameters['target'], '8.8.8.8')
-        self.assertTrue(events[-1].parameters['stopped'])
+        self.assertEqual(events[-1].parameters.target, '8.8.8.8')
+        self.assertTrue(events[-1].parameters.stopped)
 
     def test_failed_process_has_failure_and_partial_results(self):
         self.services.ping.start('8.8.8.8', 1, 1, 64)
@@ -115,7 +115,7 @@ class TechnicalJournalTest(unittest.TestCase):
         self.services.wifi.set_event_sink(events.append)
         self.runner.results['/usr/bin/nmcli'] = CommandResult(0, 'wlan0:wifi\n')
         self.services.wifi.connect('lab', 'private-password', True)
-        self.assertEqual(events[-1].parameters, {'ssid': 'lab'})
+        self.assertEqual(events[-1].parameters.detail, 'lab')
         self.assertNotIn('private-password', repr(events))
         for event in events:
             self.services.journal.record(event)
@@ -166,9 +166,9 @@ class TechnicalJournalTest(unittest.TestCase):
 
     def test_export_names_are_data_not_translation_keys(self):
         for language in ('es', 'en'):
-            text = render_event(OperationEvent('export', 'completed', {}, 'ping-{value}.csv'), language)
+            text = render_event(make_event('export', 'completed', {}, 'ping-{value}.csv'), language)
             self.assertIn('ping-{value}.csv', text[0])
-        english = render_event(OperationEvent('ipv4_wifi', 'started', {}), 'en')
+        english = render_event(make_event('ipv4_wifi', 'started', {}), 'en')
         self.assertIn('Wi-Fi IP', english[0])
 
     def test_all_result_families_render_from_domain_data_in_both_languages(self):
@@ -196,7 +196,7 @@ class TechnicalJournalTest(unittest.TestCase):
         for language in ('es', 'en'):
             for action, parameters, result, expected in cases:
                 with self.subTest(language=language, action=action):
-                    lines = render_event(OperationEvent(action, 'completed', parameters, result), language)
+                    lines = render_event(make_event(action, 'completed', parameters, result), language)
                     self.assertTrue(lines)
                     self.assertIn(expected, '\n'.join(lines))
                     self.assertNotIn('journal', '\n'.join(lines))

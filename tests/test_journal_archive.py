@@ -17,7 +17,7 @@ from mulita.adapters.journals import FileJournalRepository
 from mulita.adapters.settings_store import MemorySettingsStore
 from mulita.bootstrap import build_services
 from mulita.config import AppConfig
-from mulita.core.events import OperationEvent
+from mulita.services.event_factory import make_event
 from mulita.core.platform import UsbDrive
 from mulita.core.journals import JournalSnapshot
 from mulita.core.settings import Settings
@@ -208,7 +208,7 @@ class FileJournalRepositoryTest(unittest.TestCase):
             services.files._storage = FakeStorage((UsbDrive('sda1', 'USB', str(usb)),))
             try:
                 with patch.object(archive._repository, 'append', side_effect=slow_append):
-                    event = OperationEvent('ping', 'started', {'target': '8.8.8.8'})
+                    event = make_event('ping', 'started', {'target': '8.8.8.8'})
                     services.journal.record(event)
                     self.assertTrue(entered.wait(1))
                     day = event.occurred_at.date().isoformat()

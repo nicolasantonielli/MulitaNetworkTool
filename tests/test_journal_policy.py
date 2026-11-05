@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 from mulita.adapters.settings_store import JsonSettingsStore, MemorySettingsStore
 from mulita.bootstrap import build_services
 from mulita.config import AppConfig
-from mulita.core.events import OperationEvent
+from mulita.services.event_factory import make_event
 from mulita.core.journal_tests import TEST_IDS
 from mulita.core.models import WifiLink
 from mulita.core.settings import Settings, settings_from_dict
@@ -23,12 +23,12 @@ class JournalPolicyTest(unittest.TestCase):
             render, append = Mock(return_value=['test']), Mock()
             journal = TechnicalJournalService(settings, render, append)
             for test in TEST_IDS:
-                journal.record(OperationEvent(test, 'started', {}))
+                journal.record(make_event(test, 'started', {}))
             self.assertEqual(len(render.call_args_list), len(TEST_IDS) - 1)
             self.assertNotIn(disabled, [call.args[0].action for call in render.call_args_list])
             render.reset_mock()
-            journal.record(OperationEvent('export', 'completed', {'test': disabled}, 'test.csv'))
-            journal.record(OperationEvent('web_export', 'completed', {'test': disabled}, 'test.csv'))
+            journal.record(make_event('export', 'completed', {'test': disabled}, 'test.csv'))
+            journal.record(make_event('web_export', 'completed', {'test': disabled}, 'test.csv'))
             render.assert_not_called()
 
     def test_system_events_and_unclassified_exports_never_reach_renderer(self):
@@ -37,18 +37,18 @@ class JournalPolicyTest(unittest.TestCase):
         for action in ('update', 'restart', 'poweroff', 'wifi_connect', 'wifi_disconnect', 'ipv4_wifi',
                        'ipv4_ethernet', 'vlan', 'rename', 'copy', 'delete', 'export', 'web_export'):
             for phase in ('started', 'completed', 'failed'):
-                journal.record(OperationEvent(action, phase, {}, 'file.csv'))
-        journal.record(OperationEvent('export', 'completed', {'place': 'bitacora'}, 'journal.csv'))
+                journal.record(make_event(action, phase, {}, 'file.csv'))
+        journal.record(make_event('export', 'completed', {'place': 'bitacora'}, 'journal.csv'))
         render.assert_not_called()
 
     def test_mixed_batch_only_records_enabled_diagnostics(self):
         render = Mock(return_value=['test'])
         journal = TechnicalJournalService(SimpleNamespace(current=Settings(technical_journal=True, journal_tests=('capture',))), render, Mock())
-        journal.record(OperationEvent('export_many', 'completed',
+        journal.record(make_event('export_many', 'completed',
             {'items': [('ping', 'ping.csv'), ('captura', 'capture.pcap'), ('bitacora', 'journal.txt')]}, 3))
         self.assertEqual(render.call_count, 1)
-        self.assertEqual(render.call_args.args[0].result, 'capture.pcap')
-        self.assertEqual(render.call_args.args[0].parameters['place'], 'captura')
+        self.assertEqual(render.call_args.args[0].result.names, ('capture.pcap',))
+        self.assertEqual(render.call_args.args[0].parameters.place, 'captura')
 
     def test_preferences_persist_and_missing_legacy_preferences_enable_all_tests(self):
         self.assertEqual(settings_from_dict({'technicalJournal': True}).journal_tests, TEST_IDS)

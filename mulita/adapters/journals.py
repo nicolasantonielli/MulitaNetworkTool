@@ -1,6 +1,7 @@
 """Filesystem implementation of daily journals. Called only by archive workers."""
 import os
 import json
+import shutil
 from dataclasses import asdict
 from pathlib import Path
 
@@ -8,6 +9,8 @@ from mulita.core.journals import JournalSnapshot, JournalRecord
 from mulita.core.journal_entries import entries_from, journal_csv
 from mulita.adapters.journal_lock import journal_lock
 from mulita.adapters.journal_files import append_entry, day_path, list_days
+from mulita.core.errors import ValidationError
+from mulita.core.messages import message
 
 
 class FileJournalRepository:
@@ -79,6 +82,51 @@ class FileJournalRepository:
 
     def delete(self, day, *, missing_ok=True):
         with self.transaction():
-            day_path(self._folder, day, self._suffix).unlink(missing_ok=missing_ok)
-            if self._suffix == '.txt':
-                day_path(self._folder, day, '.jsonl').unlink(missing_ok=True)
+            path = day_path(self._folder, day, self._suffix)
+            self._delete_file(path.name, missing_ok=missing_ok)
+
+    def _parts(self, name):
+        path = self._folder / name
+        if Path(name).name != name or path.suffix != self._suffix or self._folder.is_symlink():
+            raise ValidationError(message('badStoredName'))
+        parts = (path, path.with_suffix('.jsonl')) if self._suffix == '.txt' else (path,)
+        if any(part.is_symlink() or (part.exists() and not part.is_file()) for part in parts):
+            raise ValidationError(message('badStoredName'))
+        return parts
+
+    def _delete_file(self, name, missing_ok=False):
+        parts = self._parts(name)
+        parts[0].unlink(missing_ok=missing_ok)
+        for part in parts[1:]:
+            part.unlink(missing_ok=True)
+
+    def delete_file(self, name):
+        with self.transaction():
+            self._delete_file(name)
+
+    def rename_file(self, source, target):
+        self._transfer(source, target, move=True)
+
+    def copy_file(self, source, target):
+        self._transfer(source, target, move=False)
+
+    def _transfer(self, source, target, *, move):
+        with self.transaction():
+            sources, targets = self._parts(source), self._parts(target)
+            if not sources[0].is_file():
+                raise ValidationError(message('fileMissing'))
+            if move and source == target:
+                return
+            if any(path.exists() for path in targets):
+                raise ValidationError(message('nameExists'))
+            completed = []
+            try:
+                for src, dst in zip(sources, targets):
+                    if src.exists():
+                        completed.append((src, dst))
+                        src.rename(dst) if move else shutil.copyfile(src, dst)
+            except OSError:
+                for src, dst in reversed(completed):
+                    if dst.exists():
+                        dst.rename(src) if move else dst.unlink()
+                raise

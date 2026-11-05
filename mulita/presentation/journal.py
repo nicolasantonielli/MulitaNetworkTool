@@ -1,5 +1,4 @@
 """Natural-language reports from use-case facts; no dependency on Qt."""
-from pathlib import PurePath
 from dataclasses import replace
 
 from mulita.presentation.i18n import Translator
@@ -9,6 +8,11 @@ from mulita.presentation.facts import wifi_facts
 from mulita.core.servers import kind_by_id
 from mulita.core.journals import JournalRecord, technical_line
 from mulita.core.journal_tests import category, TESTS
+from mulita.core.events import OperationEvent
+from mulita.core.event_payloads import (PingReport, TraceReport, PortsReport, DiscoveryReport,
+    WakeReport, ClimateReport, PublicIpReport, VendorReport, TapReport, TlsReport,
+    NmapReport, SwitchReport, ExportReport)
+from mulita.core.models import SpeedTestResult, WifiLink
 
 
 _LABELS = {
@@ -27,12 +31,12 @@ _LABELS = {
 _EXPORTS = ('export', 'ping_export', 'export_many', 'web_export')
 
 
-def render_record(event, language):
+def render_record(event: OperationEvent, language: str) -> JournalRecord | list[str]:
     lines = render_event(event, language)
     if not lines:
         return []
     tr = Translator(language).tr
-    label = (tr(kind_by_id(event.parameters['kind']).title) if event.action == 'server'
+    label = (tr(kind_by_id(event.parameters.kind).title) if event.action == 'server'
              else tr(_LABELS.get(event.action, 'export')))
     if event.action in _EXPORTS and category(event):
         label = tr(dict(TESTS)[category(event)])
@@ -41,27 +45,21 @@ def render_record(event, language):
     description = '\n'.join(lines) if started else '\n'.join(render_event(replace(event, phase='started'), language)) or label
     results = '' if started else '\n'.join(lines)
     if event.action in _EXPORTS and event.phase == 'completed':
+        assert isinstance(event.result, ExportReport)
         description = '\n'.join(lines)
-        names = [PurePath(event.result).name] if event.action != 'export_many' else [name for _, name in event.parameters['items']]
-        if event.action == 'ping_export':
-            names.append(names[0][:-4] + '.statics.csv')
+        names = event.result.names
         results = '\n'.join(names)
-    phase = 'failed' if event.parameters.get('exit_code', 0) and not event.parameters.get('stopped') else event.phase
+    phase = 'failed' if event.parameters.exit_code and not event.parameters.stopped else event.phase
     return JournalRecord(event.operation_id, event.occurred_at.isoformat(timespec='seconds'),
                          label, phase, description, results,
                          tuple(technical_line(event.occurred_at, line) for line in lines))
 
 
-def render_event(event, language):
+def render_event(event: OperationEvent, language: str) -> list[str]:
     tr = Translator(language).tr
     action, phase, p, value = event.action, event.phase, event.parameters, event.result
-    detail = str(next((p[key] for key in ('target', 'interface', 'ssid', 'mac', 'name') if key in p), ''))
-    if action == 'tap':
-        config = p['config']
-        detail = f'{config.entrante} → {config.saliente}'
-    elif 'items' in p:
-        detail = ', '.join(name for _, name in p['items'])
-    label = tr(kind_by_id(p['kind']).title) if action == 'server' else tr(_LABELS.get(action, 'export'))
+    detail = p.detail
+    label = tr(kind_by_id(p.kind).title) if action == 'server' else tr(_LABELS.get(action, 'export'))
     subject = f'{label} ({detail})' if detail else label
     if phase == 'failed':
         return [tr('journalFailed', subject=subject)]
@@ -76,16 +74,15 @@ def render_event(event, language):
         return []
 
     lines = []
-    if p.get('exit_code', 0) != 0 and not p.get('stopped'):
+    if p.exit_code not in (None, 0) and not p.stopped:
         lines.append(tr('journalFailed', subject=subject))
     if action in _EXPORTS:
-        names = [PurePath(value).name] if action != 'export_many' else [name for _, name in p['items']]
-        if action == 'ping_export':
-            names.append(names[0][:-4] + '.statics.csv')
+        assert isinstance(value, ExportReport)
+        names = value.names
         key = 'journalWebExport' if action == 'web_export' else 'journalExport'
         return [tr(key, name=name) for name in names]
-    if action == 'ping':
-        summary = value['summary']
+    if isinstance(value, PingReport):
+        summary = value.summary
         if summary.ready:
             sent = tr('journalSentOne') if summary.transmitted == '1' else tr('journalSent', count=summary.transmitted)
             received = tr('journalReceivedOne') if summary.received == '1' else tr('journalReceived', count=summary.received)
@@ -93,66 +90,52 @@ def render_event(event, language):
             if summary.average:
                 result += tr('journalPingAverage', average=summary.average)
         else:
-            result = tr('journalPingIncomplete', count=value['replies'])
+            result = tr('journalPingIncomplete', count=value.replies)
         lines.append(tr('journalPingResult', target=summary.target or detail, result=result))
-    elif action == 'trace':
-        route = '; '.join(tr('journalHop', hop=h.hop, address=h.address, loss=h.loss, average=h.average) for h in value)
+    elif isinstance(value, TraceReport):
+        route = '; '.join(tr('journalHop', hop=h.hop, address=h.address, loss=h.loss, average=h.average) for h in value.hops)
         lines.append(tr('journalTraceResult', target=detail) + (route or tr('journalNoHops')))
-    elif action == 'ports':
-        rows = '; '.join(f'{item.host} {item.port}/{item.protocol} {item.state} {item.service}'.strip() for item in value)
+    elif isinstance(value, PortsReport):
+        rows = '; '.join(f'{item.host} {item.port}/{item.protocol} {item.state} {item.service}'.strip() for item in value.findings)
         lines.append(tr('journalPorts') + (rows or tr('journalNoPorts')))
-    elif action == 'discovery':
-        hosts = '; '.join(f'{item.ip} ({item.mac})' for item in value)
+    elif isinstance(value, DiscoveryReport):
+        hosts = '; '.join(f'{item.ip} ({item.mac})' for item in value.hosts)
         lines.append(tr('journalDiscovery', interface=detail) + (hosts or tr('journalNoHosts')))
-    elif action == 'wol':
+    elif isinstance(value, WakeReport):
         lines.append(tr('journalWol', mac=value.mac, target=value.target, port=value.port))
-    elif action == 'climate':
-        lines.append(tr('journalClimate', temperature=temperature_value(value), humidity=humidity_value(value))
-                     if value else tr('journalNoClimate'))
-    elif action == 'speed':
+    elif isinstance(value, ClimateReport):
+        lines.append(tr('journalClimate', temperature=temperature_value(value.reading), humidity=humidity_value(value.reading))
+                     if value.reading else tr('journalNoClimate'))
+    elif isinstance(value, SpeedTestResult):
         lines.append(tr('journalSpeed', download=mbps(value.download_bps), upload=mbps(value.upload_bps)))
-    elif action == 'public_ip':
+    elif isinstance(value, PublicIpReport):
         lines.append(tr('journalPublicIp', ip=value.ip))
-    elif action == 'vendor':
-        lines.append(tr('journalVendor', mac=detail, name=value or tr('journalNoMatch')))
+    elif isinstance(value, VendorReport):
+        lines.append(tr('journalVendor', mac=detail, name=value.name or tr('journalNoMatch')))
     elif action == 'capture':
-        if p.get('exit_code') == 0 or p.get('stopped'):
+        if p.exit_code == 0 or p.stopped:
             lines.append(tr('journalCaptureEnded', interface=detail))
-    elif action == 'wifi_info':
+    elif isinstance(value, WifiLink):
         facts = '; '.join(f'{label}: {fact}' for label, fact in wifi_facts(value, Translator(language)))
         lines.append(tr('journalWifiInfo', result=facts or tr('journalNoneReported')))
-    elif action == 'tap':
-        if value:
-            lines.append(tr('journalTap', name=value))
-    elif action == 'tls':
-        counts = {}
-        for finding in value:
-            counts[finding.severity] = counts.get(finding.severity, 0) + 1
-        result = ', '.join(f'{severity_label(level, Translator(language))}: {count}' for level, count in counts.items())
+    elif isinstance(value, TapReport):
+        if value.filename:
+            lines.append(tr('journalTap', name=value.filename))
+    elif isinstance(value, TlsReport):
+        result = ', '.join(f'{severity_label(item.severity, Translator(language))}: {item.count}' for item in value.counts)
         lines.append(tr('journalTls', target=detail, result=result or tr('journalNoFindings')))
-    elif action == 'nmap':
-        if value:
-            hosts = ', '.join(h['ip'] for h in value.hosts if h.get('ip'))
+    elif isinstance(value, NmapReport):
+        if value.status:
+            hosts = ', '.join(value.hosts)
             lines.append(tr('journalNmap', target=detail, status=tr('nmapStatus' + value.status.capitalize()),
                             hosts=hosts or tr('journalNone'), ports=value.open_ports or tr('journalNoneReported')))
-    elif action == 'switch':
+    elif isinstance(value, SwitchReport):
         neighbors = '; '.join(tr('journalNeighbor',
-            name=row.get('name') or row.get('chassis') or tr('journalUnnamed'),
-            port=row.get('port') or tr('journalUnknown')) for row in value.get('neighbors', []))
-        lines.append(tr('journalSwitch', interface=value.get('interface', ''),
-            status=tr('switchCancelled' if value['cancelled'] else 'switchComplete'),
-            frames=value.get('frames', 0), neighbors=neighbors or tr('journalNoneObserved')))
-    elif action in ('wifi_connect', 'wifi_reconnect'):
-        if action == 'wifi_connect' or value:
-            lines.append(tr('journalConnected', detail=detail))
-    elif action == 'wifi_disconnect':
-        lines.append(tr('journalDisconnected'))
-    elif action in ('ipv4_ethernet', 'ipv4_wifi'):
-        assigned = f'{value.address}/{value.prefix}' if value.address else tr('journalNoAddress')
-        lines.append(tr('journalIpv4', interface=p.get('interface', 'Wi-Fi'), mode=value.mode.value, assigned=assigned))
-    elif action == 'vlan':
-        lines.append(tr('journalVlan', vlan=p['vlan'], interface=p['interface']) if p['enabled'] else
-                     tr('journalNoVlan', interface=p['interface']))
+            name=row.name or tr('journalUnnamed'),
+            port=row.port or tr('journalUnknown')) for row in value.neighbors)
+        lines.append(tr('journalSwitch', interface=value.interface,
+            status=tr('switchCancelled' if value.cancelled else 'switchComplete'),
+            frames=value.frames, neighbors=neighbors or tr('journalNoneObserved')))
     else:
         lines.append(tr('journalEnded', subject=subject))
     return lines
