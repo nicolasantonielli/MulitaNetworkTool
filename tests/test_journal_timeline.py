@@ -10,7 +10,8 @@ from mulita.adapters.journals import FileJournalRepository
 from mulita.services.event_factory import make_event
 from mulita.core.errors import ValidationError
 from mulita.core.journal_entries import journal_csv
-from mulita.core.models import PingSummary
+from mulita.core.models import PingSummary, TraceHop, PortFinding, SpeedTestResult, WifiLink
+from mulita.presentation.journal_results import display_results
 from mulita.core.platform import UsbDrive
 from mulita.core.settings import Settings, Theme, Language
 from mulita.presentation.journal import render_record
@@ -44,9 +45,36 @@ class TimelineTest(unittest.TestCase):
         self.assertEqual(rows[0], ['fecha', 'tipo de prueba', 'texto', 'resultados'])
         self.assertEqual(rows[1][:3], ['2026-11-05T12:55:01-03:00', 'Ping', 'Se hizo ping a 8.8.8.8.'])
         self.assertIn('50%', rows[1][3])
+        self.assertEqual(len(rows), 2)  # Multiline results remain inside one CSV cell.
+        self.assertEqual(len(rows[1]), 4)
+        self.assertIn('\nEnviados: 2\nRecibidos: 1\nPérdida: 50%', rows[1][3])
         snapshot = self.repo.snapshot(self.day)
         self.assertEqual(snapshot.entries, entries)
         self.assertIsNone(self.repo.snapshot(self.day, self.day, snapshot.revision).entries)
+
+    def test_diagnostic_results_have_separate_rows_in_both_languages(self):
+        cases = [
+            ('trace', (TraceHop(1, '192.0.2.1', '0%', '1', '10', '10', '10', '10', '0'),
+                       TraceHop(2, '192.0.2.2', '0%', '1', '20', '20', '20', '20', '0')), ('192.0.2.1', '192.0.2.2')),
+            ('ports', (PortFinding('192.0.2.1', '80', 'tcp', 'open', 'http'),
+                       PortFinding('192.0.2.1', '443', 'tcp', 'open', 'https')), ('80/tcp', '443/tcp')),
+            ('speed', SpeedTestResult(10000000, 2000000), ('10.00 Mbps', '2.00 Mbps')),
+            ('wifi_info', WifiLink(interface='wlan0', ssid='Lab', address='192.0.2.1'), ('Lab', 'wlan0', '192.0.2.1')),
+        ]
+        for language in ('es', 'en'):
+            for action, value, expected in cases:
+                record = render_record(make_event(action, 'completed', {'target': '192.0.2.1'}, value), language)
+                lines = record.results.splitlines()
+                indices = [next(index for index, line in enumerate(lines) if text in line) for text in expected]
+                self.assertEqual(len(set(indices)), len(expected))
+
+    def test_old_prose_gets_visual_breaks_without_breaking_addresses(self):
+        old = 'Resultado del ping a 2001:db8::1: se enviaron 2 paquetes. Tiempo medio de respuesta: 1.5 ms.'
+        displayed = display_results(old)
+        self.assertIn('2001:db8::1:\n', displayed)
+        self.assertIn('\nTiempo medio', displayed)
+        self.assertIn('1.5 ms.', displayed)
+        self.assertEqual(display_results(displayed), displayed)
 
     def test_legacy_and_damaged_metadata_preserve_history(self):
         self.ping()

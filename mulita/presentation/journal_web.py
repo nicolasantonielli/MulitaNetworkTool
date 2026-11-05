@@ -3,6 +3,7 @@ from html import escape
 
 from mulita.presentation.i18n import Translator
 from mulita.presentation.theme import palette_for
+from mulita.presentation.journal_results import display_results
 
 
 def timeline(entries, settings):
@@ -29,7 +30,7 @@ def timeline(entries, settings):
     rows = []
     for entry in entries:
         accent = {'failed': colors.danger, 'completed': colors.success, 'stop': colors.warning}.get(entry['phase'], colors.primary)
-        result = (f'<h2>{escape(tr("journalResults"))}</h2><p>{escape(entry["results"])}</p>'
+        result = (f'<h2>{escape(tr("journalResults"))}</h2><p>{escape(display_results(entry["results"]))}</p>'
                   if entry['results'] else '')
         rows.append(f'<li style="--accent:{accent}"><time datetime="{escape(entry["timestamp"], quote=True)}">'
                     f'{escape(entry["time"])}<small>{escape(entry["date"])}</small></time>'

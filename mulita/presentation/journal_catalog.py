@@ -1,6 +1,13 @@
 """Technical journal translations, independent of Qt and HTTP servers."""
 
 PAIRS = (
+    ('journalTarget', 'Destino', 'Target'),
+    ('journalPort', 'Puerto', 'Port'),
+    ('journalHosts', 'Equipos', 'Hosts'),
+    ('journalOpenPorts', 'Puertos TCP abiertos', 'Open TCP ports'),
+    ('journalFrames', 'Tramas observadas', 'Frames observed'),
+    ('journalNeighbors', 'Vecinos', 'Neighbors'),
+    ('journalPartialResults', 'La prueba falló. Resultados parciales:', 'The test failed. Partial results:'),
     ('journalAdvanced', 'Avanzado', 'Advanced'),
     ('journalTestSettings', 'Pruebas de la bitácora', 'Journal tests'),
     ('journalTestsHint', 'Elegí qué pruebas registrar. El interruptor general de la bitácora debe estar activado. Los registros anteriores se conservan.', 'Choose which tests to record. The main journal switch must be enabled. Existing records are preserved.'),

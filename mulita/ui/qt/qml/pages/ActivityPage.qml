@@ -198,6 +198,7 @@ ColumnLayout {
                     Text {
                         width: parent.width; visible: text.length > 0
                         text: modelData.results; color: ui.text; font.pixelSize: ui.fontSmall
+                        lineHeight: 1.3
                         wrapMode: Text.WrapAnywhere; textFormat: Text.PlainText
                     }
                 }

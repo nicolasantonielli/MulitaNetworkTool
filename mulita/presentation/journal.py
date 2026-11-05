@@ -5,6 +5,7 @@ from mulita.presentation.i18n import Translator
 from mulita.presentation.texts import temperature_value, humidity_value, mbps
 from mulita.presentation.tls import severity_label
 from mulita.presentation.facts import wifi_facts
+from mulita.presentation.journal_results import formatted_results
 from mulita.core.servers import kind_by_id
 from mulita.core.journals import JournalRecord, technical_line
 from mulita.core.journal_tests import category, TESTS
@@ -43,7 +44,7 @@ def render_record(event: OperationEvent, language: str) -> JournalRecord | list[
     started = event.phase == 'started'
     # Reuse the redacted, localized report; never serialize raw operation parameters.
     description = '\n'.join(lines) if started else '\n'.join(render_event(replace(event, phase='started'), language)) or label
-    results = '' if started else '\n'.join(lines)
+    results = '' if started else formatted_results(event, language, '\n'.join(lines))
     if event.action in _EXPORTS and event.phase == 'completed':
         assert isinstance(event.result, ExportReport)
         description = '\n'.join(lines)

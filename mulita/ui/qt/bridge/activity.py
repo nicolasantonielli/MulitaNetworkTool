@@ -4,6 +4,7 @@ from datetime import datetime
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.ui.qt.bridge.base import Controller
+from mulita.presentation.journal_results import display_results
 
 
 class DailyJournal(Controller):
@@ -104,7 +105,8 @@ class DailyJournal(Controller):
                 self._revision = snapshot.revision
                 if snapshot.text is not None:
                     self._report = snapshot.text
-                    self._entries = list(snapshot.entries or ())
+                    self._entries = [dict(entry, results=display_results(entry['results']))
+                                     for entry in (snapshot.entries or ())]
                 self.changed.emit()
         self.busyChanged.emit()
         if self._refresh_pending and not self._deleting:
