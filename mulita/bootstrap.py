@@ -15,6 +15,7 @@ from mulita.adapters.backlight import PanelBacklight
 from mulita.adapters.removable_storage import LinuxRemovableStorage
 from mulita.adapters.switchport import LinuxPacketSource, SysfsLinkReader, JsonSwitchReportStore
 from mulita.adapters.subprocess_runner import SubprocessCommandRunner
+from mulita.adapters.export_bundle import export_bundle
 from mulita.config import AppConfig, load_config
 from mulita.core.commands import CommandFactory
 from mulita.core.models import Calibration
@@ -23,7 +24,7 @@ from mulita.presentation.journal import render_event
 from mulita.adapters.journals import FileJournalRepository
 from mulita.services.journal_archive import JournalArchive
 from mulita.services.journal import TechnicalJournalService
-from mulita.core.ports import ClimateSensor, CommandRunner, SettingsStore
+from mulita.core.ports import ClimateSensor, CommandRunner, SettingsStore, ExportBundle
 from mulita.services import Services
 from mulita.services.settings import SettingsService
 from mulita.services.diagnostics import (DiscoveryService, PingService,
@@ -55,7 +56,8 @@ def _climate(config: AppConfig) -> ClimateService:
 
 def build_services(config: AppConfig, runner: CommandRunner | None = None,
                    climate: ClimateService | None = None,
-                   settings_store: SettingsStore | None = None) -> Services:
+                   settings_store: SettingsStore | None = None,
+                   exporter: ExportBundle | None = None) -> Services:
     runner = runner or SubprocessCommandRunner()
     commands = CommandFactory(config.binaries, server_programs())
     capture = CaptureService(runner, commands, config.capture_dir)
@@ -75,7 +77,8 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
         capture=capture,
         tap=tap,
         trace=TraceService(runner, commands, config.trace_cycles, config.trace_dir),
-        ping=PingService(runner, commands, config.ping_dir),
+        ping=PingService(runner, commands, config.ping_dir,
+                         exporter=exporter if exporter is not None else export_bundle),
         port_scan=PortScanService(runner, commands, config.scan_dir),
         discovery=DiscoveryService(runner, commands, config.discovery_dir),
         wake_on_lan=WakeOnLanService(runner, commands),

@@ -1,4 +1,4 @@
-"""Daily activity files shared by the Qt application and the standalone web server."""
+"""Filesystem helpers used inside the shared journal repository's transactions."""
 from datetime import date, datetime
 from pathlib import Path
 

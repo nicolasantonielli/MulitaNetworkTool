@@ -46,7 +46,7 @@ class LocalizationTest(unittest.TestCase):
 
     def test_journal_templates_preserve_parameters_in_both_languages(self):
         from string import Formatter
-        from mulita.servers.journal_text import PAIRS, translate
+        from mulita.presentation.journal_catalog import PAIRS
         formatter = Formatter()
         for key, spanish, english in PAIRS:
             with self.subTest(key=key):
@@ -56,7 +56,6 @@ class LocalizationTest(unittest.TestCase):
                 for language, template in [('es', spanish), ('en', english)]:
                     expected = template.format(**parameters)
                     self.assertEqual(Translator(language).tr(key, **parameters), expected)
-                    self.assertEqual(translate(key, language, **parameters), expected)
 
     def test_controllers_and_catalogs_are_independent_between_instances(self):
         spanish, english = settings('es'), settings('en')

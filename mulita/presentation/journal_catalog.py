@@ -1,4 +1,4 @@
-"""Technical journal catalog shared with the standalone web server."""
+"""Technical journal translations, independent of Qt and HTTP servers."""
 
 PAIRS = (
     ('journalExport', 'Se exportó el archivo {name}.', 'The file {name} was exported.'),
@@ -51,9 +51,3 @@ PAIRS = (
     ('journalNoneObserved', 'ninguno observado', 'none observed'),
     ('journalWebExport', 'Se exportó el archivo {name} desde la web.', 'The file {name} was exported from the web.'),
 )
-
-
-def translate(key, language="es", **parameters):
-    column = 2 if language == "en" else 1
-    template = next(row[column] for row in PAIRS if row[0] == key)
-    return template.format(**parameters)

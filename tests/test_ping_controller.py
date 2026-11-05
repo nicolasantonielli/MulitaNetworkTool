@@ -7,6 +7,7 @@ from PyQt5.QtQml import QQmlComponent, QQmlEngine
 from PyQt5.QtQuick import QQuickItem
 from PyQt5.QtTest import QTest, QSignalSpy
 from mulita.config import Binaries
+from mulita.adapters.export_bundle import export_bundle
 from mulita.core.commands import CommandFactory
 from mulita.services.diagnostics import PingService
 from mulita.ui.qt.bridge.base import BridgeContext, Notifier
@@ -22,7 +23,7 @@ class PingControllerTest(unittest.TestCase):
 
     def setUp(self):
         self.runner = FakeRunner()
-        self.service = PingService(self.runner, CommandFactory(Binaries()))
+        self.service = PingService(self.runner, CommandFactory(Binaries()), exporter=export_bundle)
         self.controller = PingController(
             BridgeContext(None, None, QtDispatcher(), Notifier()), self.service)
         self.controller.start('8.8.8.8', 0, 0.1, 64)

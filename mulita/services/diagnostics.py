@@ -8,7 +8,6 @@ import os
 from pathlib import Path, PurePosixPath
 from typing import Optional
 
-from mulita.adapters.export_bundle import export_bundle
 from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
@@ -16,7 +15,7 @@ from mulita.core.models import (HostSighting, PingReply, PingRequest, PingSummar
                                 PortFinding, TraceHop)
 from mulita.core.parsers import interface_network, parse_port_scan, parse_trace
 from mulita.core.messages import message
-from mulita.core.ports import CommandRunner, ExitListener, OutputListener
+from mulita.core.ports import CommandRunner, ExitListener, OutputListener, ExportBundle
 from mulita.services.base import ProcessSession
 
 _CSV_HEADER = ('hop', 'address', 'loss', 'sent', 'last', 'average', 'best', 'worst', 'deviation')
@@ -103,10 +102,12 @@ def _write_statics(path: Path, summary: PingSummary) -> None:
 class PingService(ProcessSession):
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
-                 directory: PurePosixPath | Path = Path.home() / 'capturas' / 'ping'):
+                 directory: PurePosixPath | Path = Path.home() / 'capturas' / 'ping',
+                 *, exporter: ExportBundle):
         super().__init__(runner, 'El ping')
         self._commands = commands
         self._directory = Path(directory)
+        self._export_bundle = exporter
 
     @operation('ping_export')
     def save(self, replies: tuple[PingReply, ...], summary: PingSummary | None, filename: str) -> str:
@@ -125,7 +126,7 @@ class PingService(ProcessSession):
             if path.exists():
                 raise ValidationError(message('nameExists'))
         try:
-            with export_bundle((table_path, statics_path)) as staged:
+            with self._export_bundle((table_path, statics_path)) as staged:
                 table_path, statics_path = staged
                 with table_path.open('w', encoding='utf-8', newline='') as handle:
                     writer = csv.writer(handle, lineterminator='\n')

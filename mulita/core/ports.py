@@ -2,13 +2,26 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Callable, Optional, Sequence
+from contextlib import AbstractContextManager
+from pathlib import Path
+from typing import Callable, Optional, Protocol, Sequence
 
 from mulita.core.models import ClimateReading, CommandResult
 from mulita.core.settings import Settings
 
 OutputListener = Callable[[str], None]
 ExitListener = Callable[[int], None]
+
+
+class ExportBundle(Protocol):
+    """Stage related exports and publish them together after successful writing.
+
+    The context yields one writable staging path per destination, in order.
+    Existing destinations must never be overwritten. A preparation/publication
+    failure removes files created by this operation and propagates the error.
+    This contract does not promise atomic recovery after power loss.
+    """
+    def __call__(self, destinations: tuple[Path, ...]) -> AbstractContextManager[tuple[Path, ...]]: ...
 
 
 class RunningCommand(ABC):

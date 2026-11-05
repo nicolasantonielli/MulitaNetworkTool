@@ -1,7 +1,7 @@
 """Catálogos de presentación en español e inglés y traductores por instancia."""
 from __future__ import annotations
 
-from mulita.servers.journal_text import PAIRS as JOURNAL_PAIRS
+from mulita.presentation.journal_catalog import PAIRS as JOURNAL_PAIRS
 
 _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('journalLoading', 'Cargando jornada…', 'Loading daily journal…'),

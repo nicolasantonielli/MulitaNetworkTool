@@ -4,7 +4,7 @@ from pathlib import Path
 
 from mulita.core.journals import JournalSnapshot
 from mulita.adapters.journal_lock import journal_lock
-from mulita.servers.activity_days import append_entry, day_path, list_days
+from mulita.adapters.journal_files import append_entry, day_path, list_days
 
 
 class FileJournalRepository:
