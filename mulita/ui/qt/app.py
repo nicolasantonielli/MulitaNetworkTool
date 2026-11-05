@@ -34,6 +34,7 @@ class QtApplication:
         from PyQt5.QtQml import QQmlApplicationEngine
 
         from mulita.ui.qt.bridge.activity import ActivityController
+        from mulita.ui.qt.bridge.remote import RemoteControl
         from mulita.ui.qt.bridge.base import BridgeContext, Notifier
         from mulita.ui.qt.bridge.ethernet import InternalEthernetController
         from mulita.ui.qt.bridge.ipv4 import IPv4Controller
@@ -88,8 +89,10 @@ class QtApplication:
         notifier = Notifier()
         ctx = BridgeContext(config=config, settings=services.settings, dispatcher=QtDispatcher(), notifier=notifier)
         activity = ActivityController(ctx)
+        self._remote = RemoteControl(lambda: self.root)
         notifier.activityRecorded.connect(activity.record)
         self._controllers = {
+            'remoteControl': self._remote,
             'activity': activity,
             'textCopy': self._text_copy,
             'touchTest': self._touch_test,
@@ -172,6 +175,7 @@ class QtApplication:
             self.dispose()
 
     def _shutdown(self) -> None:
+        self._remote.close()
         try:
             self._services.shutdown()
         finally:

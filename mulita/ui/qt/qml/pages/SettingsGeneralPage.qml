@@ -24,6 +24,28 @@ ScrollPage {
 
     Card {
         Layout.fillWidth: true
+        title: i18n.pack.remoteTitle
+        titleIcon: "display"
+        Switch {
+            text: i18n.pack.remoteTitle
+            enabled: remoteControl.available
+            checked: remoteControl.enabled
+            onToggled: remoteControl.setEnabled(checked)
+            palette.windowText: ui.text
+            implicitHeight: ui.touch
+        }
+        Text {
+            Layout.fillWidth: true
+            text: remoteControl.code ? i18n.pack.remoteCode + " " + remoteControl.code
+                                     : (remoteControl.enabled ? i18n.pack.remoteConnected : i18n.pack.remoteHint)
+            font.pixelSize: remoteControl.code ? ui.fontTitle : ui.fontSmall
+            wrapMode: Text.Wrap
+            color: ui.text
+        }
+    }
+
+    Card {
+        Layout.fillWidth: true
         title: i18n.pack.activityTitle
         titleIcon: "file"
         Switch {

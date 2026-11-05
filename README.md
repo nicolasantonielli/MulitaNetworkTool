@@ -256,6 +256,12 @@ Enable **Record activities** under **Settings → General**. The **Activity log*
 
 Start Mulita's HTTP or HTTPS server with **Share captures and reports** enabled. Visitors can open **Registro de actividades** from the web home page (`/actividad/`), select a daily page, download its UTF-8 log, or delete that day from the device. The tile and the web server use the same files. If today's log is deleted while recording is enabled, the next recorded action starts a new log for today.
 
+### Remote control
+
+Start the Mulita web server, preferably with HTTPS. On the device, open **Settings → General → Remote control**, turn it on, then enter the displayed code at `/control` in the browser. The six-digit code is valid for two minutes and pairs one browser. The browser shows the live device screen and accepts taps, drags, and long presses. Use the on-screen keyboard for text. Screen capture runs only for a paired viewer and is limited to four captures per second.
+
+Disable the switch on the device or select **Desconectar** in the browser to revoke access. If the browser stops requesting frames, the session expires after 30 seconds. A new connection requires a new code from the device. Remote control starts off after every application restart and works independently of capture and report sharing.
+
 ## Application Settings
 
 ### General

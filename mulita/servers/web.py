@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import html
 import io
+import json
 import os
 import posixpath
 import secrets
@@ -25,8 +26,10 @@ from urllib.parse import parse_qs, quote, unquote, urlsplit
 
 if __package__:
     from .activity_days import day_path, list_days
+    from .remote_page import CONTROL_PAGE, forward
 else:  # Mulita also starts this server by script path.
     from activity_days import day_path, list_days
+    from remote_page import CONTROL_PAGE, forward
 
 MAX_TEST_MB = 1024
 CHUNK = 64 * 1024
@@ -293,6 +296,8 @@ class Handler(SimpleHTTPRequestHandler):
         super().send_error(code, message, explain)
 
     def log_request(self, code='-', size='-') -> None:
+        if code in (200, 202) and self.path in ('/control/frame', '/control/input'):
+            return
         say(self.client_address[0], f'{self.command} {self.path} {code}')
 
     def log_message(self, format, *args) -> None:  # noqa: A002
@@ -308,6 +313,9 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _special(self, send_body: bool) -> bool:
         path = urlsplit(self.path).path
+        if path.rstrip('/') == '/control':
+            self._send_data(render_page(CONTROL_PAGE, self.secure), 'text/html; charset=utf-8', send_body)
+            return True
         if path == '/actividad' or path.startswith('/actividad/'):
             self._activity(path, send_body)
             return True
@@ -375,6 +383,9 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parts = urlsplit(self.path).path.split('/')
+        if len(parts) == 3 and parts[1] == 'control':
+            self._remote(parts[2])
+            return
         if not self.server.captures or len(parts) != 4 or parts[:2] != ['', 'actividad'] or parts[3] != 'eliminar':
             self.send_error(404)
             return
@@ -398,6 +409,26 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header('Location', '/actividad/')
         self.end_headers()
 
+    def _remote(self, action):
+        if action not in ('pair', 'frame', 'input', 'end'):
+            self.send_error(404)
+            return
+        try:
+            length = int(self.headers.get('Content-Length', 0))
+            if not 0 < length <= 512 or self.headers.get_content_type() != 'application/json':
+                self.send_error(400)
+                return
+            data = json.loads(self.rfile.read(length))
+            if not isinstance(data, dict):
+                raise ValueError
+        except (ValueError, UnicodeError):
+            self.send_error(400)
+            return
+        data['action'] = action
+        data['token'] = self.headers.get('Authorization', '').removeprefix('Bearer ')[:64]
+        code, body = forward(data)
+        self._send_data(body, 'image/jpeg' if action == 'frame' else 'text/plain', True, status=code)
+
     def _index(self, send_body: bool) -> None:
         server = self.connection.getsockname()[0]
         scheme = 'HTTPS' if self.secure else 'HTTP'
@@ -420,14 +451,20 @@ class Handler(SimpleHTTPRequestHandler):
             '<svg aria-hidden="true" viewBox="0 0 24 24">'
             '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg></a>'
             for mb in (1, 10, 100))
+        if os.environ.get('MULITA_CONTROL_PORT'):
+            captures += ('<a class="panel resource" href="/control"><strong>Control remoto</strong>'
+                         '<span class="arrow" aria-hidden="true">›</span></a>')
         content = Template(HOME).substitute(
             scheme=scheme, client=html.escape(self.client_address[0]),
             server=html.escape(server), timestamp=time.strftime('%Y-%m-%d %H:%M:%S'),
             captures=captures, downloads=downloads)
         self._send_data(render_page(content, self.secure), 'text/html; charset=utf-8', send_body)
 
-    def _send_data(self, page, content_type, send_body, filename=None):
-        self.send_response(200)
+    def _send_data(self, page, content_type, send_body, filename=None, status=200):
+        self.send_response(status)
+        if self.path.split('?', 1)[0].rstrip('/') == '/control':
+            self.send_header('Content-Security-Policy', "frame-ancestors 'none'")
+            self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
         self.send_header('Content-Type', content_type)
         if filename:
             self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
