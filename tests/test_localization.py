@@ -44,6 +44,20 @@ class LocalizationTest(unittest.TestCase):
     def setUpClass(cls):
         cls.app = qt_app()
 
+    def test_journal_templates_preserve_parameters_in_both_languages(self):
+        from string import Formatter
+        from mulita.servers.journal_text import PAIRS, translate
+        formatter = Formatter()
+        for key, spanish, english in PAIRS:
+            with self.subTest(key=key):
+                fields = {field for _, field, _, _ in formatter.parse(spanish) if field}
+                self.assertEqual(fields, {field for _, field, _, _ in formatter.parse(english) if field})
+                parameters = {field: 'sample-{value}.csv' for field in fields}
+                for language, template in [('es', spanish), ('en', english)]:
+                    expected = template.format(**parameters)
+                    self.assertEqual(Translator(language).tr(key, **parameters), expected)
+                    self.assertEqual(translate(key, language, **parameters), expected)
+
     def test_controllers_and_catalogs_are_independent_between_instances(self):
         spanish, english = settings('es'), settings('en')
         first, second = WifiController(context(spanish), None), WifiController(context(english), None)

@@ -260,7 +260,7 @@ Start Mulita's HTTP or HTTPS server with **Share captures and reports** enabled.
 
 Enable **Record technical journal** in **Settings → General**. Its switch is independent of the activity log. The **Technical journal** tile and the web page `/bitacora/` show the same daily text files. Select a day to read, copy (on the device), export, or delete it. The web server must have **Share captures and reports** enabled.
 
-Entries use Spanish prose and local time in `YYYY-DD-MM HH:MM` format. Ping entries include the target, packet loss and mean round-trip time when available. Other diagnostics record their findings, and successful exports record the filenames. Daily filenames use `YYYY-MM-DD.txt` so they sort chronologically.
+New entries use the language selected in Settings (Spanish or English), including exports from the web, without restarting the application or server. Existing entries keep their original text. Entries use local time in `YYYY-DD-MM HH:MM` format. Ping entries include the target, packet loss and mean round-trip time when available. Other diagnostics record their findings, and successful exports record the filenames. Daily filenames use `YYYY-MM-DD.txt` so they sort chronologically.
 
 ### Remote control
 

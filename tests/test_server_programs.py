@@ -275,6 +275,19 @@ class WebTest(unittest.TestCase):
             time.sleep(0.01)
         self.assertIn('Se exportó el archivo informe.csv desde la web.', logs[0].read_text(encoding='utf-8'))
 
+        settings.write_text('{"technicalJournal":true,"language":"en"}')
+        self.assertEqual(self.get(port, '/capturas/informe.csv')[0], 200)
+        for _ in range(100):
+            text = logs[0].read_text(encoding='utf-8')
+            if 'The file informe.csv was exported from the web.' in text:
+                break
+            time.sleep(0.01)
+        self.assertIn('The file informe.csv was exported from the web.', text)
+        self.assertIn('Se exportó el archivo informe.csv desde la web.', text)
+        settings.write_text('{"technicalJournal":false,"language":"en"}')
+        self.assertEqual(self.get(port, '/capturas/informe.csv')[0], 200)
+        self.assertEqual(logs[0].read_text(encoding='utf-8'), text)
+
     def check_daily_management(self, journal, suffix):
         folder = Path(self.captures) / journal
         folder.mkdir()

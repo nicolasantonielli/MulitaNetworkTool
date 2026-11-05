@@ -85,10 +85,12 @@ class SwitchPortController(Controller):
         self._report = report
         self._running = False
         self._status = self._tr('switchCancelled' if report['cancelled'] else 'switchComplete')
-        neighbors = '; '.join(f"{row.get('name') or row.get('chassis') or 'equipo sin nombre'}, "
-                              f"puerto {row.get('port') or 'desconocido'}" for row in report.get('neighbors', []))
-        self._note(f"Escucha en {report.get('interface', '')}: {self._status}. "
-                   f"Tramas observadas: {report.get('frames', 0)}. Vecinos: {neighbors or 'ninguno observado'}.")
+        neighbors = '; '.join(self._tr(
+            'journalNeighbor', name=row.get('name') or row.get('chassis') or self._tr('journalUnnamed'),
+            port=row.get('port') or self._tr('journalUnknown')) for row in report.get('neighbors', []))
+        self._note(self._tr(
+            'journalSwitch', interface=report.get('interface', ''), status=self._status,
+            frames=report.get('frames', 0), neighbors=neighbors or self._tr('journalNoneObserved')))
         self._record('switchTitle', self._status)
         self.changed.emit()
 

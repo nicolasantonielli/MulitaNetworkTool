@@ -352,9 +352,11 @@ class NmapController(SessionController):
             self._phase = outcome.status
             self._last_ports = outcome.open_ports
             hosts = ', '.join(h['ip'] for h in outcome.hosts if h.get('ip'))
-            self._note(f'Nmap sobre {self._targets}: estado {outcome.status}. '
-                       f'Equipos observados: {hosts or "ninguno"}. '
-                       f'Puertos TCP abiertos: {outcome.open_ports or "ninguno informado"}.')
+            self._note(self._tr(
+                'journalNmap', target=self._targets,
+                status=self._tr('nmapStatus' + outcome.status.capitalize()),
+                hosts=hosts or self._tr('journalNone'),
+                ports=outcome.open_ports or self._tr('journalNoneReported')))
             if outcome.privilege and outcome.profile_id == 'syn':
                 self._fallback = 'tcp-standard'
             if outcome.status == 'error':

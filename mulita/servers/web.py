@@ -28,9 +28,11 @@ from urllib.parse import parse_qs, quote, unquote, urlsplit
 if __package__:
     from .activity_days import append_entry, day_path, list_days, technical_line
     from .remote_page import CONTROL_PAGE, forward
+    from .journal_text import translate as journal_text
 else:  # Mulita also starts this server by script path.
     from activity_days import append_entry, day_path, list_days, technical_line
     from remote_page import CONTROL_PAGE, forward
+    from journal_text import translate as journal_text
 
 JOURNALS = {'actividad': ('Registro de actividades', '.log'), 'bitacora': ('Bitácora técnica', '.txt')}
 
@@ -400,7 +402,7 @@ class Handler(SimpleHTTPRequestHandler):
             config = json.loads(Path(self.server.journal_settings).read_text(encoding='utf-8'))
             if isinstance(config, dict) and config.get('technicalJournal') is True:
                 now = datetime.now().astimezone()
-                entry = technical_line(now, f'Se exportó el archivo {name} desde la web.')
+                entry = technical_line(now, journal_text('journalWebExport', config.get('language', 'es'), name=name))
                 append_entry(Path(self.server.captures) / 'bitacora', now, '.txt', entry)
         except FileNotFoundError:
             return

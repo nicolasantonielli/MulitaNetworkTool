@@ -4,7 +4,6 @@ from pathlib import Path
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
-from mulita.presentation.i18n import Translator
 from mulita.servers.activity_days import append_entry, day_path, list_days, technical_line
 from mulita.ui.qt.bridge.base import Controller
 
@@ -113,26 +112,26 @@ class TechnicalJournal(DailyJournal):
     def action(self, key, detail, phase):
         if not self._ctx.settings.current.technical_journal:
             return
-        label = Translator('es').tr(key)
+        label = self._tr(key)
         subject = f'{label} ({detail})' if detail else label
         if phase == 'activityFailed':
-            self.note(f'Falló la operación «{subject}».')
+            self.note(self._tr('journalFailed', subject=subject))
         elif phase == 'activityStop':
-            self.note(f'Se solicitó detener «{subject}».')
+            self.note(self._tr('journalStop', subject=subject))
         elif phase == 'activityStarted':
             if key == 'pingTitle':
-                self.note(f'Se hizo ping a {detail}.')
+                self.note(self._tr('journalPing', detail=detail))
             elif key == 'tracesTitle':
-                self.note(f'Se trazó la ruta hasta {detail}.')
+                self.note(self._tr('journalTrace', detail=detail))
             elif key == 'captureTitle':
-                self.note(f'Se inició una captura en la interfaz {detail}.')
+                self.note(self._tr('journalCapture', detail=detail))
             elif key not in ('export', 'save'):
-                self.note(f'Se inició la operación «{subject}».')
+                self.note(self._tr('journalStarted', subject=subject))
         elif phase == 'activityCompleted' and key == 'connect':
-            self.note(f'Se estableció la conexión Wi-Fi con la red {detail}.')
+            self.note(self._tr('journalConnected', detail=detail))
         elif phase == 'activityCompleted' and key == 'wifiDisconnect':
-            self.note('Se desconectó la interfaz Wi-Fi.')
+            self.note(self._tr('journalDisconnected'))
         elif phase in ('activityCompleted', 'activityEnded') and key not in (
                 'pingTitle', 'tracesTitle', 'discoverTitle', 'scanPorts', 'toolSpeed',
                 'publicIp', 'vendor', 'cyberTls', 'cyberNmap', 'export', 'save'):
-            self.note(f'Finalizó la operación «{subject}».')
+            self.note(self._tr('journalEnded', subject=subject))

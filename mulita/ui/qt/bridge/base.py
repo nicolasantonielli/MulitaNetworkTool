@@ -76,7 +76,7 @@ class Controller(QObject):
         self._ctx.notifier.technicalNote.emit(sentence)
 
     def _saved_file(self, name):
-        self._note(f'Se exportó el archivo {name}.')
+        self._note(self._tr('journalExport', name=name))
 
     def _export(self, task, on_success) -> None:
         """Una exportación por controlador, con respuestas en el hilo gráfico."""

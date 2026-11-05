@@ -1,6 +1,8 @@
 """Catálogos de presentación en español e inglés y traductores por instancia."""
 from __future__ import annotations
 
+from mulita.servers.journal_text import PAIRS as JOURNAL_PAIRS
+
 _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('commandFailure', '{message}: {detail}', '{message}: {detail}'),
     ('settingsSaveFailed', 'No se pudo guardar la configuración.', 'Could not save settings.'),
@@ -842,6 +844,8 @@ _PAIRS: tuple[tuple[str, str, str], ...] = (
     ('nmapCheckFtpDetail', 'Comprueba si el FTP acepta un ingreso anónimo.', 'Checks whether FTP allows an anonymous login.'),
     ('nmapCheckFtpImpact', 'Intenta un ingreso anonymous.', 'Tries an anonymous login.'),
 )
+
+_PAIRS += JOURNAL_PAIRS
 
 ES = {key: es for key, es, _en in _PAIRS}
 EN = {key: en for key, _es, en in _PAIRS}

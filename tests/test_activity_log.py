@@ -137,6 +137,29 @@ class ActivityLogTest(unittest.TestCase):
                 self.assertIn('Se exportó el archivo ping.statics.csv.', text)
                 self.assertEqual(activity.read(day), report)
 
+                settings.setLanguage('en')
+                self.assertTrue(ping.start('1.1.1.1', 2, 1, 64))
+                runner.outputs[-1]('2 packets transmitted, 1 received, 50% packet loss, time 1000ms\n'
+                                   'rtt min/avg/max/mdev = 9.0/10.0/11.0/0.2 ms\n')
+                runner.handles[-1].finish()
+                app.app.processEvents()
+                ping.save('english')
+                for _ in range(100):
+                    QTest.qWait(20)
+                    if not ping.saving:
+                        break
+                updated = journal.read(day)
+                self.assertTrue(updated.startswith(text))
+                self.assertIn('A ping was sent to 1.1.1.1.', updated)
+                self.assertIn('2 packets were sent and 1 was received (50% loss).', updated)
+                self.assertIn('Average response time: 10.0 ms.', updated)
+                self.assertIn('The file english.csv was exported.', updated)
+                self.assertIn('The file english.statics.csv was exported.', updated)
+                settings.setLanguage('es')
+                journal.action('wifiDisconnect', '', 'activityCompleted')
+                text = journal.read(day)
+                self.assertTrue(text.endswith('Se desconectó la interfaz Wi-Fi.\n'))
+
                 tile = next(tile for tile in home.property('catalog').toVariant() if tile['id'] == 'journal')
                 home.open.emit(tile['page'])
                 app.app.processEvents()

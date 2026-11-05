@@ -89,8 +89,8 @@ class IPv4Controller(TaskController):
         self._task(task, ok, action=self._title_key, detail=f'{mode} {address}'.strip())
 
     def _note_ipv4(self, config):
-        assigned = f'{config.address}/{config.prefix}' if config.address else 'sin dirección asignada'
-        self._note(f'Se aplicó la configuración IPv4 en {self.interfaceName}: {config.mode.value}, {assigned}.')
+        assigned = f'{config.address}/{config.prefix}' if config.address else self._tr('journalNoAddress')
+        self._note(self._tr('journalIpv4', interface=self.interfaceName, mode=config.mode.value, assigned=assigned))
 
     def _show(self, config: EthernetConfig) -> None:
         self._config = config
