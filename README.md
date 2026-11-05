@@ -264,6 +264,8 @@ New entries use the language selected in Settings (Spanish or English), includin
 
 Device operations emit structured events from the services, including when called without Qt. `TechnicalJournalService` observes these events; a separate formatter produces the localized sentences. Qt controllers only display and manage the journal. The composition root connects the observer, formatter and file writer. Event parameters are explicitly selected so credentials and raw error output are not copied to the journal. A journal write failure is logged and does not change the result of the operation being recorded.
 
+Both journals use a filesystem repository behind a serial background worker. Qt properties return cached snapshots; listing, reading, writing and deleting days never access disk on the GUI thread. Refreshes reuse unchanged text and discard obsolete selections. Local export and application shutdown wait for queued writes. The web server still accesses the shared daily files independently.
+
 ### Remote control
 
 Start the Mulita web server, preferably with HTTPS. On the device, open **Settings → General → Remote control**, turn it on, then enter the displayed code at `/control` in the browser. The six-digit code is valid for two minutes and pairs one browser. The browser shows the live device screen and accepts taps, drags, and long presses. Use the on-screen keyboard for text. Screen capture runs only for a paired viewer and is limited to four captures per second.

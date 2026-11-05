@@ -52,12 +52,14 @@ class SystemController(TaskController):
                 os.execv(sys.executable, [sys.executable, *sys.argv])
 
         self._record('restartApp', '', 'activityStarted')
-        self._ctx.dispatcher.finish_background(self._maintenance.reset, restarted, self._fail)
+        self._ctx.dispatcher.finish_background(
+            lambda: self._maintenance.run_final_action(self._maintenance.reset), restarted, self._fail)
 
     @pyqtSlot()
     def poweroff(self) -> None:
         self._record('powerOff', '', 'activityStarted')
-        self._ctx.dispatcher.finish_background(self._maintenance.poweroff, on_error=self._fail)
+        self._ctx.dispatcher.finish_background(
+            lambda: self._maintenance.run_final_action(self._maintenance.poweroff), on_error=self._fail)
 
     @pyqtSlot(str)
     def share(self, source: str) -> None:

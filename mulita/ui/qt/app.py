@@ -88,10 +88,10 @@ class QtApplication:
 
         notifier = Notifier()
         ctx = BridgeContext(config=config, settings=services.settings, dispatcher=QtDispatcher(), notifier=notifier)
-        activity = ActivityController(ctx)
+        activity = ActivityController(ctx, services.journals['actividad'])
         self._remote = RemoteControl(lambda: self.root)
         notifier.activityRecorded.connect(activity.record)
-        journal = TechnicalJournal(ctx, services.journal)
+        journal = TechnicalJournal(ctx, services.journals['bitacora'])
         self._controllers = {
             'remoteControl': self._remote,
             'activity': activity,
@@ -179,10 +179,12 @@ class QtApplication:
     def _shutdown(self) -> None:
         self._remote.close()
         try:
-            self._services.shutdown()
+            self._services.shutdown(close_journals=False)
         finally:
             self._dispatcher.shutdown()
             self._controllers['technicalJournal'].close()
+            self._controllers['activity'].close()
+            self._services.close_journals()
 
     def dispose(self) -> None:
         """El motor QML se destruye antes que los controladores que sus vinculaciones leen."""

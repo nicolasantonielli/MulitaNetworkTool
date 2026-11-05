@@ -21,6 +21,18 @@ from tests.fakes import FakeRunner, FakeStorage
 
 
 class ActivityLogTest(unittest.TestCase):
+    def load_journal(self, controller, day=''):
+        controller.refresh(day)
+        self.wait_journal(controller)
+        return controller.report
+
+    def wait_journal(self, controller):
+        for _ in range(200):
+            QTest.qWait(10)
+            if not controller.busy:
+                return
+        self.fail('Journal did not finish loading')
+
     def test_operator_can_record_review_and_pause_without_losing_history(self):
         # El proceso de la aplicación es dueño del singleton Qt y de su portapapeles.
         if __name__ != '__main__':
@@ -52,8 +64,10 @@ class ActivityLogTest(unittest.TestCase):
                 runner.handles[-1].finish()
                 ctx.contextProperty('wifi').connectTo('lab', 'private-test-password', True)
                 for _ in range(100):
+                    if not activity.busy:
+                        activity.refresh('')
                     QTest.qWait(20)
-                    if 'lab | Completado' in activity.read(activity.days[0]):
+                    if activity.days and 'lab | Completado' in activity.read(activity.days[0]):
                         break
                 pager = app.root.findChild(QObject, 'homePager')
                 home = pager.parentItem()
@@ -62,6 +76,7 @@ class ActivityLogTest(unittest.TestCase):
                 app.app.processEvents()
                 page = app.root.findChild(QObject, 'activityPage')
                 self.assertTrue(page.isVisible())
+                self.wait_journal(activity)
                 report = page.property('report')
                 copy_button = next(child for child in page.findChildren(QObject) if child.property('text') == 'Copiar'
                                    and child.metaObject().indexOfSignal(b'clicked()') >= 0)
@@ -98,9 +113,11 @@ class ActivityLogTest(unittest.TestCase):
 
                 history = config.capture_dir / 'actividad'
                 (history / '2020-01-01.log').write_text('Previous session', encoding='utf-8')
+                self.load_journal(activity, day)
                 self.assertEqual(activity.days, [day, '2020-01-01'])
                 page.setProperty('selectedDay', '2020-01-01')
                 page.refresh()
+                self.wait_journal(activity)
                 self.assertEqual(page.property('report'), 'Previous session')
                 delete_button = next(child for child in page.findChildren(QObject) if child.property('text') == 'Borrar'
                                      and child.metaObject().indexOfSignal(b'clicked()') >= 0)
@@ -111,6 +128,7 @@ class ActivityLogTest(unittest.TestCase):
                 self.assertTrue((history / '2020-01-01.log').exists())
                 delete_button.clicked.emit()
                 dialog.finish(True)
+                self.wait_journal(activity)
                 self.assertEqual(activity.days, [day])
                 self.assertEqual(page.property('report'), report)
 
@@ -130,7 +148,7 @@ class ActivityLogTest(unittest.TestCase):
                     QTest.qWait(20)
                     if not ping.saving:
                         break
-                text = journal.read(day)
+                text = self.load_journal(journal, day)
                 self.assertIn(' - Se hizo ping a 8.8.8.8.', text)
                 self.assertIn('se enviaron 2 paquetes y se recibió 1 (50% de pérdida)', text)
                 self.assertIn('Tiempo medio de respuesta: 10.0 ms.', text)
@@ -151,7 +169,7 @@ class ActivityLogTest(unittest.TestCase):
                     QTest.qWait(20)
                     if not ping.saving:
                         break
-                updated = journal.read(day)
+                updated = self.load_journal(journal, day)
                 self.assertTrue(updated.startswith(text))
                 self.assertIn('A ping was sent to 1.1.1.1.', updated)
                 self.assertIn('2 packets were sent and 1 was received (50% loss).', updated)
@@ -160,7 +178,7 @@ class ActivityLogTest(unittest.TestCase):
                 self.assertIn('The file english.statics.csv was exported.', updated)
                 settings.setLanguage('es')
                 services.journal.record(OperationEvent('wifi_disconnect', 'completed', {}))
-                text = journal.read(day)
+                text = self.load_journal(journal, day)
                 self.assertTrue(text.endswith('Se desconectó la interfaz Wi-Fi.\n'))
 
                 tile = next(tile for tile in home.property('catalog').toVariant() if tile['id'] == 'journal')
@@ -177,6 +195,7 @@ class ActivityLogTest(unittest.TestCase):
                 self.assertEqual(services.files.export('bitacora', day + '.txt', 'sda1'), day + '.txt')
                 self.assertEqual((usb / (day + '.txt')).read_text(encoding='utf-8'), text)
                 journal.deleteDay(day)
+                self.wait_journal(journal)
                 self.assertEqual(journal.days, [])
                 self.assertEqual(activity.days, [day])
             finally:

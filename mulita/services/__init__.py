@@ -19,6 +19,7 @@ from mulita.services.tools import (ClimateService, MacVendorService, PublicIpSer
                                    SpeedTestService, WakeOnLanService)
 from mulita.services.wifi import WifiService
 from mulita.services.journal import TechnicalJournalService
+from mulita.services.journal_archive import JournalArchive
 
 
 @dataclass
@@ -47,8 +48,9 @@ class Services:
     nmap: NmapScanService
     switchport: SwitchPortService
     journal: TechnicalJournalService
+    journals: dict[str, JournalArchive]
 
-    def shutdown(self) -> None:
+    def shutdown(self, *, close_journals=True) -> None:
         """Al cerrar la aplicacion no quedan capturas ni pings huerfanos."""
         for session in (self.capture, self.ping, self.discovery, self.tls, self.nmap):
             session.stop()
@@ -56,3 +58,9 @@ class Services:
         self.servers.stop_all()
         self.switchport.stop()
         self.keyboard.hide()
+        if close_journals:
+            self.close_journals()
+
+    def close_journals(self):
+        for archive in self.journals.values():
+            archive.close()

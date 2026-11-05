@@ -19,7 +19,9 @@ from mulita.core.commands import CommandFactory
 from mulita.core.models import Calibration
 from mulita.core.events import EventSource
 from mulita.presentation.journal import render_event
-from mulita.servers.activity_days import append_entry, technical_line
+from mulita.servers.activity_days import technical_line
+from mulita.adapters.journals import FileJournalRepository
+from mulita.services.journal_archive import JournalArchive
 from mulita.services.journal import TechnicalJournalService
 from mulita.core.ports import ClimateSensor, CommandRunner, SettingsStore
 from mulita.services import Services
@@ -59,9 +61,14 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
     capture = CaptureService(runner, commands, config.capture_dir)
     tap = TapService(runner, commands, CaptureService(runner, commands, config.storage.folder('tap')))
     settings = SettingsService(settings_store or JsonSettingsStore(config.settings_path), PanelBacklight())
+    archives = {place: JournalArchive(FileJournalRepository(Path(config.storage.folder(place)), suffix))
+                for place, suffix in (('actividad', '.log'), ('bitacora', '.txt'))}
+    def flush_journals():
+        for archive in archives.values():
+            archive.flush()
     journal = TechnicalJournalService(
         settings, render_event,
-        lambda now, text: append_entry(Path(config.storage.folder('bitacora')), now, '.txt', technical_line(now, text)))
+        lambda now, text: archives['bitacora'].append(now, technical_line(now, text)))
     services = Services(
         interfaces=InterfaceService(runner, commands),
         ethernet=EthernetService(runner, commands, config.internal_interface, config.internal_connection),
@@ -80,13 +87,16 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
         mac_vendor=MacVendorService(runner, commands, config.mac_vendor_url, config.mac_vendor_timeout),
         files=CaptureFilesService(
             config.capture_dir, lambda: capture.is_running, lambda: tap.is_running,
-            storage=LinuxRemovableStorage(runner, commands)),
+            storage=LinuxRemovableStorage(runner, commands),
+            journal_flush=lambda place: archives[place].flush() if place in archives else None),
         maintenance=MaintenanceService(runner, commands, config.repository_dir, config.service_name,
-                                   config.update_remote, config.update_branch, config.installation_user),
+                                   config.update_remote, config.update_branch, config.installation_user,
+                                   before_shutdown=flush_journals),
         keyboard=KeyboardService(runner, commands),
         share=ShareService(),
         settings=settings,
         journal=journal,
+        journals=archives,
         servers=ServerService(runner, commands, config.servers_dir, config.servers_state_dir,
                               config.capture_dir, settings_path=config.settings_path),
         tls=TlsService(runner, commands, config.tls_dir),

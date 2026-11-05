@@ -31,8 +31,10 @@ class TechnicalJournalTest(unittest.TestCase):
         self.runner = FakeRunner()
         self.services = build_services(self.config, runner=self.runner,
             settings_store=MemorySettingsStore(Settings(technical_journal=True)))
+        self.addCleanup(self.services.close_journals)
 
     def text(self):
+        self.services.journals['bitacora'].flush()
         return ''.join(path.read_text(encoding='utf-8') for path in
                        sorted((self.config.capture_dir / 'bitacora').glob('*.txt')))
 

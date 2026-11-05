@@ -11,13 +11,6 @@ class TechnicalJournalService:
         self._render = render
         self._append = append
         self._lock = RLock()
-        self._listeners = []
-
-    def subscribe(self, listener):
-        self._listeners.append(listener)
-
-    def unsubscribe(self, listener):
-        self._listeners.remove(listener)
 
     def record(self, event: OperationEvent):
         with self._lock:
@@ -31,6 +24,3 @@ class TechnicalJournalService:
             except Exception:
                 logging.getLogger(__name__).exception('Could not write technical journal')
                 return
-            if lines:
-                for listener in tuple(self._listeners):
-                    listener()

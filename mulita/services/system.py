@@ -22,7 +22,8 @@ class MaintenanceService(EventSource):
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
                  repository_dir: str, service_name: str,
-                 update_remote: str = 'origin', update_branch: str = 'v3.1', installation_user: str = ''):
+                 update_remote: str = 'origin', update_branch: str = 'v3.1', installation_user: str = '',
+                 before_shutdown: Callable[[], None] | None = None):
         self._runner = runner
         self._commands = commands
         self._repository_dir = repository_dir
@@ -30,6 +31,14 @@ class MaintenanceService(EventSource):
         self._update_remote = update_remote
         self._update_branch = update_branch
         self._installation_user = installation_user
+        self._before_shutdown = before_shutdown or (lambda: None)
+
+    def run_final_action(self, action):
+        """Drain the final operation's own events before its UI callback can exec."""
+        try:
+            return action()
+        finally:
+            self._before_shutdown()
 
     @operation('update')
     def update(self) -> CommandResult:
@@ -40,12 +49,14 @@ class MaintenanceService(EventSource):
     @operation('restart')
     def reset(self) -> CommandResult | None:
         """Con systemd, pide el reinicio del servicio. Sin systemd, None: el proceso se reemplaza."""
+        self._before_shutdown()
         if not os.environ.get('INVOCATION_ID'):
             return None
         return self._checked(self._commands.restart_service(self._service_name), 'No se pudo reiniciar')
 
     @operation('poweroff')
     def poweroff(self) -> CommandResult:
+        self._before_shutdown()
         return self._checked(self._commands.poweroff(), 'No se pudo apagar')
 
     def _checked(self, argv: list[str], error_message: str) -> CommandResult:

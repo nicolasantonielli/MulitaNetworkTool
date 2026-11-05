@@ -4,6 +4,7 @@ from __future__ import annotations
 from mulita.servers.journal_text import PAIRS as JOURNAL_PAIRS
 
 _PAIRS: tuple[tuple[str, str, str], ...] = (
+    ('journalLoading', 'Cargando jornada…', 'Loading daily journal…'),
     ('commandFailure', '{message}: {detail}', '{message}: {detail}'),
     ('settingsSaveFailed', 'No se pudo guardar la configuración.', 'Could not save settings.'),
     ('switchTitle', 'Puerto de switch', 'Switch port'),

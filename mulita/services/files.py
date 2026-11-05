@@ -34,12 +34,13 @@ class CaptureFilesService(EventSource):
 
     def __init__(self, directory: PurePosixPath | Path,
                  capture_active=None, tap_active=None,
-                 storage: RemovableStorage | None = None):
+                 storage: RemovableStorage | None = None, journal_flush=None):
         self._root = Path(directory)
         self._paths = StoragePaths(self._root)
         self._capture_active = capture_active or (lambda: False)
         self._tap_active = tap_active or (lambda: False)
         self._storage = storage
+        self._journal_flush = journal_flush or (lambda _place: None)
 
     def list_files(self) -> tuple[StoredCapture, ...]:
         found: list[tuple[float, StoredCapture]] = []
@@ -150,6 +151,7 @@ class CaptureFilesService(EventSource):
         return len(planned)
 
     def _guard(self, place: str) -> None:
+        self._journal_flush(place)
         if place == 'captura' and self._capture_active():
             raise ValidationError(message('captureBusy'))
         if place == 'tap' and self._tap_active():

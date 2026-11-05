@@ -13,33 +13,32 @@ ColumnLayout {
     spacing: ui.gap
     property string selectedDay: ""
     property string report: ""
-    property string fileRevision: ""
     property var availableDays: []
     property string exportDay: ""
     readonly property var drives: JSON.parse(files.drivesJson)
 
     function refresh() {
         if (!visible || !root.journal) return
+        root.journal.refresh(root.selectedDay)
+    }
+    function applySnapshot() {
         var days = root.journal.days
         if (days.join() !== availableDays.join()) availableDays = days
-        if (days.indexOf(selectedDay) < 0) selectedDay = days.length ? days[0] : ""
+        selectedDay = root.journal.day
         if (days.indexOf(exportDay) < 0) exportDay = ""
-        fileRevision = root.journal.revision(selectedDay)
-        report = root.journal.read(selectedDay)
+        report = root.journal.report
     }
     onVisibleChanged: refresh()
     Timer {
         interval: 3000
         running: root.visible
         repeat: true
-        onTriggered: {
-            if (root.journal.days.join() !== root.availableDays.join() ||
-                    root.journal.revision(root.selectedDay) !== root.fileRevision) root.refresh()
-        }
+        onTriggered: root.refresh()
     }
     Connections {
         target: root.journal
-        function onChanged() { root.refresh() }
+        function onChanged() { root.applySnapshot() }
+        function onInvalidated() { root.refresh() }
     }
 
     RowLayout {
@@ -69,17 +68,18 @@ ColumnLayout {
         TouchButton {
             text: i18n.pack.copy
             icon: "file"
-            enabled: root.report.length > 0
+            enabled: !root.journal.busy && root.report.length > 0
             onClicked: system.copyText(root.report)
         }
         TouchButton {
             text: i18n.pack.export
-            enabled: !files.busy
+            enabled: !files.busy && !root.journal.busy
             onClicked: { root.exportDay = root.selectedDay; files.refreshDrives() }
         }
         TouchButton {
             text: i18n.pack.delete
             kind: "danger"
+            enabled: !root.journal.busy
             onClicked: {
                 var day = root.selectedDay
                 confirmation.ask({title: i18n.pack.delete, message: i18n.pack.deleteBody.replace("{name}", day + root.suffix),
@@ -111,7 +111,7 @@ ColumnLayout {
         TouchButton {
             text: i18n.pack.export
             visible: root.drives.length > 0
-            enabled: !files.busy && usb.currentIndex >= 0
+            enabled: !files.busy && !root.journal.busy && usb.currentIndex >= 0
             onClicked: {
                 files.exportFile(root.technical ? "bitacora" : "actividad", root.exportDay + root.suffix, root.drives[usb.currentIndex].value)
                 root.exportDay = ""
@@ -129,7 +129,9 @@ ColumnLayout {
         Layout.rightMargin: ui.padding
         Text {
             Layout.fillWidth: true
-            text: root.report || ((root.technical ? i18n.pack.journalEmpty : i18n.pack.activityEmpty) + (root.recording ? "" : " " + i18n.pack.activityEnableHint))
+            text: root.journal.busy && root.selectedDay !== root.journal.day ? i18n.pack.journalLoading :
+                  (root.report || (root.journal.busy ? i18n.pack.journalLoading :
+                  ((root.technical ? i18n.pack.journalEmpty : i18n.pack.activityEmpty) + (root.recording ? "" : " " + i18n.pack.activityEnableHint))))
             textFormat: Text.PlainText
             wrapMode: Text.WrapAnywhere
             color: ui.text
