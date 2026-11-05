@@ -20,7 +20,7 @@ from mulita.config import AppConfig, load_config
 from mulita.core.commands import CommandFactory
 from mulita.core.models import Calibration
 from mulita.core.events import EventSource
-from mulita.presentation.journal import render_event
+from mulita.presentation.journal import render_record
 from mulita.adapters.journals import FileJournalRepository
 from mulita.services.journal_archive import JournalArchive
 from mulita.services.journal import TechnicalJournalService
@@ -69,7 +69,7 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
     def flush_journals():
         for archive in archives.values():
             archive.flush()
-    journal = TechnicalJournalService(settings, render_event, archives['bitacora'].append)
+    journal = TechnicalJournalService(settings, render_record, archives['bitacora'].append)
     services = Services(
         interfaces=InterfaceService(runner, commands),
         ethernet=EthernetService(runner, commands, config.internal_interface, config.internal_connection),
@@ -91,7 +91,8 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
             config.capture_dir, lambda: capture.is_running, lambda: tap.is_running,
             storage=LinuxRemovableStorage(runner, commands),
             journal_flush=lambda place: archives[place].flush() if place in archives else None,
-            journal_access=lambda place: repositories[place].transaction() if place in repositories else nullcontext()),
+            journal_access=lambda place: repositories[place].transaction() if place in repositories else nullcontext(),
+            journal_csv=repositories['bitacora'].csv_bytes),
         maintenance=MaintenanceService(runner, commands, config.repository_dir, config.service_name,
                                    config.update_remote, config.update_branch, config.installation_user,
                                    before_shutdown=flush_journals),

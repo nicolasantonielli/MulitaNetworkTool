@@ -1,10 +1,12 @@
 """Natural-language reports from use-case facts; no dependency on Qt."""
 from pathlib import PurePath
+from dataclasses import replace
 
 from mulita.presentation.i18n import Translator
 from mulita.presentation.texts import temperature_value, humidity_value, mbps
 from mulita.presentation.tls import severity_label
 from mulita.core.servers import kind_by_id
+from mulita.core.journals import JournalRecord, technical_line
 
 
 _LABELS = {
@@ -20,6 +22,29 @@ _LABELS = {
     'rename': 'rename', 'copy': 'copy', 'delete': 'delete',
 }
 _EXPORTS = ('export', 'ping_export', 'export_many', 'web_export')
+
+
+def render_record(event, language):
+    lines = render_event(event, language)
+    if not lines:
+        return []
+    tr = Translator(language).tr
+    label = (tr(kind_by_id(event.parameters['kind']).title) if event.action == 'server'
+             else tr(_LABELS.get(event.action, 'export')))
+    started = event.phase == 'started'
+    # Reuse the redacted, localized report; never serialize raw operation parameters.
+    description = '\n'.join(lines) if started else '\n'.join(render_event(replace(event, phase='started'), language)) or label
+    results = '' if started else '\n'.join(lines)
+    if event.action in _EXPORTS and event.phase == 'completed':
+        description = '\n'.join(lines)
+        names = [PurePath(event.result).name] if event.action != 'export_many' else [name for _, name in event.parameters['items']]
+        if event.action == 'ping_export':
+            names.append(names[0][:-4] + '.statics.csv')
+        results = '\n'.join(names)
+    phase = 'failed' if event.parameters.get('exit_code', 0) and not event.parameters.get('stopped') else event.phase
+    return JournalRecord(event.operation_id, event.occurred_at.isoformat(timespec='seconds'),
+                         label, phase, description, results,
+                         tuple(technical_line(event.occurred_at, line) for line in lines))
 
 
 def render_event(event, language):

@@ -1,8 +1,11 @@
 """Filesystem implementation of daily journals. Called only by archive workers."""
 import os
+import json
+from dataclasses import asdict
 from pathlib import Path
 
-from mulita.core.journals import JournalSnapshot
+from mulita.core.journals import JournalSnapshot, JournalRecord
+from mulita.core.journal_entries import entries_from, journal_csv
 from mulita.adapters.journal_lock import journal_lock
 from mulita.adapters.journal_files import append_entry, day_path, list_days
 
@@ -28,6 +31,22 @@ class FileJournalRepository:
         with self.transaction():
             return day_path(self._folder, day, self._suffix).read_bytes()
 
+    def read_entries(self, day):
+        with self.transaction():
+            text = day_path(self._folder, day, self._suffix).read_text(encoding='utf-8')
+            return entries_from(text, self._metadata(day))
+
+    def csv_bytes(self, day):
+        return journal_csv(self.read_entries(day))
+
+    def _metadata(self, day):
+        if self._suffix != '.txt':
+            return ''
+        try:
+            return day_path(self._folder, day, '.jsonl').read_text(encoding='utf-8')
+        except (FileNotFoundError, UnicodeDecodeError):
+            return ''
+
     def _snapshot(self, day, known_day='', known_revision=''):
         days = list_days(self._folder, self._suffix)
         # Another process may delete a day between listing and opening it.
@@ -37,16 +56,29 @@ class FileJournalRepository:
                 with day_path(self._folder, selected, self._suffix).open('r', encoding='utf-8') as stream:
                     stat = os.fstat(stream.fileno())
                     revision = f'{stat.st_dev}:{stat.st_ino}:{stat.st_mtime_ns}:{stat.st_size}'
+                    if self._suffix == '.txt':
+                        metadata_path = day_path(self._folder, selected, '.jsonl')
+                        if metadata_path.exists():
+                            meta_stat = metadata_path.stat()
+                            revision += f':{meta_stat.st_mtime_ns}:{meta_stat.st_size}'
                     text = None if selected == known_day and revision == known_revision else stream.read()
-                    return JournalSnapshot(tuple(days), selected, revision, text)
+                    entries = entries_from(text, self._metadata(selected)) if text is not None and self._suffix == '.txt' else None
+                    return JournalSnapshot(tuple(days), selected, revision, text, entries)
             except FileNotFoundError:
                 days.remove(selected)
-        return JournalSnapshot((), '', '', '')
+        return JournalSnapshot((), '', '', '', ())
 
     def append(self, now, line):
         with self.transaction():
-            append_entry(self._folder, now, self._suffix, line)
+            if isinstance(line, JournalRecord):
+                for sentence in line.lines:
+                    append_entry(self._folder, now, self._suffix, sentence)
+                append_entry(self._folder, now, '.jsonl', json.dumps(asdict(line), ensure_ascii=False))
+            else:
+                append_entry(self._folder, now, self._suffix, line)
 
     def delete(self, day, *, missing_ok=True):
         with self.transaction():
             day_path(self._folder, day, self._suffix).unlink(missing_ok=missing_ok)
+            if self._suffix == '.txt':
+                day_path(self._folder, day, '.jsonl').unlink(missing_ok=True)

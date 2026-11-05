@@ -31,7 +31,9 @@ from mulita.servers.remote_page import CONTROL_PAGE, forward
 from mulita.adapters.journals import FileJournalRepository
 from mulita.adapters.settings_store import StoredSettingsReader
 from mulita.core.events import OperationEvent
-from mulita.presentation.journal import render_event
+from mulita.presentation.journal import render_record
+from mulita.presentation.journal_web import timeline
+from mulita.core.settings import Settings
 from mulita.services.journal import TechnicalJournalService
 
 JOURNALS = {'actividad': ('Registro de actividades', '.log'), 'bitacora': ('Bitácora técnica', '.txt')}
@@ -229,6 +231,9 @@ class Handler(SimpleHTTPRequestHandler):
         if candidate.name.startswith('.mulita-') and candidate.suffix == '.lock':
             self.send_error(404)
             return None
+        if self.server.captures and candidate.parent == Path(self.server.captures) / 'bitacora' and candidate.suffix == '.jsonl':
+            self.send_error(404)
+            return None
         if self.server.captures:
             for journal, (_title, suffix) in JOURNALS.items():
                 folder = Path(self.server.captures) / journal
@@ -259,7 +264,8 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             with os.scandir(path) as listing:
                 entries = sorted((item for item in listing if not (
-                    item.name.startswith('.mulita-') and item.name.endswith('.lock'))),
+                    (item.name.startswith('.mulita-') and item.name.endswith('.lock')) or
+                    (self.server.captures and Path(path) == Path(self.server.captures) / 'bitacora' and item.name.endswith('.jsonl')))),
                     key=lambda item: (not item.is_dir(), item.name.casefold()))
         except OSError:
             self.send_error(403, 'No se puede acceder a esta carpeta.')
@@ -394,6 +400,12 @@ class Handler(SimpleHTTPRequestHandler):
                 parts = path.removeprefix(f'/{journal}/').rstrip('/').split('/')
                 day = parts[0]
                 filename = day + suffix
+                if journal == 'bitacora' and parts == [day, 'exportar.csv']:
+                    filename = day + '.csv'
+                    self._send_data(repository.csv_bytes(day), 'text/csv; charset=utf-8', send_body, filename)
+                    if send_body:
+                        self._export_note(filename)
+                    return
                 if parts == [day, 'exportar']:
                     data = repository.read_bytes(day)
                     self._send_data(data, 'text/plain; charset=utf-8', send_body, filename)
@@ -403,15 +415,23 @@ class Handler(SimpleHTTPRequestHandler):
                 if parts != [day]:
                     raise FileNotFoundError
                 report = html.escape(repository.read_bytes(day).decode('utf-8'))
+                body = f'<pre class="panel connection journal">{report}</pre>'
+                csv_link = ''
+                if journal == 'bitacora':
+                    settings = (StoredSettingsReader(Path(self.server.journal_settings)).current
+                                if self.server.journal_settings else Settings())
+                    body = timeline(repository.read_entries(day), settings)
+                    csv_link = f'<a class="download" href="/{journal}/{day}/exportar.csv">Exportar CSV</a>'
                 content = (
                     f'<a class="back-link" href="/{journal}/">← Todas las jornadas</a>'
                     f'<h1>{title} · {day}</h1><div class="journal-actions">'
                     f'<a class="download" href="/{journal}/{day}/exportar">Exportar {suffix}</a>'
+                    f'{csv_link}'
                     f'<form method="post" action="/{journal}/{day}/eliminar" '
                     f'onsubmit="return confirm(\'¿Eliminar el registro del {day}?\')">'
                     f'<input type="hidden" name="token" value="{self.server.activity_token}">'
                     '<button type="submit" class="theme">Eliminar jornada</button></form></div>'
-                    f'<pre class="panel connection journal">{report}</pre>')
+                    f'{body}')
             self._send_data(render_page(content, self.secure), 'text/html; charset=utf-8', send_body)
         except (FileNotFoundError, ValueError):
             self.send_error(404)
@@ -427,7 +447,7 @@ class Handler(SimpleHTTPRequestHandler):
         if not self.server.journal_settings:
             return
         service = TechnicalJournalService(
-            StoredSettingsReader(Path(self.server.journal_settings)), render_event,
+            StoredSettingsReader(Path(self.server.journal_settings)), render_record,
             FileJournalRepository(Path(self.server.captures) / 'bitacora', '.txt').append)
         service.record(OperationEvent('web_export', 'completed', {}, name))
 

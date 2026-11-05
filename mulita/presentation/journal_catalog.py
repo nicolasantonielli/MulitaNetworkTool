@@ -1,6 +1,8 @@
 """Technical journal translations, independent of Qt and HTTP servers."""
 
 PAIRS = (
+    ('journalLegacy', 'Registro anterior', 'Earlier record'),
+    ('journalResults', 'Resultados', 'Results'),
     ('journalExport', 'Se exportó el archivo {name}.', 'The file {name} was exported.'),
     ('journalFailed', 'Falló la operación «{subject}».', 'The operation “{subject}” failed.'),
     ('journalStop', 'Se solicitó detener «{subject}».', 'A stop was requested for “{subject}”.'),

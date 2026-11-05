@@ -304,6 +304,11 @@ class FilesController(TaskController):
                    action='export', detail=name)
 
     @pyqtSlot(str, str)
+    def exportJournalCsv(self, day: str, drive: str) -> None:
+        self._task(lambda: self._files_service.export_journal_csv(day, drive), self._done,
+                   action='export', detail=day + '.csv')
+
+    @pyqtSlot(str, str)
     def exportMany(self, payload: str, drive: str) -> None:
         def exported(count):
             self._done(count)

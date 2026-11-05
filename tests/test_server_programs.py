@@ -320,6 +320,36 @@ class WebTest(unittest.TestCase):
         self.assertEqual(self.get(port, '/capturas/informe.csv')[0], 200)
         self.assertEqual(logs[0].read_text(encoding='utf-8'), text)
 
+    def test_technical_timeline_csv_and_internal_metadata(self):
+        import csv
+        from datetime import datetime
+        from mulita.adapters.journals import FileJournalRepository
+        from mulita.core.events import OperationEvent
+        from mulita.presentation.journal import render_record
+        folder = Path(self.captures) / 'bitacora'
+        repo = FileJournalRepository(folder, '.txt')
+        now = datetime.fromisoformat('2026-11-05T12:57:00-03:00')
+        repo.append(now, render_record(OperationEvent('web_export', 'completed', {}, 'ping.csv', occurred_at=now), 'en'))
+        settings = Path(self.tmp.name) / 'settings.json'
+        settings.write_text('{"theme":"light","language":"en"}')
+        port = self.serve(journal_settings=settings)
+        status, page = self.get(port, '/bitacora/2026-11-05')
+        self.assertEqual(status, 200)
+        self.assertIn(b'class="timeline"', page)
+        self.assertIn(b'--bg:#EEF2F6!important', page)
+        self.assertIn(b'12:57:00', page)
+        self.assertIn(b'Results', page)
+        route = '/bitacora/2026-11-05/exportar.csv'
+        status, content = self.get(port, route)
+        self.assertEqual(status, 200)
+        rows = list(csv.reader(io.StringIO(content.decode('utf-8-sig'))))
+        self.assertEqual(rows[0], ['fecha', 'tipo de prueba', 'texto', 'resultados'])
+        self.assertEqual(rows[1][3], 'ping.csv')
+        self.assertEqual(self.get(port, route, 'HEAD'), (200, b''))
+        self.assertEqual(self.get(port, '/bitacora/2026-11-06/exportar.csv')[0], 404)
+        self.assertEqual(self.get(port, '/capturas/bitacora/2026-11-05.jsonl')[0], 404)
+        self.assertNotIn(b'.jsonl', self.get(port, '/capturas/bitacora/')[1])
+
     def check_daily_management(self, journal, suffix):
         folder = Path(self.captures) / journal
         folder.mkdir()

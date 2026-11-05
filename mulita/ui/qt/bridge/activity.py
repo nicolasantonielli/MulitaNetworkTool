@@ -15,6 +15,7 @@ class DailyJournal(Controller):
         super().__init__(ctx)
         self._archive = archive
         self._days = []
+        self._entries = []
         self._day = self._report = self._revision = self._desired_day = ''
         self._loading = self._deleting = self._refresh_pending = self._closed = False
         self._generation = 0
@@ -44,6 +45,10 @@ class DailyJournal(Controller):
     @pyqtProperty(str, notify=changed)
     def report(self):
         return self._report
+
+    @pyqtProperty('QVariantList', notify=changed)
+    def entries(self):
+        return list(self._entries)
 
     @pyqtSlot(str, result=str)
     def revision(self, day):
@@ -99,6 +104,7 @@ class DailyJournal(Controller):
                 self._revision = snapshot.revision
                 if snapshot.text is not None:
                     self._report = snapshot.text
+                    self._entries = list(snapshot.entries or ())
                 self.changed.emit()
         self.busyChanged.emit()
         if self._refresh_pending and not self._deleting:

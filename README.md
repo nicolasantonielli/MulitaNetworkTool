@@ -258,7 +258,9 @@ Start Mulita's HTTP or HTTPS server with **Share captures and reports** enabled.
 
 ### Technical journal
 
-Enable **Record technical journal** in **Settings → General**. Its switch is independent of the activity log. The **Technical journal** tile and the web page `/bitacora/` show the same daily text files. Select a day to read, copy (on the device), export, or delete it. The web server must have **Share captures and reports** enabled.
+Enable **Record technical journal** in **Settings → General**. Its switch is independent of the activity log. The **Technical journal** tile and the web page `/bitacora/` show a daily timeline: date/time at the left and a card with the test type, description and results. Both use the theme selected on the device. Select a day to read, copy (on the device), export, or delete it. The web server must have **Share captures and reports** enabled.
+
+The tile exports CSV to USB; the daily web page offers CSV and the original TXT. CSV contains exactly `fecha`, `tipo de prueba`, `texto`, `resultados`, with ISO timestamps including the local UTC offset for new records and UTF-8 BOM for spreadsheet compatibility. New operations group their start and results in one card. Older text-only records remain visible as earlier records, with no invented test type or results. Structured metadata is stored beside each TXT as a private JSONL file, under the same process lock; daily deletion and file-manager copy/rename/delete manage both files. Keep both files when backing up the journal. The CSV export records its actual filename in the journal when recording is enabled.
 
 New entries use the language selected in Settings (Spanish or English), including exports from the web, without restarting the application or server. Existing entries keep their original text. Entries use local time in `YYYY-DD-MM HH:MM` format. Ping entries include the target, packet loss and mean round-trip time when available. Other diagnostics record their findings, and successful exports record the filenames. Daily filenames use `YYYY-MM-DD.txt` so they sort chronologically.
 

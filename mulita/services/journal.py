@@ -3,7 +3,7 @@ import logging
 from threading import RLock
 
 from mulita.core.events import OperationEvent
-from mulita.core.journals import technical_line
+from mulita.core.journals import JournalRecord, technical_line
 
 
 class TechnicalJournalService:
@@ -20,6 +20,9 @@ class TechnicalJournalService:
                 if not current.technical_journal:
                     return
                 lines = self._render(event, current.language.value)
+                if isinstance(lines, JournalRecord):
+                    self._append(event.occurred_at, lines)
+                    return
                 for line in lines:
                     self._append(event.occurred_at, technical_line(event.occurred_at, line))
             except Exception:

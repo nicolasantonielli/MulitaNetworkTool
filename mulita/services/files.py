@@ -35,7 +35,7 @@ class CaptureFilesService(EventSource):
 
     def __init__(self, directory: PurePosixPath | Path,
                  capture_active=None, tap_active=None,
-                 storage: RemovableStorage | None = None, journal_flush=None, journal_access=None):
+                 storage: RemovableStorage | None = None, journal_flush=None, journal_access=None, journal_csv=None):
         self._root = Path(directory)
         self._paths = StoragePaths(self._root)
         self._capture_active = capture_active or (lambda: False)
@@ -43,6 +43,7 @@ class CaptureFilesService(EventSource):
         self._storage = storage
         self._journal_flush = journal_flush or (lambda _place: None)
         self._journal_access = journal_access or (lambda _place: nullcontext())
+        self._journal_csv = journal_csv
 
     def list_files(self) -> tuple[StoredCapture, ...]:
         found: list[tuple[float, StoredCapture]] = []
@@ -76,6 +77,7 @@ class CaptureFilesService(EventSource):
             if target.exists():
                 raise ValidationError(message('nameExists'))
             source.rename(target)
+            self._metadata_file(place, source, target, 'rename')
             return target.name
 
     @operation('copy', 'name', 'new_name')
@@ -87,13 +89,16 @@ class CaptureFilesService(EventSource):
             if target.exists():
                 raise ValidationError(message('nameExists'))
             shutil.copyfile(source, target)
+            self._metadata_file(place, source, target, 'copy')
             return target.name
 
     @operation('delete', 'name')
     def delete(self, place: str, name: str) -> None:
         self._guard(place)
         with self._journal_access(place):
-            self._existing(place, name).unlink()
+            source = self._existing(place, name)
+            source.unlink()
+            self._metadata_file(place, source)
 
     @operation('delete', 'items')
     def delete_many(self, items: list[tuple[str, str]]) -> None:
@@ -106,6 +111,41 @@ class CaptureFilesService(EventSource):
         for place, path in paths:
             with self._journal_access(place):
                 path.unlink()
+                self._metadata_file(place, path)
+
+    @staticmethod
+    def _metadata_file(place, source, target=None, action='delete'):
+        if place != 'bitacora':
+            return
+        metadata = source.with_suffix('.jsonl')
+        if metadata.is_symlink():
+            return
+        if action == 'delete':
+            metadata.unlink(missing_ok=True)
+        elif metadata.exists():
+            destination = target.with_suffix('.jsonl')
+            if destination.is_symlink():
+                raise ValidationError(message('badStoredName'))
+            if action == 'rename':
+                metadata.replace(destination)
+            else:
+                shutil.copyfile(metadata, destination)
+
+    @operation('export')
+    def export_journal_csv(self, day: str, drive_id: str) -> str:
+        self._guard('bitacora')
+        if not _DEVICE.fullmatch(drive_id or ''):
+            raise ValidationError(message('badDrive'))
+        if self._journal_csv is None:
+            raise ValidationError(message('fileMissing'))
+        data = self._journal_csv(day)
+        target = self._drive_folder(drive_id) / (day + '.csv')
+        if target.exists():
+            raise ValidationError(message('usbExists'))
+        with target.open('xb') as stream:
+            stream.write(data)
+        self._storage.sync()
+        return target.name
 
     def list_drives(self) -> tuple[UsbDrive, ...]:
         found = self._storage.list_drives() if self._storage is not None else ()

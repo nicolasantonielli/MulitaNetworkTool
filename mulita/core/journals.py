@@ -11,11 +11,23 @@ class JournalSnapshot:
     revision: str
     # None means the caller already has this revision's text.
     text: str | None
+    entries: tuple[dict, ...] | None = None
+
+
+@dataclass(frozen=True)
+class JournalRecord:
+    operation_id: str
+    timestamp: str
+    kind: str
+    phase: str
+    text: str
+    results: str
+    lines: tuple[str, ...]
 
 
 class JournalRepository(Protocol):
     def snapshot(self, day: str, known_day: str = '', known_revision: str = '') -> JournalSnapshot: ...
-    def append(self, now: datetime, line: str) -> None: ...
+    def append(self, now: datetime, line: str | JournalRecord) -> None: ...
     def delete(self, day: str) -> None: ...
 
 

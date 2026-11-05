@@ -149,6 +149,9 @@ class ActivityLogTest(unittest.TestCase):
                     if not ping.saving:
                         break
                 text = self.load_journal(journal, day)
+                ping_cards = [entry for entry in journal.entries if entry['kind'] == 'Ping' and '8.8.8.8' in entry['text']]
+                self.assertEqual(len(ping_cards), 1)
+                self.assertIn('50%', ping_cards[0]['results'])
                 self.assertIn(' - Se hizo ping a 8.8.8.8.', text)
                 self.assertIn('se enviaron 2 paquetes y se recibió 1 (50% de pérdida)', text)
                 self.assertIn('Tiempo medio de respuesta: 10.0 ms.', text)
