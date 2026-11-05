@@ -5,8 +5,10 @@ from dataclasses import replace
 from mulita.presentation.i18n import Translator
 from mulita.presentation.texts import temperature_value, humidity_value, mbps
 from mulita.presentation.tls import severity_label
+from mulita.presentation.facts import wifi_facts
 from mulita.core.servers import kind_by_id
 from mulita.core.journals import JournalRecord, technical_line
+from mulita.core.journal_tests import category, TESTS
 
 
 _LABELS = {
@@ -20,6 +22,7 @@ _LABELS = {
     'ipv4_wifi': 'wifiIp', 'ipv4_ethernet': 'ethInternal', 'vlan': 'ethInternal',
     'update': 'updateWord', 'restart': 'restartApp', 'poweroff': 'powerOff',
     'rename': 'rename', 'copy': 'copy', 'delete': 'delete',
+    'wifi_info': 'wifiInfo',
 }
 _EXPORTS = ('export', 'ping_export', 'export_many', 'web_export')
 
@@ -31,6 +34,8 @@ def render_record(event, language):
     tr = Translator(language).tr
     label = (tr(kind_by_id(event.parameters['kind']).title) if event.action == 'server'
              else tr(_LABELS.get(event.action, 'export')))
+    if event.action in _EXPORTS and category(event):
+        label = tr(dict(TESTS)[category(event)])
     started = event.phase == 'started'
     # Reuse the redacted, localized report; never serialize raw operation parameters.
     description = '\n'.join(lines) if started else '\n'.join(render_event(replace(event, phase='started'), language)) or label
@@ -112,7 +117,10 @@ def render_event(event, language):
         lines.append(tr('journalVendor', mac=detail, name=value or tr('journalNoMatch')))
     elif action == 'capture':
         if p.get('exit_code') == 0 or p.get('stopped'):
-            lines.append(tr('journalCaptureSaved', interface=detail, name=value.filename))
+            lines.append(tr('journalCaptureEnded', interface=detail))
+    elif action == 'wifi_info':
+        facts = '; '.join(f'{label}: {fact}' for label, fact in wifi_facts(value, Translator(language)))
+        lines.append(tr('journalWifiInfo', result=facts or tr('journalNoneReported')))
     elif action == 'tap':
         if value:
             lines.append(tr('journalTap', name=value))

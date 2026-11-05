@@ -7,6 +7,8 @@ os.environ['QT_QUICK_BACKEND'] = 'software'
 
 from PyQt5.QtCore import QObject
 from PyQt5.QtQml import QQmlExpression, QQmlEngine
+from PyQt5.QtQuick import QQuickItem
+from PyQt5 import sip
 from mulita.adapters.settings_store import MemorySettingsStore
 from mulita.bootstrap import build_services
 from mulita.config import AppConfig
@@ -60,6 +62,29 @@ class SettingsNavigationTest(unittest.TestCase):
                     check(back)
             evaluate('navigate("unknown")')
             check('interface')
+            evaluate('navigate("general")')
+            general = evaluate('pageRepeater.itemAt(pageIndex(currentPage)).item')[0]
+            button = general.findChild(QObject, 'journalAdvancedButton')
+            button.clicked.emit()
+            app.app.processEvents()
+            self.assertEqual(root.property('currentPage'), 'journal')
+            advanced = evaluate('pageRepeater.itemAt(pageIndex(currentPage)).item')[0]
+            def visual_children(item):
+                for child in item.childItems():
+                    yield child
+                    yield from visual_children(child)
+            switch = next((item for item in visual_children(sip.cast(advanced, QQuickItem))
+                           if item.objectName() == 'journal-test-ping'), None)
+            self.assertIsNotNone(switch)
+            self.assertTrue(switch.property('checked'))
+            switch.setProperty('checked', False)
+            switch.toggled.emit()
+            app.app.processEvents()
+            self.assertNotIn('ping', services.settings.current.journal_tests)
+            advanced.goBack.emit()
+            app.app.processEvents()
+            check('general')
+            evaluate('navigate("interface")')
             loader = evaluate('pageRepeater.itemAt(pageIndex(currentPage))')[0]
             services.settings.set_language('en')
             app.app.processEvents()

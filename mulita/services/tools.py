@@ -150,7 +150,7 @@ class PublicIpService(EventSource):
             raise CommandFailedError(message('pubFail'), result)
         return parse_public_address(result.stdout)
 
-    @operation('export')
+    @operation('export', context=lambda _: {'test': 'public_ip'})
     def save(self, info: PublicAddress, moment: datetime | None = None) -> str:
         if not info.ip:
             raise ValidationError(message('noPublic'))

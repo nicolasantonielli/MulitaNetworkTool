@@ -1,9 +1,11 @@
 """Independent observer that renders and stores technical operation events."""
 import logging
+from dataclasses import replace
 from threading import RLock
 
 from mulita.core.events import OperationEvent
 from mulita.core.journals import JournalRecord, technical_line
+from mulita.core.journal_tests import category
 
 
 class TechnicalJournalService:
@@ -18,6 +20,15 @@ class TechnicalJournalService:
             try:
                 current = self._settings.current
                 if not current.technical_journal:
+                    return
+                if event.action == 'export_many':
+                    # A mixed selection must not leak disabled tests into the report.
+                    if event.phase == 'completed':
+                        for index, (place, name) in enumerate(event.parameters.get('items', ())):
+                            self.record(replace(event, action='export', parameters={'place': place},
+                                                result=name, operation_id=f'{event.operation_id}:{index}'))
+                    return
+                if category(event) not in current.journal_tests:
                     return
                 lines = self._render(event, current.language.value)
                 if isinstance(lines, JournalRecord):

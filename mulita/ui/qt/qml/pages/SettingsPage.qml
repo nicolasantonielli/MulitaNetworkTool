@@ -16,7 +16,8 @@ Item {
         { id: "ethernet", label: "navEthIn", icon: "ethernet", component: ethernetPage },
         { id: "maintenance", label: "navMaint", icon: "wrench", component: maintenancePage },
         { id: "touch", component: touchPage },
-        { id: "tiles", component: tilesPage }
+        { id: "tiles", component: tilesPage },
+        { id: "journal", component: journalPage }
     ]
     readonly property var menuPages: pages.filter(function(page) { return !!page.label })
     property string currentPage: "general"
@@ -37,7 +38,8 @@ Item {
     }
     onPagesChanged: navigate(currentPage)
 
-    Component { id: generalPage; SettingsGeneralPage { objectName: "general" } }
+    Component { id: generalPage; SettingsGeneralPage { objectName: "general"; onOpenJournalAdvanced: root.navigate("journal") } }
+    Component { id: journalPage; SettingsJournalPage { onGoBack: root.navigate("general") } }
     Component { id: displayPage; SettingsDisplayPage { objectName: "display"; onOpenTouchTest: root.navigate("touch") } }
     Component { id: wifiPage; SettingsWifiPage { objectName: "wifi"; dialog: confirmationDialog } }
     Component { id: ethernetPage; SettingsEthernetPage { objectName: "ethernet"; dialog: confirmationDialog } }
@@ -56,7 +58,7 @@ Item {
         SideNav {
             id: nav
             objectName: "settingsNav"
-            visible: root.currentPage !== "touch" && root.currentPage !== "tiles"
+            visible: root.currentPage !== "touch" && root.currentPage !== "tiles" && root.currentPage !== "journal"
             Layout.preferredWidth: Math.round(root.width * 0.27)
             Layout.fillHeight: true
             onCurrentIndexChanged: {

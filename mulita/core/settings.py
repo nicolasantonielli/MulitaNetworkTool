@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any, Mapping
 
 from mulita.core.errors import ValidationError
+from mulita.core.journal_tests import TEST_IDS, enabled_tests
 from mulita.core.messages import message
 
 MM_PER_INCH = 25.4
@@ -85,6 +86,7 @@ class Settings:
     home: HomeOrder = field(default_factory=HomeOrder)
     activity_logging: bool = False
     technical_journal: bool = False
+    journal_tests: tuple[str, ...] = TEST_IDS
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -96,6 +98,7 @@ class Settings:
             'brightness': self.brightness,
             'activityLogging': self.activity_logging,
             'technicalJournal': self.technical_journal,
+            'journalTests': {key: key in self.journal_tests for key in TEST_IDS},
             'homeOrder': {
                 'screens': [list(screen) for screen in self.home.screens],
             },
@@ -230,6 +233,7 @@ def settings_from_dict(data: Mapping[str, Any]) -> Settings:
                     language=chosen_language, brightness=level,
                     activity_logging=data.get('activityLogging') is True,
                     technical_journal=data.get('technicalJournal') is True,
+                    journal_tests=enabled_tests(data.get('journalTests')),
                     home=home_order_from(data.get('homeOrder')))
 
 

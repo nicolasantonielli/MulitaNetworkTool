@@ -208,7 +208,7 @@ class FileJournalRepositoryTest(unittest.TestCase):
             services.files._storage = FakeStorage((UsbDrive('sda1', 'USB', str(usb)),))
             try:
                 with patch.object(archive._repository, 'append', side_effect=slow_append):
-                    event = OperationEvent('wifi_disconnect', 'completed', {})
+                    event = OperationEvent('ping', 'started', {'target': '8.8.8.8'})
                     services.journal.record(event)
                     self.assertTrue(entered.wait(1))
                     day = event.occurred_at.date().isoformat()
@@ -217,13 +217,13 @@ class FileJournalRepositoryTest(unittest.TestCase):
                         self.assertFalse(exported.done())
                         release.set()
                         self.assertEqual(exported.result(timeout=3), day + '.txt')
-                    self.assertIn('Se desconectó', (usb / (day + '.txt')).read_text(encoding='utf-8'))
+                    self.assertIn('Se hizo ping', (usb / (day + '.txt')).read_text(encoding='utf-8'))
                 # Read the file directly after completion, without an extra flush.
                 # The restart callback must be safe to replace the process now.
                 with patch.dict('os.environ', {'INVOCATION_ID': ''}):
                     self.assertIsNone(services.maintenance.run_final_action(services.maintenance.reset))
                 text = (config.capture_dir / 'bitacora' / (day + '.txt')).read_text(encoding='utf-8')
-                self.assertIn('Finalizó la operación', text)
+                self.assertEqual(text, (usb / (day + '.txt')).read_text(encoding='utf-8'))
             finally:
                 release.set()
                 services.close_journals()

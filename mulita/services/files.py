@@ -131,7 +131,7 @@ class CaptureFilesService(EventSource):
             else:
                 shutil.copyfile(metadata, destination)
 
-    @operation('export')
+    @operation('export', context=lambda _: {'place': 'bitacora'})
     def export_journal_csv(self, day: str, drive_id: str) -> str:
         self._guard('bitacora')
         if not _DEVICE.fullmatch(drive_id or ''):
@@ -158,7 +158,7 @@ class CaptureFilesService(EventSource):
             named.append(UsbDrive(drive.device, label, drive.mountpoint))
         return tuple(named)
 
-    @operation('export')
+    @operation('export', 'place')
     def export(self, place: str, name: str, drive_id: str) -> str:
         self._guard(place)
         if not _DEVICE.fullmatch(drive_id or ''):

@@ -40,7 +40,7 @@ class WifiService(EventSource):
         listed = self._checked(self._commands.wifi_list(device), 'No se pudieron buscar redes')
         return device, tuple(parse_wifi_list(listed.stdout))
 
-    @operation('export')
+    @operation('export', context=lambda _: {'test': 'wifi_info'})
     def save(self, link: WifiLink, moment: datetime | None = None) -> str:
         facts = link.facts()
         if not facts:
@@ -72,6 +72,7 @@ class WifiService(EventSource):
         except OSError as exc:
             raise CommandFailedError(message('wifiFolder')) from exc
 
+    @operation('wifi_info')
     def status(self) -> WifiLink:
         """Dirección y radio del enlace, sin disparar un escaneo de redes."""
         device = self.interface()

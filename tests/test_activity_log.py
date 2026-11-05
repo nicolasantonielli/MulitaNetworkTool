@@ -182,7 +182,7 @@ class ActivityLogTest(unittest.TestCase):
                 settings.setLanguage('es')
                 services.journal.record(OperationEvent('wifi_disconnect', 'completed', {}))
                 text = self.load_journal(journal, day)
-                self.assertTrue(text.endswith('Se desconectó la interfaz Wi-Fi.\n'))
+                self.assertEqual(text, updated)
 
                 tile = next(tile for tile in home.property('catalog').toVariant() if tile['id'] == 'journal')
                 home.open.emit(tile['page'])

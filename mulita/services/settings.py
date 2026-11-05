@@ -8,6 +8,7 @@ from mulita.core import settings as rules
 from mulita.core.errors import MulitaError, ValidationError
 from mulita.core.ports import SettingsStore
 from mulita.core.settings import Settings
+from mulita.core.journal_tests import TEST_IDS
 from mulita.core.platform import Backlight
 from mulita.core.messages import message
 
@@ -46,6 +47,13 @@ class SettingsService:
 
     def set_technical_journal(self, enabled: bool) -> Settings:
         return self._commit(replace(self._current, technical_journal=enabled))
+
+    def set_journal_test(self, test: str, enabled: bool) -> Settings:
+        if test not in TEST_IDS or type(enabled) is not bool:
+            raise ValidationError(message('journalInvalidTest'))
+        selected = set(self._current.journal_tests)
+        selected.add(test) if enabled else selected.discard(test)
+        return self._commit(replace(self._current, journal_tests=tuple(key for key in TEST_IDS if key in selected)))
 
     def set_activity_logging(self, enabled: bool) -> Settings:
         return self._commit(replace(self._current, activity_logging=enabled))

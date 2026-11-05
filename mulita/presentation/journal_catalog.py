@@ -1,6 +1,12 @@
 """Technical journal translations, independent of Qt and HTTP servers."""
 
 PAIRS = (
+    ('journalAdvanced', 'Avanzado', 'Advanced'),
+    ('journalTestSettings', 'Pruebas de la bitácora', 'Journal tests'),
+    ('journalTestsHint', 'Elegí qué pruebas registrar. El interruptor general de la bitácora debe estar activado. Los registros anteriores se conservan.', 'Choose which tests to record. The main journal switch must be enabled. Existing records are preserved.'),
+    ('journalInvalidTest', 'Prueba de bitácora inválida.', 'Invalid journal test.'),
+    ('journalCaptureEnded', 'Finalizó la captura en la interfaz {interface}.', 'Packet capture ended on interface {interface}.'),
+    ('journalWifiInfo', 'Se consultó la información Wi-Fi: {result}', 'Wi-Fi information was checked: {result}'),
     ('journalLegacy', 'Registro anterior', 'Earlier record'),
     ('journalResults', 'Resultados', 'Results'),
     ('journalExport', 'Se exportó el archivo {name}.', 'The file {name} was exported.'),

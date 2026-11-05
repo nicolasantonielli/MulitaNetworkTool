@@ -76,6 +76,6 @@ class SwitchPortService(EventSource):
                       neighbors=[value[1] for value in neighbors.values() if value[0] > now], vlans=sorted(observed))
         return report
 
-    @operation('export')
+    @operation('export', context=lambda _: {'test': 'switch'})
     def save(self, report: dict) -> Path:
         return self._reports.save(report)

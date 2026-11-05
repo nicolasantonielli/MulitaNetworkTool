@@ -15,6 +15,7 @@ from PyQt5.QtGui import QColor, QGuiApplication
 
 from mulita.core.errors import MulitaError, ValidationError
 from mulita.core.settings import Language, Settings, Theme
+from mulita.core.journal_tests import TESTS
 from mulita.presentation import i18n
 from mulita.presentation.theme import Metrics, palette_for
 from mulita.ui.qt.bridge.base import BridgeContext, Controller, TaskController
@@ -120,6 +121,19 @@ class SettingsController(Controller):
     @pyqtProperty(bool, notify=changed)
     def technicalJournal(self) -> bool:
         return self._current.technical_journal
+
+    @pyqtProperty('QVariantList', notify=changed)
+    def journalTests(self):
+        return [{'id': key, 'label': self._tr(label), 'enabled': key in self._current.journal_tests}
+                for key, label in TESTS]
+
+    @pyqtSlot(str, bool)
+    def setJournalTest(self, test: str, enabled: bool) -> None:
+        try:
+            self._ctx.settings.set_journal_test(test, enabled)
+        except MulitaError as exc:
+            self._fail(exc)
+            self.changed.emit()
 
     @pyqtSlot(bool)
     def setTechnicalJournal(self, enabled: bool) -> None:

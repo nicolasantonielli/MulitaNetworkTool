@@ -119,7 +119,7 @@ class TechnicalJournalTest(unittest.TestCase):
         self.assertNotIn('private-password', repr(events))
         for event in events:
             self.services.journal.record(event)
-        self.assertIn('Se estableció la conexión Wi-Fi con la red lab.', self.text())
+        self.assertEqual(self.text(), '')  # Connection changes are system activity, not diagnostics.
         self.assertNotIn('private-password', self.text())
         with patch.object(self.runner, 'run', side_effect=OSError('secret-error-text')):
             with self.assertRaises(OSError):
@@ -145,7 +145,8 @@ class TechnicalJournalTest(unittest.TestCase):
             return command
         with patch.object(self.runner, 'start', side_effect=immediate):
             request = self.services.capture.start('eth0', 'inout', 'capture')
-        self.assertIn(f'se guardó en {request.filename}.', self.text())
+        self.assertIn('Finalizó la captura en la interfaz eth0.', self.text())
+        self.assertNotIn(request.filename, self.text())
 
     def test_service_graph_does_not_load_qt(self):
         subprocess.run([sys.executable, '-c',
@@ -182,7 +183,7 @@ class TechnicalJournalTest(unittest.TestCase):
             ('speed', {}, SpeedTestResult(10000000, 2000000), '10.00'),
             ('public_ip', {}, SimpleNamespace(ip='192.0.2.1'), '192.0.2.1'),
             ('vendor', {'mac': '00:11:22:33:44:55'}, 'Vendor', 'Vendor'),
-            ('capture', {'interface': 'eth0', 'exit_code': 0}, SimpleNamespace(filename='capture.pcap'), 'capture.pcap'),
+            ('capture', {'interface': 'eth0', 'exit_code': 0}, SimpleNamespace(filename='capture.pcap'), 'eth0'),
             ('tap', {'config': SimpleNamespace(entrante='eth0', saliente='eth1')}, 'tap.pcap', 'tap.pcap'),
             ('tls', {'target': 'example.org'}, (SimpleNamespace(severity='HIGH'),), ': 1'),
             ('nmap', {'target': '192.0.2.1'},

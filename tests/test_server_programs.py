@@ -292,13 +292,16 @@ class WebTest(unittest.TestCase):
         settings = Path(self.tmp.name) / 'settings.json'
         port = self.serve(journal_settings=settings)
         folder = Path(self.captures) / 'bitacora'
+        reports = Path(self.captures) / 'ping'
+        reports.mkdir()
+        (reports / 'informe.csv').write_text('ping results')
         settings.write_text('{"technicalJournal":false}')
-        self.assertEqual(self.get(port, '/capturas/informe.csv')[0], 200)
+        self.assertEqual(self.get(port, '/capturas/ping/informe.csv')[0], 200)
         self.assertFalse(folder.exists())
         settings.write_text('{"technicalJournal":true}')
-        self.assertEqual(self.get(port, '/capturas/informe.csv', 'HEAD')[0], 200)
+        self.assertEqual(self.get(port, '/capturas/ping/informe.csv', 'HEAD')[0], 200)
         self.assertFalse(folder.exists())
-        self.assertEqual(self.get(port, '/capturas/informe.csv')[0], 200)
+        self.assertEqual(self.get(port, '/capturas/ping/informe.csv')[0], 200)
         # A following request can finish before the download handler closes its log.
         for _ in range(100):
             logs = list(folder.glob('*.txt'))
@@ -308,7 +311,7 @@ class WebTest(unittest.TestCase):
         self.assertIn('Se exportó el archivo informe.csv desde la web.', logs[0].read_text(encoding='utf-8'))
 
         settings.write_text('{"technicalJournal":true,"language":"en"}')
-        self.assertEqual(self.get(port, '/capturas/informe.csv')[0], 200)
+        self.assertEqual(self.get(port, '/capturas/ping/informe.csv')[0], 200)
         for _ in range(100):
             text = logs[0].read_text(encoding='utf-8')
             if 'The file informe.csv was exported from the web.' in text:
@@ -317,8 +320,20 @@ class WebTest(unittest.TestCase):
         self.assertIn('The file informe.csv was exported from the web.', text)
         self.assertIn('Se exportó el archivo informe.csv desde la web.', text)
         settings.write_text('{"technicalJournal":false,"language":"en"}')
-        self.assertEqual(self.get(port, '/capturas/informe.csv')[0], 200)
+        self.assertEqual(self.get(port, '/capturas/ping/informe.csv')[0], 200)
         self.assertEqual(logs[0].read_text(encoding='utf-8'), text)
+
+    def test_web_exports_ignore_disabled_tests_and_journal_exports(self):
+        settings = Path(self.tmp.name) / 'settings.json'
+        settings.write_text('{"technicalJournal":true,"journalTests":{"ping":false}}')
+        folder = Path(self.captures) / 'ping'
+        folder.mkdir()
+        (folder / 'ping.csv').write_text('results')
+        port = self.serve(journal_settings=settings)
+        self.assertEqual(self.get(port, '/capturas/ping/ping.csv')[0], 200)
+        self.assertEqual(self.get(port, '/capturas/informe.csv')[0], 200)
+        time.sleep(0.05)
+        self.assertFalse((Path(self.captures) / 'bitacora').exists())
 
     def test_technical_timeline_csv_and_internal_metadata(self):
         import csv

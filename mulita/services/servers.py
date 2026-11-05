@@ -104,7 +104,7 @@ class ServerService(EventSource):
 
     # --- Registro guardado --------------------------------------------------------------
 
-    @operation('export')
+    @operation('export', context=lambda _: {'test': 'server'})
     def save(self, kind: str, rows: list[dict], filename: str) -> str:
         definition = kind_by_id(kind)
         if not rows:

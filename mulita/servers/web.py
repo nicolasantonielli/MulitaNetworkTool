@@ -34,6 +34,8 @@ from mulita.core.events import OperationEvent
 from mulita.presentation.journal import render_record
 from mulita.presentation.journal_web import timeline
 from mulita.core.settings import Settings
+from mulita.core.storage import PLACES as STORAGE_PLACES
+from mulita.core.journal_tests import PLACES as JOURNAL_PLACES
 from mulita.services.journal import TechnicalJournalService
 
 JOURNALS = {'actividad': ('Registro de actividades', '.log'), 'bitacora': ('Bitácora técnica', '.txt')}
@@ -441,15 +443,23 @@ class Handler(SimpleHTTPRequestHandler):
     def copyfile(self, source, outputfile):
         super().copyfile(source, outputfile)
         if self.server.captures and self.path.startswith('/capturas/') and hasattr(source, 'name'):
-            self._export_note(Path(source.name).name)
+            path = Path(self.translate_path(self.path))
+            relative = path.relative_to(Path(self.server.captures))
+            test = None
+            if len(relative.parts) == 1 and path.suffix == '.pcap':
+                test = 'capture'
+            elif len(relative.parts) > 1:
+                test = next((JOURNAL_PLACES.get(place.id) for place in STORAGE_PLACES
+                             if place.folder == relative.parts[0]), None)
+            self._export_note(Path(source.name).name, test)
 
-    def _export_note(self, name):
+    def _export_note(self, name, test=None):
         if not self.server.journal_settings:
             return
         service = TechnicalJournalService(
             StoredSettingsReader(Path(self.server.journal_settings)), render_record,
             FileJournalRepository(Path(self.server.captures) / 'bitacora', '.txt').append)
-        service.record(OperationEvent('web_export', 'completed', {}, name))
+        service.record(OperationEvent('web_export', 'completed', {'test': test}, name))
 
     def do_POST(self) -> None:
         parts = urlsplit(self.path).path.split('/')

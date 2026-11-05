@@ -67,7 +67,7 @@ class TlsService(ProcessSession):
         self._findings = parse_report(raw)
         shutil.rmtree(workdir, ignore_errors=True)
 
-    @operation('export')
+    @operation('export', context=lambda _: {'test': 'tls'})
     def save(self, findings: tuple[TlsFinding, ...], filename: str) -> str:
         if not findings:
             raise ValidationError(message('noTlsRows'))

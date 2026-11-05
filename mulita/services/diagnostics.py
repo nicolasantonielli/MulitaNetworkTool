@@ -41,7 +41,7 @@ class TraceService(EventSource):
             raise CommandFailedError(detail or message('traceFailed'), result)
         return ()
 
-    @operation('export')
+    @operation('export', context=lambda _: {'test': 'trace'})
     def save(self, hops: tuple[TraceHop, ...], filename: str) -> str:
         if not hops:
             raise ValidationError(message('noTrace'))
@@ -184,7 +184,7 @@ class PortScanService(EventSource):
             raise CommandFailedError(detail or message('scanFailed'), result)
         return ()
 
-    @operation('export')
+    @operation('export', context=lambda _: {'test': 'ports'})
     def save(self, findings: tuple[PortFinding, ...], filename: str) -> str:
         if not findings:
             raise ValidationError(message('noPorts'))
@@ -242,7 +242,7 @@ class DiscoveryService(ProcessSession):
             raise ValidationError(message('discoverNoAddress', interface=interface))
         return network
 
-    @operation('export')
+    @operation('export', context=lambda _: {'test': 'discovery'})
     def save(self, hosts: tuple[HostSighting, ...], filename: str) -> str:
         if not hosts:
             raise ValidationError(message('noHosts'))

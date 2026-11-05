@@ -4,6 +4,7 @@ import QtQuick.Layouts 1.15
 import "../components"
 
 ScrollPage {
+    signal openJournalAdvanced()
     Card {
         Layout.fillWidth: true
         title: i18n.pack.about
@@ -67,6 +68,11 @@ ScrollPage {
             onToggled: settings.setTechnicalJournal(checked)
             palette.windowText: ui.text
             implicitHeight: ui.touch
+        }
+        TouchButton {
+            objectName: "journalAdvancedButton"
+            text: i18n.pack.journalAdvanced
+            onClicked: openJournalAdvanced()
         }
     }
 
