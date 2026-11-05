@@ -12,14 +12,21 @@ import html
 import io
 import os
 import posixpath
+import secrets
 import socket
 import ssl
 import sys
 import threading
 import time
 from string import Template
+from pathlib import Path
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import quote, unquote, urlsplit
+from urllib.parse import parse_qs, quote, unquote, urlsplit
+
+if __package__:
+    from .activity_days import day_path, list_days
+else:  # Mulita also starts this server by script path.
+    from activity_days import day_path, list_days
 
 MAX_TEST_MB = 1024
 CHUNK = 64 * 1024
@@ -73,6 +80,8 @@ svg { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.7;
 .file-name { min-width:0; overflow-wrap:anywhere; }
 .empty { padding:28px; color:var(--muted); }
 .back-link { display:inline-flex; align-items:center; min-height:44px; margin-top:12px; }
+.journal { white-space:pre-wrap; overflow-wrap:anywhere; font:14px/1.6 Consolas,monospace; }
+.journal-actions { display:flex; flex-wrap:wrap; align-items:center; gap:18px; margin:16px 0; }
 .theme:hover { background:var(--high); }
 main { max-width:1080px; margin:auto; padding:42px 28px 28px; }
 .eyebrow { margin:0 0 8px; color:var(--muted); font-size:12px; font-weight:600;
@@ -299,6 +308,9 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _special(self, send_body: bool) -> bool:
         path = urlsplit(self.path).path
+        if path == '/actividad' or path.startswith('/actividad/'):
+            self._activity(path, send_body)
+            return True
         if path in ('/', ''):
             self._index(send_body)
             return True
@@ -322,6 +334,70 @@ class Handler(SimpleHTTPRequestHandler):
                 pass
         return True
 
+    def _activity(self, path: str, send_body: bool) -> None:
+        if not self.server.captures:
+            self.send_error(404)
+            return
+        folder = Path(self.server.captures) / 'actividad'
+        try:
+            if path in ('/actividad', '/actividad/'):
+                rows = ''.join(
+                    f'<li><a class="resource" href="/actividad/{day}">{day}</a></li>'
+                    for day in list_days(folder))
+                content = '<h1>Registro de actividades</h1>' + (
+                    f'<ul class="panel file-list">{rows}</ul>' if rows else
+                    '<p class="empty">Todavía no hay jornadas registradas.</p>')
+            else:
+                parts = path.removeprefix('/actividad/').rstrip('/').split('/')
+                day = parts[0]
+                filename = day_path(folder, day)
+                if parts == [day, 'exportar']:
+                    data = filename.read_bytes()
+                    self._send_data(data, 'text/plain; charset=utf-8', send_body, filename.name)
+                    return
+                if parts != [day]:
+                    raise FileNotFoundError
+                report = html.escape(filename.read_text(encoding='utf-8'))
+                content = (
+                    '<a class="back-link" href="/actividad/">← Todas las jornadas</a>'
+                    f'<h1>Registro del {day}</h1><div class="journal-actions">'
+                    f'<a class="download" href="/actividad/{day}/exportar">Exportar .log</a>'
+                    f'<form method="post" action="/actividad/{day}/eliminar" '
+                    f'onsubmit="return confirm(\'¿Eliminar el registro del {day}?\')">'
+                    f'<input type="hidden" name="token" value="{self.server.activity_token}">'
+                    '<button type="submit" class="theme">Eliminar jornada</button></form></div>'
+                    f'<pre class="panel connection journal">{report}</pre>')
+            self._send_data(render_page(content, self.secure), 'text/html; charset=utf-8', send_body)
+        except (FileNotFoundError, ValueError):
+            self.send_error(404)
+        except OSError:
+            self.send_error(403)
+
+    def do_POST(self) -> None:
+        parts = urlsplit(self.path).path.split('/')
+        if not self.server.captures or len(parts) != 4 or parts[:2] != ['', 'actividad'] or parts[3] != 'eliminar':
+            self.send_error(404)
+            return
+        try:
+            length = int(self.headers.get('Content-Length', '0'))
+            if not 0 < length <= 256 or self.headers.get_content_type() != 'application/x-www-form-urlencoded':
+                self.send_error(400)
+                return
+            form = parse_qs(self.rfile.read(length).decode('ascii'))
+            if form.get('token') != [self.server.activity_token]:
+                self.send_error(403)
+                return
+            day_path(Path(self.server.captures) / 'actividad', parts[2]).unlink()
+        except (ValueError, FileNotFoundError):
+            self.send_error(404)
+            return
+        except OSError:
+            self.send_error(403)
+            return
+        self.send_response(303)
+        self.send_header('Location', '/actividad/')
+        self.end_headers()
+
     def _index(self, send_body: bool) -> None:
         server = self.connection.getsockname()[0]
         scheme = 'HTTPS' if self.secure else 'HTTP'
@@ -335,6 +411,9 @@ class Handler(SimpleHTTPRequestHandler):
                 '<span><strong>Capturas e informes</strong>'
                 '<small>Consultá los resultados de Mulita.</small></span>'
                 '<span class="arrow" aria-hidden="true">›</span></a>')
+            captures += ('<a class="panel resource" href="/actividad/"><span><strong>Registro de actividades</strong>'
+                         '<small>Consultar jornadas y exportar registros.</small></span>'
+                         '<span class="arrow" aria-hidden="true">›</span></a>')
         downloads = ''.join(
             f'<a class="download" href="/prueba/{mb}" download="mulita-prueba-{mb}MB.bin">'
             f'<span><strong>{mb} MB</strong><small>Descargar archivo</small></span>'
@@ -345,9 +424,13 @@ class Handler(SimpleHTTPRequestHandler):
             scheme=scheme, client=html.escape(self.client_address[0]),
             server=html.escape(server), timestamp=time.strftime('%Y-%m-%d %H:%M:%S'),
             captures=captures, downloads=downloads)
-        page = render_page(content, self.secure)
+        self._send_data(render_page(content, self.secure), 'text/html; charset=utf-8', send_body)
+
+    def _send_data(self, page, content_type, send_body, filename=None):
         self.send_response(200)
-        self.send_header('Content-Type', 'text/html; charset=utf-8')
+        self.send_header('Content-Type', content_type)
+        if filename:
+            self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
         self.send_header('Content-Length', str(len(page)))
         self.send_header('Cache-Control', 'no-store')
         self.end_headers()
@@ -380,6 +463,7 @@ class Server(ThreadingHTTPServer):
                  context: ssl.SSLContext | None = None):
         self.root = root
         self.captures = captures
+        self.activity_token = secrets.token_urlsafe(32)
         self.context = context
         super().__init__(address, handler)
 

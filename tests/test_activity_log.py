@@ -31,6 +31,9 @@ class ActivityLogTest(unittest.TestCase):
             runner = FakeRunner({'/usr/bin/ip': CommandResult(0, '[]'),
                                  '/usr/bin/nmcli': CommandResult(0, '')})
             services = build_services(config, runner=runner)
+            usb = Path(folder) / 'usb'
+            usb.mkdir()
+            services.files = CaptureFilesService(config.capture_dir, storage=FakeStorage((UsbDrive('sda1', 'USB', str(usb)),)))
             services.wifi.connect = Mock(return_value='lab')
             app = QtApplication(config, services)
             try:
@@ -77,10 +80,19 @@ class ActivityLogTest(unittest.TestCase):
                 self.assertEqual(activity.read(activity.days[0]), report)
                 day = activity.days[0]
                 filename = day + '.log'
-                usb = Path(folder) / 'usb'
-                usb.mkdir()
-                files = CaptureFilesService(config.capture_dir, storage=FakeStorage((UsbDrive('sda1', 'USB', str(usb)),)))
-                files.export('actividad', filename, 'sda1')
+                buttons = [child for child in page.findChildren(QObject) if child.property('text') == 'Exportar'
+                           and child.metaObject().indexOfSignal(b'clicked()') >= 0]
+                buttons[0].clicked.emit()
+                for _ in range(100):
+                    QTest.qWait(20)
+                    if buttons[1].isVisible() and buttons[1].isEnabled():
+                        break
+                self.assertTrue(buttons[1].isEnabled())
+                buttons[1].clicked.emit()
+                for _ in range(100):
+                    QTest.qWait(20)
+                    if (usb / filename).exists():
+                        break
                 self.assertEqual((usb / filename).read_text(encoding='utf-8'), report)
 
                 history = config.capture_dir / 'actividad'
@@ -89,6 +101,17 @@ class ActivityLogTest(unittest.TestCase):
                 page.setProperty('selectedDay', '2020-01-01')
                 page.refresh()
                 self.assertEqual(page.property('report'), 'Previous session')
+                delete_button = next(child for child in page.findChildren(QObject) if child.property('text') == 'Borrar'
+                                     and child.metaObject().indexOfSignal(b'clicked()') >= 0)
+                delete_button.clicked.emit()
+                QTest.qWait(300)
+                dialog = next(child for child in page.findChildren(QObject) if child.property('opened') is True)
+                dialog.finish(False)
+                self.assertTrue((history / '2020-01-01.log').exists())
+                delete_button.clicked.emit()
+                dialog.finish(True)
+                self.assertEqual(activity.days, [day])
+                self.assertEqual(page.property('report'), report)
             finally:
                 app.dispose()
 

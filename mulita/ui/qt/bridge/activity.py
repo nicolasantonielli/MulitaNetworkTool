@@ -1,9 +1,10 @@
 """Registro diario de acciones iniciadas desde Mulita."""
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
+from mulita.servers.activity_days import day_path, list_days
 from mulita.ui.qt.bridge.base import Controller
 
 
@@ -47,9 +48,9 @@ class ActivityController(Controller):
         line = ' | '.join(' '.join(str(part).split())[:512] for part in parts if part)
         try:
             self._folder.mkdir(parents=True, exist_ok=True)
-            with (self._folder / f'{now.date()}.log').open('a', encoding='utf-8') as stream:
+            with day_path(self._folder, now.date().isoformat()).open('a', encoding='utf-8') as stream:
                 stream.write(line + '\n')
-        except OSError as error:
+        except (OSError, ValueError) as error:
             self._fail(error)
             return
         self.changed.emit()
@@ -57,8 +58,8 @@ class ActivityController(Controller):
     @pyqtProperty('QStringList', notify=changed)
     def days(self):
         try:
-            return sorted((p.stem for p in self._folder.glob('????-??-??.log') if p.is_file()), reverse=True)
-        except OSError as error:
+            return list_days(self._folder)
+        except (OSError, ValueError) as error:
             self._fail(error)
             return []
 
@@ -67,10 +68,18 @@ class ActivityController(Controller):
         if not day:
             return ''
         try:
-            path = self._folder / f'{date.fromisoformat(day).isoformat()}.log'
+            path = day_path(self._folder, day)
             return path.read_text(encoding='utf-8')
         except FileNotFoundError:
             return ''
         except (OSError, ValueError) as error:
             self._fail(error)
             return ''
+
+    @pyqtSlot(str)
+    def deleteDay(self, day):
+        try:
+            day_path(self._folder, day).unlink(missing_ok=True)
+        except (OSError, ValueError) as error:
+            self._fail(error)
+        self.changed.emit()

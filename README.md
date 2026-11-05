@@ -252,7 +252,9 @@ If an update changes installation dependencies, service generation, or display c
 
 ### Activity log
 
-Enable **Record activities** under **Settings → General**. The **Activity log** tile shows dated entries for operator actions such as pings, captures, scans, Wi-Fi connections, and configuration changes. Select a day and use **Copy** to include it in a report. Daily UTF-8 text files are saved in the `actividad` folder under the capture directory and can be exported from **Tools → Files**. Recording starts disabled. Turning it off keeps the existing history available.
+Enable **Record activities** under **Settings → General**. The **Activity log** tile shows dated entries for operator actions such as pings, captures, scans, Wi-Fi connections, and configuration changes. Select a day to copy its text, export its `.log` file to a USB drive, or delete it after confirmation. Recording starts disabled. Turning it off keeps the existing history available.
+
+Start Mulita's HTTP or HTTPS server with **Share captures and reports** enabled. Visitors can open **Registro de actividades** from the web home page (`/actividad/`), select a daily page, download its UTF-8 log, or delete that day from the device. The tile and the web server use the same files. If today's log is deleted while recording is enabled, the next recorded action starts a new log for today.
 
 ## Application Settings
 

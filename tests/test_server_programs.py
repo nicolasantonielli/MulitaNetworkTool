@@ -1,6 +1,7 @@
 import http.client
 import io
 import os
+import re
 import shutil
 import socket
 import ssl
@@ -11,6 +12,7 @@ import threading
 import time
 import unittest
 from unittest import mock
+from pathlib import Path
 
 from mulita.servers import ntp, tftp, web
 
@@ -246,6 +248,43 @@ class WebTest(unittest.TestCase):
         self.assertIn('127.0.0.1', text)
         self.assertIn('/capturas/', text)
         self.assertEqual(self.get(port, '/', 'HEAD')[1], b'')
+
+    def test_daily_activity_view_download_and_confirmed_deletion(self):
+        folder = Path(self.captures) / 'actividad'
+        folder.mkdir()
+        day = '2026-11-04'
+        report = b'Ping <lab>\n'
+        path = folder / (day + '.log')
+        path.write_bytes(report)
+        url = '/actividad/' + day
+        port = self.serve()
+        self.assertIn(b'/actividad/', self.get(port, '/')[1])
+        self.assertIn(url.encode(), self.get(port, '/actividad/')[1])
+        status, page = self.get(port, url)
+        self.assertEqual(status, 200)
+        self.assertIn(b'Ping &lt;lab&gt;', page)
+        self.assertEqual(self.get(port, url, 'HEAD'), (200, b''))
+        conn = http.client.HTTPConnection('127.0.0.1', port)
+        self.addCleanup(conn.close)
+        conn.request('GET', url + '/exportar')
+        response = conn.getresponse()
+        self.assertIn(day + '.log', response.getheader('Content-Disposition'))
+        self.assertEqual(response.read(), report)
+        self.assertEqual(self.get(port, url + '/eliminar')[0], 404)
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+        conn.request('POST', url + '/eliminar', 'token=invalid', headers)
+        response = conn.getresponse()
+        self.assertEqual(response.status, 403)
+        response.read()
+        self.assertTrue(path.exists())
+        token = re.search(rb'name="token" value="([^"]+)"', page).group(1)
+        conn.request('POST', url + '/eliminar', b'token=' + token, headers)
+        response = conn.getresponse()
+        self.assertEqual(response.status, 303)
+        response.read()
+        self.assertFalse(path.exists())
+        self.assertEqual(self.get(port, url)[0], 404)
+        self.assertEqual(self.get(self.serve(captures=False), '/actividad/')[0], 404)
 
     def test_files_are_served_from_the_root_and_from_archivos(self):
         port = self.serve()
