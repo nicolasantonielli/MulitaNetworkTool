@@ -54,7 +54,14 @@ ColumnLayout {
             wrapMode: Text.Wrap
         }
         ComboBox {
+            id: daySelector
+            objectName: "journalDaySelector"
+            font.pixelSize: ui.fontBody
+            implicitWidth: Math.ceil(dayWidth.width) + leftPadding + rightPadding
+                           + contentItem.leftPadding + contentItem.rightPadding + ui.gap * 2
+            Layout.minimumWidth: implicitWidth
             implicitHeight: ui.touch
+            TextMetrics { id: dayWidth; font: daySelector.font; text: "8888-88-88" }
             model: root.availableDays
             visible: count > 0
             currentIndex: model.indexOf(root.selectedDay)
