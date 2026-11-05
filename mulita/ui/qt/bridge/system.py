@@ -42,7 +42,8 @@ class SystemController(TaskController):
     @pyqtSlot()
     def update(self) -> None:
         self._task(self._maintenance.update,
-                   lambda _result: self._ctx.notifier.success(self._tr('updateWord'), self._tr('updateDone')))
+                   lambda _result: self._ctx.notifier.success(self._tr('updateWord'), self._tr('updateDone')),
+                   action='updateWord', detail=self._ctx.config.update_branch)
 
     @pyqtSlot()
     def reset(self) -> None:
@@ -50,10 +51,12 @@ class SystemController(TaskController):
             if result is None:
                 os.execv(sys.executable, [sys.executable, *sys.argv])
 
+        self._record('restartApp', '', 'activityStarted')
         self._ctx.dispatcher.finish_background(self._maintenance.reset, restarted, self._fail)
 
     @pyqtSlot()
     def poweroff(self) -> None:
+        self._record('powerOff', '', 'activityStarted')
         self._ctx.dispatcher.finish_background(self._maintenance.poweroff, on_error=self._fail)
 
     @pyqtSlot(str)
@@ -111,6 +114,18 @@ class SettingsController(Controller):
             self._ctx.settings.set_resize_tiles(value)
         except MulitaError as exc:
             self._fail(exc)
+
+    @pyqtProperty(bool, notify=changed)
+    def activityLogging(self) -> bool:
+        return self._current.activity_logging
+
+    @pyqtSlot(bool)
+    def setActivityLogging(self, enabled: bool) -> None:
+        try:
+            self._ctx.settings.set_activity_logging(enabled)
+        except MulitaError as exc:
+            self._fail(exc)
+            self.changed.emit()
 
     @pyqtProperty(int, notify=changed)
     def brightness(self) -> int:

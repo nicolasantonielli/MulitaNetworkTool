@@ -1,2 +1,2 @@
 # Versionado semantico: MAYOR.MENOR.PARCHE. Se incrementa con cada actualizacion.
-__version__ = '3.1.10'
+__version__ = '3.1.11'

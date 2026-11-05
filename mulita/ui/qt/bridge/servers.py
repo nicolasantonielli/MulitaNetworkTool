@@ -91,6 +91,7 @@ class ServersController(Controller):
         self._stopping.discard(kind)
         self._starting.add(kind)
         self._logs[kind].clear()
+        self._record(kind_by_id(kind).title, '', 'activityStarted')
         self._set_state(kind, STARTING)
         self._notify_rows(kind)
         dispatcher = self._ctx.dispatcher
@@ -107,6 +108,7 @@ class ServersController(Controller):
     def stop(self, kind: str) -> None:
         if kind not in self._logs or self._states.get(kind, IDLE) == IDLE:
             return
+        self._record(kind_by_id(kind).title, '', 'activityStop')
         self._stopping.add(kind)
         # La preparación todavía puede crear recursos o lanzar el proceso.
         # Esperar su respuesta evita limpiar SFTP a mitad de su configuración
@@ -167,6 +169,7 @@ class ServersController(Controller):
         self._stopping.discard(kind)
         self._set_state(kind, IDLE)
         if not stopped:
+            self._record(kind_by_id(kind).title, '', 'activityFailed')
             self._fail(error)
 
     def _output(self, kind: str, text: str) -> None:
@@ -184,6 +187,7 @@ class ServersController(Controller):
         stopped = kind in self._stopping
         self._stopping.discard(kind)
         self._set_state(kind, IDLE)
+        self._record(kind_by_id(kind).title, '', 'activityFailed' if code and not stopped else 'activityEnded')
         if code != 0 and not stopped:
             detail = '\n'.join(self._logs[kind].tail) or self._tr('serverFailed', code=code)
             self._ctx.notifier.error(detail, title=self._tr(kind_by_id(kind).title))

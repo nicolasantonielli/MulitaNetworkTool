@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 
 class Notifier(QObject):
+    activityRecorded = pyqtSignal(str, str, str)
     notified = pyqtSignal(str, str, str, arguments=['kind', 'title', 'message'])
 
     def info(self, title: str, message: str) -> None:
@@ -65,6 +66,10 @@ class Controller(QObject):
     def saving(self) -> bool:
         return self._saving
 
+    def _record(self, action: str, detail: str = '', phase: str = '') -> None:
+        if action:
+            self._ctx.notifier.activityRecorded.emit(action, detail, phase)
+
     def _export(self, task, on_success) -> None:
         """Una exportación por controlador, con respuestas en el hilo gráfico."""
         if self._saving:
@@ -72,17 +77,18 @@ class Controller(QObject):
         self._saving = True
         self.savingChanged.emit()
 
-        def finished(callback, value):
+        def finished(callback, value, phase):
             self._saving = False
             self.savingChanged.emit()
+            self._record('export', '', phase)
             callback(value)
 
         try:
             self._ctx.dispatcher.background(
-                task, lambda value: finished(on_success, value),
-                lambda error: finished(self._fail, error))
+                task, lambda value: finished(on_success, value, 'activityCompleted'),
+                lambda error: finished(self._fail, error, 'activityFailed'))
         except Exception as error:
-            finished(self._fail, error)
+            finished(self._fail, error, 'activityFailed')
 
     @property
     def translator(self) -> Translator:
@@ -126,18 +132,22 @@ class TaskController(Controller):
 
     def _task(self, task: Callable[[], Any],
               on_success: Optional[Callable[[Any], None]] = None,
-              on_error: Optional[Callable[[Exception], None]] = None) -> None:
+              on_error: Optional[Callable[[Exception], None]] = None,
+              *, action: str = '', detail: str = '') -> None:
         if self._busy:
             return
         self._set_busy(True)
+        self._record(action, detail, 'activityStarted')
 
         def succeeded(value: Any) -> None:
             self._set_busy(False)
+            self._record(action, detail, 'activityCompleted')
             if on_success:
                 on_success(value)
 
         def failed(error: Exception) -> None:
             self._set_busy(False)
+            self._record(action, detail, 'activityFailed')
             (on_error or self._fail)(error)
 
         self._ctx.dispatcher.background(task, succeeded, failed)
@@ -151,6 +161,8 @@ class SessionController(Controller):
         super().__init__(ctx)
         self._session = session
         self._running = False
+        self._activity_action = ''
+        self._activity_detail = ''
         self._console = Console()
 
     @pyqtProperty(bool, notify=runningChanged)
@@ -163,6 +175,8 @@ class SessionController(Controller):
 
     @pyqtSlot()
     def stop(self) -> None:
+        if self._running:
+            self._record(self._activity_action, self._activity_detail, 'activityStop')
         self._session.stop()
         self._set_running(False)
 
@@ -171,13 +185,16 @@ class SessionController(Controller):
             self._running = running
             self.runningChanged.emit()
 
-    def _launch(self, starter: Callable[..., Any]) -> bool:
+    def _launch(self, starter: Callable[..., Any], action: str, detail: str) -> bool:
         dispatcher = self._ctx.dispatcher
         try:
             starter(on_output=dispatcher.wrap(self._output), on_exit=dispatcher.wrap(self._exited))
         except MulitaError as exc:
+            self._record(action, detail, 'activityFailed')
             self._rejected(exc)
             return False
+        self._activity_action, self._activity_detail = action, detail
+        self._record(action, detail, 'activityStarted')
         self._set_running(True)
         return True
 
@@ -189,6 +206,8 @@ class SessionController(Controller):
 
     def _exited(self, code: int) -> None:
         if not self._session.is_running:
+            phase = 'activityFailed' if code and self._running else 'activityEnded'
+            self._record(self._activity_action, self._activity_detail, phase)
             self._set_running(False)
             self._finished(code)
 

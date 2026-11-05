@@ -44,6 +44,7 @@ class SwitchPortController(Controller):
     def start(self, interface, seconds):
         if self._running:
             return
+        self._record('switchTitle', interface, 'activityStarted')
         self._cancelled.clear()
         self._report = {}
         self._running = True
@@ -84,10 +85,12 @@ class SwitchPortController(Controller):
         self._report = report
         self._running = False
         self._status = self._tr('switchCancelled' if report['cancelled'] else 'switchComplete')
+        self._record('switchTitle', self._status)
         self.changed.emit()
 
     def _failed(self, error):
         self._running = False
+        self._record('switchTitle', '', 'activityFailed')
         self._status = self._render(error)
         self.changed.emit()
         self._fail(error)

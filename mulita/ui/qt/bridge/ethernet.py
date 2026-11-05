@@ -27,4 +27,5 @@ class InternalEthernetController(IPv4Controller):
             self._show(config)
             self._ctx.notifier.success(self._tr('ethInternal'), self._tr('vlanApplied'))
         self._task(lambda: self._network.apply_with_vlan(
-            mode, address, netmask, gateway, dns, enabled, vlan), ok)
+            mode, address, netmask, gateway, dns, enabled, vlan), ok, action='ethInternal',
+            detail=f'{mode} {address}' + (f' VLAN {vlan}' if enabled else ''))

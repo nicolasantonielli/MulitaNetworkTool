@@ -15,7 +15,7 @@ from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.errors import MulitaError
 from mulita.core.models import MISSING_COMMAND_CODE
-from mulita.core.tls import DEFAULT_MODE, MODES
+from mulita.core.tls import DEFAULT_MODE, MODES, parse_target
 from mulita.presentation.tls import grouped, summarize
 from mulita.ui.qt.bridge.base import BridgeContext, SessionController
 
@@ -62,11 +62,18 @@ class TlsController(SessionController):
         self._reset()
         self._stopping = False
 
+        try:
+            endpoint = parse_target(target).label
+        except MulitaError as error:
+            self._record('cyberTls', '', 'activityFailed')
+            self._rejected(error)
+            return False
+
         def starter(**callbacks) -> None:
             self._target = self._session.start(target, mode, **callbacks).label
             self.resultChanged.emit()
 
-        return self._launch(starter)
+        return self._launch(starter, 'cyberTls', endpoint)
 
     @pyqtSlot()
     def stop(self) -> None:

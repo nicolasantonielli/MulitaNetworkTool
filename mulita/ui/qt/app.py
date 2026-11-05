@@ -33,6 +33,7 @@ class QtApplication:
         from PyQt5.QtGui import QCursor, QGuiApplication
         from PyQt5.QtQml import QQmlApplicationEngine
 
+        from mulita.ui.qt.bridge.activity import ActivityController
         from mulita.ui.qt.bridge.base import BridgeContext, Notifier
         from mulita.ui.qt.bridge.ethernet import InternalEthernetController
         from mulita.ui.qt.bridge.ipv4 import IPv4Controller
@@ -86,7 +87,10 @@ class QtApplication:
 
         notifier = Notifier()
         ctx = BridgeContext(config=config, settings=services.settings, dispatcher=QtDispatcher(), notifier=notifier)
+        activity = ActivityController(ctx)
+        notifier.activityRecorded.connect(activity.record)
         self._controllers = {
+            'activity': activity,
             'textCopy': self._text_copy,
             'touchTest': self._touch_test,
             'ui': Appearance(ctx),
@@ -176,6 +180,8 @@ class QtApplication:
     def dispose(self) -> None:
         """El motor QML se destruye antes que los controladores que sus vinculaciones leen."""
         from PyQt5 import sip
+        self.app.removeEventFilter(self._touch_debug)
+        self.app.removeEventFilter(self._text_copy)
         self._shutdown()
         if self.engine is not None and not sip.isdeleted(self.engine):
             sip.delete(self.engine)

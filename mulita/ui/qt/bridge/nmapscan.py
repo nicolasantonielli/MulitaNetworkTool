@@ -317,11 +317,14 @@ class NmapController(SessionController):
             prepared,
             on_output=dispatcher.wrap(lambda text: self._output(text) if generation == self._run_generation else None),
             on_exit=dispatcher.wrap(lambda code: self._exited(code) if generation == self._run_generation else None))
+        self._activity_action, self._activity_detail = 'cyberNmap', self._targets
+        self._record('cyberNmap', self._targets, 'activityStarted')
         self._set_running(True)
         self._phase = 'running'
         self.runChanged.emit()
 
     def _rejected(self, error: Exception) -> None:
+        self._record('cyberNmap', '', 'activityFailed')
         self._phase = 'idle'
         self._set_running(False)
         if not self._stopping:
@@ -352,6 +355,7 @@ class NmapController(SessionController):
                 self._fallback = 'tcp-standard'
             if outcome.status == 'error':
                 self._ctx.notifier.error(outcome.tail or self._tr('nmapFailed', code=code), title=self._tr('cyberNmap'))
+        self._record('cyberNmap', self._targets, 'activityFailed' if self._phase == 'error' else 'activityEnded')
         self.hostsChanged.emit()
         self.runChanged.emit()
         self._refresh_catalog()

@@ -77,7 +77,8 @@ ColumnLayout {
             nmap: i18n.pack.cyberNmap,
             tls: i18n.pack.cyberTls,
             servers: i18n.pack.homeServers,
-            switchport: i18n.pack.switchTitle
+            switchport: i18n.pack.switchTitle,
+            activity: i18n.pack.activityTitle
         }
         return names[id] || id
     }
@@ -86,7 +87,7 @@ ColumnLayout {
         var names = {
             capture: "capture", traces: "trace", tap: "tap", scan: "scan",
             tools: "tools", settings: "settings", vuln: "bug", wifi: "wifi",
-            arp: "shield", nmap: "scan", tls: "lock", servers: "server", switchport: "ethernet"
+            arp: "shield", nmap: "scan", tls: "lock", servers: "server", switchport: "ethernet", activity: "file"
         }
         return names[id] || "info"
     }

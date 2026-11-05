@@ -62,7 +62,7 @@ class WakeOnLanController(TaskController):
         self._detail = ''
         self._phase = 'sending'
         self.changed.emit()
-        self._task(lambda: self._wake_on_lan.wake(mac), self._sent, self._failed)
+        self._task(lambda: self._wake_on_lan.wake(mac), self._sent, self._failed, action='toolWol', detail=mac)
 
     def _sent(self, packet) -> None:
         self._phase = 'sent'
@@ -136,7 +136,7 @@ class SpeedTestController(TaskController):
     def measure(self, interface: str) -> None:
         self._set_status(texts.MEASURING)
         self._task(lambda: self._speed_test.measure(interface),
-                   self._show, lambda error: self._set_status(self._render(error)))
+                   self._show, lambda error: self._set_status(self._render(error)), action='toolSpeed', detail=interface)
 
     def _show(self, result: SpeedTestResult) -> None:
         self._result = result
@@ -175,7 +175,7 @@ class PublicIpController(TaskController):
 
     @pyqtSlot()
     def lookup(self) -> None:
-        self._task(self._public_ip.lookup, self._show, self._failed)
+        self._task(self._public_ip.lookup, self._show, self._failed, action='publicIp')
 
     @pyqtSlot()
     def save(self) -> None:
@@ -183,7 +183,7 @@ class PublicIpController(TaskController):
         if info is None or self._busy:
             return
         self._task(lambda: self._public_ip.save(info),
-                   lambda name: self._ctx.notifier.success(self._tr('pubTitle'), name))
+                   lambda name: self._ctx.notifier.success(self._tr('pubTitle'), name), action='save', detail=self._tr('publicIp'))
 
     def _show(self, info) -> None:
         self._info, self._status = info, ''
@@ -213,7 +213,7 @@ class MacVendorController(TaskController):
 
     @pyqtSlot(str)
     def lookup(self, mac: str) -> None:
-        self._task(lambda: self._mac_vendor.lookup(mac), self._show, self._failed)
+        self._task(lambda: self._mac_vendor.lookup(mac), self._show, self._failed, action='vendor', detail=mac)
 
     def _show(self, name: str) -> None:
         self._vendor, self._status = name, ''
@@ -280,27 +280,33 @@ class FilesController(TaskController):
 
     @pyqtSlot(str, str, str)
     def rename(self, place: str, name: str, new_name: str) -> None:
-        self._task(lambda: self._files_service.rename(place, name, new_name), self._done)
+        self._task(lambda: self._files_service.rename(place, name, new_name), self._done,
+                   action='rename', detail=name)
 
     @pyqtSlot(str, str, str)
     def copyFile(self, place: str, name: str, new_name: str) -> None:
-        self._task(lambda: self._files_service.copy(place, name, new_name), self._done)
+        self._task(lambda: self._files_service.copy(place, name, new_name), self._done,
+                   action='copy', detail=name)
 
     @pyqtSlot(str, str)
     def remove(self, place: str, name: str) -> None:
-        self._task(lambda: self._files_service.delete(place, name), self._done)
+        self._task(lambda: self._files_service.delete(place, name), self._done,
+                   action='delete', detail=name)
 
     @pyqtSlot(str)
     def removeMany(self, payload: str) -> None:
-        self._task(lambda: self._files_service.delete_many(_picked(payload)), self._done)
+        self._task(lambda: self._files_service.delete_many(_picked(payload)), self._done,
+                   action='delete')
 
     @pyqtSlot(str, str, str)
     def exportFile(self, place: str, name: str, drive: str) -> None:
-        self._task(lambda: self._files_service.export(place, name, drive), self._done)
+        self._task(lambda: self._files_service.export(place, name, drive), self._done,
+                   action='export', detail=name)
 
     @pyqtSlot(str, str)
     def exportMany(self, payload: str, drive: str) -> None:
-        self._task(lambda: self._files_service.export_many(_picked(payload), drive), self._done)
+        self._task(lambda: self._files_service.export_many(_picked(payload), drive), self._done,
+                   action='export')
 
     def _show(self, found: tuple) -> None:
         self._files = found

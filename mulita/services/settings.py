@@ -44,6 +44,9 @@ class SettingsService:
     def set_resize_tiles(self, value: bool) -> Settings:
         return self._commit(replace(self._current, display=replace(self._current.display, resize_tiles=value)))
 
+    def set_activity_logging(self, enabled: bool) -> Settings:
+        return self._commit(replace(self._current, activity_logging=enabled))
+
     def set_rotation(self, angle: int) -> Settings:
         if type(angle) is not int or angle not in (0, 90, 180, 270):
             raise ValidationError(message('rotationInvalid'))

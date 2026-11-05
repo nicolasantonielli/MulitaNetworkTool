@@ -21,7 +21,8 @@ ApplicationWindow {
         { title: i18n.pack.pageServers, share: false },
         { title: i18n.pack.cyberTls, share: false },
         { title: i18n.pack.cyberNmap, share: false },
-        { title: i18n.pack.switchTitle, share: false }
+        { title: i18n.pack.switchTitle, share: false },
+        { title: i18n.pack.activityTitle, share: false }
     ]
     property int currentPage: 0
 
@@ -129,6 +130,7 @@ ApplicationWindow {
                 TlsPage { }
                 NmapPage { }
                 SwitchPortPage { }
+                ActivityPage { }
 
                 onCurrentIndexChanged: pageFade.restart()
             }

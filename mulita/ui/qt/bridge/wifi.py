@@ -76,7 +76,7 @@ class WifiController(TaskController):
             self._ctx.notifier.success('Wi-Fi', self._tr('wifiForgotten'))
             self.loadSaved()
 
-        self._task(lambda: self._wifi.forget_saved(uuid), forgotten)
+        self._task(lambda: self._wifi.forget_saved(uuid), forgotten, action='wifiForget')
 
     @pyqtSlot()
     def disconnect(self) -> None:
@@ -87,7 +87,7 @@ class WifiController(TaskController):
             self._ctx.notifier.success('Wi-Fi', self._tr('wifiDisconnected'))
             self.refresh()
 
-        self._task(self._wifi.disconnect, disconnected)
+        self._task(self._wifi.disconnect, disconnected, action='wifiDisconnect')
 
     @pyqtProperty(str, notify=networksChanged)
     def networksJson(self) -> str:
@@ -113,7 +113,7 @@ class WifiController(TaskController):
             return
         link = self._link
         self._task(lambda: self._wifi.save(link),
-                   lambda name: self._ctx.notifier.success(self._tr('wifiInfo'), name))
+                   lambda name: self._ctx.notifier.success(self._tr('wifiInfo'), name), action='save', detail=self._tr('wifiInfo'))
 
     @pyqtSlot(str, str, bool)
     def connectTo(self, ssid: str, password: str, secure: bool) -> None:
@@ -121,7 +121,7 @@ class WifiController(TaskController):
             self._ctx.notifier.success('Wi-Fi', self._tr('wifiConnected', name=name))
             self.refresh()
 
-        self._task(lambda: self._wifi.connect(ssid, password, secure), connected)
+        self._task(lambda: self._wifi.connect(ssid, password, secure), connected, action='connect', detail=ssid)
 
     @pyqtSlot(str, bool)
     def connectRemembered(self, ssid: str, secure: bool) -> None:
@@ -131,6 +131,7 @@ class WifiController(TaskController):
 
         def finished(connected: bool) -> None:
             if connected:
+                self._record('connect', ssid, 'activityCompleted')
                 self._ctx.notifier.success('Wi-Fi', self._tr('wifiConnected', name=ssid))
                 self.refresh()
             else:

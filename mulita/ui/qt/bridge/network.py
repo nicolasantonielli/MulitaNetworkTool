@@ -155,7 +155,7 @@ class CaptureController(SessionController):
         self._last_output.clear()
         self._stopping = False
         started = self._launch(lambda **listeners: self._remember(
-            self._session.start(interface, direction, filename, **listeners)))
+            self._session.start(interface, direction, filename, **listeners)), 'captureTitle', interface)
         return started
 
     @pyqtSlot()
@@ -212,6 +212,7 @@ class TapController(Controller):
     @pyqtSlot(str, str, str, str)
     def start(self, entrante: str, mirror: str, saliente: str, filename: str) -> None:
         from mulita.core.errors import MulitaError
+        interfaces = f'{entrante} / {mirror} / {saliente}'
         try:
             name = self._tap.start(
                 TapConfig(entrante=entrante, mirror=mirror, saliente=saliente),
@@ -219,18 +220,23 @@ class TapController(Controller):
                 on_output=self._ctx.dispatcher.wrap(self._output),
                 on_exit=self._ctx.dispatcher.wrap(self._capture_stopped))
         except MulitaError as exc:
+            self._record('homeTap', interfaces, 'activityFailed')
             self._fail(exc)
             return
         self._lines = []
         self._pending = ''
         self.linesChanged.emit()
         self._active_file = name
+        self._record('homeTap', interfaces, 'activityStarted')
         self.activeFileChanged.emit()
         self.runningChanged.emit()
 
     @pyqtSlot()
     def stop(self) -> None:
+        was_running = self._tap.is_running
         self._tap.stop()
+        if was_running:
+            self._record('homeTap', '', 'activityEnded')
         self._active_file = ''
         self.activeFileChanged.emit()
         self.runningChanged.emit()

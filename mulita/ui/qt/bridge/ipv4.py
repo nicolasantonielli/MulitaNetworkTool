@@ -85,7 +85,7 @@ class IPv4Controller(TaskController):
             self._show(config)
             self._ctx.notifier.success(self._tr(self._title_key), done)
 
-        self._task(task, ok)
+        self._task(task, ok, action=self._title_key, detail=f'{mode} {address}'.strip())
 
     def _show(self, config: EthernetConfig) -> None:
         self._config = config

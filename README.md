@@ -250,6 +250,10 @@ sudo systemctl restart mulita
 
 If an update changes installation dependencies, service generation, or display configuration, rerun `bash install-lite.sh 5` or `bash install-lite.sh 7`, then reboot.
 
+### Activity log
+
+Enable **Record activities** under **Settings → General**. The **Activity log** tile shows dated entries for operator actions such as pings, captures, scans, Wi-Fi connections, and configuration changes. Select a day and use **Copy** to include it in a report. Daily UTF-8 text files are saved in the `actividad` folder under the capture directory and can be exported from **Tools → Files**. Recording starts disabled. Turning it off keeps the existing history available.
+
 ## Application Settings
 
 ### General

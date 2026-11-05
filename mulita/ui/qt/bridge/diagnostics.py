@@ -48,7 +48,7 @@ class TraceController(TaskController):
 
     @pyqtSlot(str)
     def trace(self, target: str) -> None:
-        self._task(lambda: self._trace.trace(target), self._show)
+        self._task(lambda: self._trace.trace(target), self._show, action='tracesTitle', detail=target)
 
     @pyqtSlot()
     def clear(self) -> None:
@@ -60,7 +60,7 @@ class TraceController(TaskController):
     @pyqtSlot(str)
     def save(self, filename: str) -> None:
         hops = self._hops
-        self._task(lambda: self._trace.save(hops, filename), self._saved)
+        self._task(lambda: self._trace.save(hops, filename), self._saved, action='save', detail=filename)
 
     def _show(self, hops: tuple) -> None:
         self._hops = tuple(hops)
@@ -162,7 +162,8 @@ class PingController(SessionController):
         self._pending = ''
         self.repliesChanged.emit()
         self.summaryChanged.emit()
-        return self._launch(lambda **listeners: self._session.start(target, count, interval, size, **listeners))
+        return self._launch(lambda **listeners: self._session.start(target, count, interval, size, **listeners),
+                            'pingTitle', target)
 
     @pyqtSlot()
     def clear(self) -> None:
@@ -229,7 +230,7 @@ class PortScanController(TaskController):
 
     @pyqtSlot(str)
     def scan(self, arguments: str) -> None:
-        self._task(lambda: self._port_scan.scan(arguments), self._show)
+        self._task(lambda: self._port_scan.scan(arguments), self._show, action='scanPorts')
 
     @pyqtSlot()
     def clear(self) -> None:
@@ -241,7 +242,7 @@ class PortScanController(TaskController):
     @pyqtSlot(str)
     def save(self, filename: str) -> None:
         found = self._ports
-        self._task(lambda: self._port_scan.save(found, filename), self._saved)
+        self._task(lambda: self._port_scan.save(found, filename), self._saved, action='save', detail=filename)
 
     def _show(self, found: tuple) -> None:
         self._ports = tuple(found)
@@ -282,7 +283,7 @@ class DiscoveryController(SessionController):
         self._diagnostics.clear()
         self._stopping = False
         self.hostsChanged.emit()
-        return self._launch(lambda **callbacks: self._session.start(interface, **callbacks))
+        return self._launch(lambda **callbacks: self._session.start(interface, **callbacks), 'discoverTitle', interface)
 
     @pyqtSlot()
     def stop(self) -> None:

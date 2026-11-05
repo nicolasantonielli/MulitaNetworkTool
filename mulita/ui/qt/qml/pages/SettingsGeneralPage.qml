@@ -24,6 +24,19 @@ ScrollPage {
 
     Card {
         Layout.fillWidth: true
+        title: i18n.pack.activityTitle
+        titleIcon: "file"
+        Switch {
+            text: i18n.pack.activityRecord
+            checked: settings.activityLogging
+            onToggled: settings.setActivityLogging(checked)
+            palette.windowText: ui.text
+            implicitHeight: ui.touch
+        }
+    }
+
+    Card {
+        Layout.fillWidth: true
         title: i18n.pack.language
         titleIcon: "globe"
 
