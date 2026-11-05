@@ -1,5 +1,6 @@
 """Punto de composicion: el unico lugar que conoce todas las implementaciones."""
 from __future__ import annotations
+from contextlib import nullcontext
 
 import logging
 import os
@@ -19,7 +20,6 @@ from mulita.core.commands import CommandFactory
 from mulita.core.models import Calibration
 from mulita.core.events import EventSource
 from mulita.presentation.journal import render_event
-from mulita.servers.activity_days import technical_line
 from mulita.adapters.journals import FileJournalRepository
 from mulita.services.journal_archive import JournalArchive
 from mulita.services.journal import TechnicalJournalService
@@ -61,14 +61,13 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
     capture = CaptureService(runner, commands, config.capture_dir)
     tap = TapService(runner, commands, CaptureService(runner, commands, config.storage.folder('tap')))
     settings = SettingsService(settings_store or JsonSettingsStore(config.settings_path), PanelBacklight())
-    archives = {place: JournalArchive(FileJournalRepository(Path(config.storage.folder(place)), suffix))
-                for place, suffix in (('actividad', '.log'), ('bitacora', '.txt'))}
+    repositories = {place: FileJournalRepository(Path(config.storage.folder(place)), suffix)
+                    for place, suffix in (('actividad', '.log'), ('bitacora', '.txt'))}
+    archives = {place: JournalArchive(repository) for place, repository in repositories.items()}
     def flush_journals():
         for archive in archives.values():
             archive.flush()
-    journal = TechnicalJournalService(
-        settings, render_event,
-        lambda now, text: archives['bitacora'].append(now, technical_line(now, text)))
+    journal = TechnicalJournalService(settings, render_event, archives['bitacora'].append)
     services = Services(
         interfaces=InterfaceService(runner, commands),
         ethernet=EthernetService(runner, commands, config.internal_interface, config.internal_connection),
@@ -88,7 +87,8 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
         files=CaptureFilesService(
             config.capture_dir, lambda: capture.is_running, lambda: tap.is_running,
             storage=LinuxRemovableStorage(runner, commands),
-            journal_flush=lambda place: archives[place].flush() if place in archives else None),
+            journal_flush=lambda place: archives[place].flush() if place in archives else None,
+            journal_access=lambda place: repositories[place].transaction() if place in repositories else nullcontext()),
         maintenance=MaintenanceService(runner, commands, config.repository_dir, config.service_name,
                                    config.update_remote, config.update_branch, config.installation_user,
                                    before_shutdown=flush_journals),

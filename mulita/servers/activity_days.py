@@ -29,7 +29,3 @@ def append_entry(folder: Path, now: datetime, suffix: str, line: str):
     folder.mkdir(parents=True, exist_ok=True)
     with day_path(folder, now.date().isoformat(), suffix).open('a', encoding='utf-8') as stream:
         stream.write(line + '\n')
-
-
-def technical_line(now: datetime, sentence: str) -> str:
-    return f"{now:%Y-%d-%m %H:%M} - {' '.join(sentence.split())}"

@@ -19,7 +19,7 @@ _LABELS = {
     'update': 'updateWord', 'restart': 'restartApp', 'poweroff': 'powerOff',
     'rename': 'rename', 'copy': 'copy', 'delete': 'delete',
 }
-_EXPORTS = ('export', 'ping_export', 'export_many')
+_EXPORTS = ('export', 'ping_export', 'export_many', 'web_export')
 
 
 def render_event(event, language):
@@ -52,7 +52,8 @@ def render_event(event, language):
         names = [PurePath(value).name] if action != 'export_many' else [name for _, name in p['items']]
         if action == 'ping_export':
             names.append(names[0][:-4] + '.statics.csv')
-        return [tr('journalExport', name=name) for name in names]
+        key = 'journalWebExport' if action == 'web_export' else 'journalExport'
+        return [tr(key, name=name) for name in names]
     if action == 'ping':
         summary = value['summary']
         if summary.ready:

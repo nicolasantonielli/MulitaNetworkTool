@@ -264,7 +264,9 @@ New entries use the language selected in Settings (Spanish or English), includin
 
 Device operations emit structured events from the services, including when called without Qt. `TechnicalJournalService` observes these events; a separate formatter produces the localized sentences. Qt controllers only display and manage the journal. The composition root connects the observer, formatter and file writer. Event parameters are explicitly selected so credentials and raw error output are not copied to the journal. A journal write failure is logged and does not change the result of the operation being recorded.
 
-Both journals use a filesystem repository behind a serial background worker. Qt properties return cached snapshots; listing, reading, writing and deleting days never access disk on the GUI thread. Refreshes reuse unchanged text and discard obsolete selections. Local export and application shutdown wait for queued writes. The web server still accesses the shared daily files independently.
+Both journals use a shared filesystem repository, with a serial background worker in the device application. Qt properties return cached snapshots; listing, reading, writing and deleting days never access disk on the GUI thread. Refreshes reuse unchanged text and discard obsolete selections. Local export and application shutdown wait for queued writes. The web server uses the same repository and technical recording service, reading persisted Settings with the same parser as the device.
+
+A stable OS lock per journal coordinates cooperating device and web processes, including the raw `/capturas/` download route and local file management. Exports take a complete snapshot and release the source lock before writing to USB or sending over HTTP. Deletion removes the entries committed before it obtains the lock; later writes (including already queued activity) can recreate that day's file. An export's own journal entry is recorded after the snapshot, so it is not included in that same download. Lock files are retained across day deletion and hidden from the web file browser; the OS releases held locks when a process exits.
 
 ### Remote control
 

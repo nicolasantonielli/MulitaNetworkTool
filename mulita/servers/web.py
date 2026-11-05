@@ -21,18 +21,18 @@ import threading
 import time
 from string import Template
 from pathlib import Path
-from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
-if __package__:
-    from .activity_days import append_entry, day_path, list_days, technical_line
-    from .remote_page import CONTROL_PAGE, forward
-    from .journal_text import translate as journal_text
-else:  # Mulita also starts this server by script path.
-    from activity_days import append_entry, day_path, list_days, technical_line
-    from remote_page import CONTROL_PAGE, forward
-    from journal_text import translate as journal_text
+if not __package__:  # The installer also launches this bundled program by path.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from mulita.servers.remote_page import CONTROL_PAGE, forward
+from mulita.adapters.journals import FileJournalRepository
+from mulita.adapters.settings_store import StoredSettingsReader
+from mulita.core.events import OperationEvent
+from mulita.presentation.journal import render_event
+from mulita.services.journal import TechnicalJournalService
 
 JOURNALS = {'actividad': ('Registro de actividades', '.log'), 'bitacora': ('Bitácora técnica', '.txt')}
 
@@ -225,6 +225,32 @@ class Handler(SimpleHTTPRequestHandler):
     def send_head(self):
         # Always show the file browser for folders, even if they contain index.html.
         path = self.translate_path(self.path)
+        candidate = Path(path)
+        if candidate.name.startswith('.mulita-') and candidate.suffix == '.lock':
+            self.send_error(404)
+            return None
+        if self.server.captures:
+            for journal, (_title, suffix) in JOURNALS.items():
+                folder = Path(self.server.captures) / journal
+                if candidate.parent == folder and candidate.suffix == suffix:
+                    # The raw file browser must use the same snapshot protocol
+                    # as /bitacora/<day>/exportar, not stream a changing file.
+                    try:
+                        data = FileJournalRepository(folder, suffix).read_bytes(candidate.stem)
+                    except (ValueError, FileNotFoundError):
+                        self.send_error(404)
+                        return None
+                    except OSError:
+                        self.send_error(403)
+                        return None
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'text/plain; charset=utf-8')
+                    self.send_header('Content-Length', str(len(data)))
+                    self.send_header('Cache-Control', 'no-store')
+                    self.end_headers()
+                    snapshot = io.BytesIO(data)
+                    snapshot.name = candidate.name
+                    return snapshot
         if urlsplit(self.path).path.endswith('/') and os.path.isdir(path):
             return self.list_directory(path)
         return super().send_head()
@@ -232,7 +258,9 @@ class Handler(SimpleHTTPRequestHandler):
     def list_directory(self, path: str):
         try:
             with os.scandir(path) as listing:
-                entries = sorted(listing, key=lambda item: (not item.is_dir(), item.name.casefold()))
+                entries = sorted((item for item in listing if not (
+                    item.name.startswith('.mulita-') and item.name.endswith('.lock'))),
+                    key=lambda item: (not item.is_dir(), item.name.casefold()))
         except OSError:
             self.send_error(403, 'No se puede acceder a esta carpeta.')
             return None
@@ -353,28 +381,28 @@ class Handler(SimpleHTTPRequestHandler):
             return
         journal = path.split('/')[1]
         title, suffix = JOURNALS[journal]
-        folder = Path(self.server.captures) / journal
+        repository = FileJournalRepository(Path(self.server.captures) / journal, suffix)
         try:
             if path.rstrip('/') == '/' + journal:
                 rows = ''.join(
                     f'<li><a class="resource" href="/{journal}/{day}">{day}</a></li>'
-                    for day in list_days(folder, suffix))
+                    for day in repository.days())
                 content = f'<h1>{title}</h1>' + (
                     f'<ul class="panel file-list">{rows}</ul>' if rows else
                     '<p class="empty">Todavía no hay jornadas registradas.</p>')
             else:
                 parts = path.removeprefix(f'/{journal}/').rstrip('/').split('/')
                 day = parts[0]
-                filename = day_path(folder, day, suffix)
+                filename = day + suffix
                 if parts == [day, 'exportar']:
-                    data = filename.read_bytes()
-                    self._send_data(data, 'text/plain; charset=utf-8', send_body, filename.name)
+                    data = repository.read_bytes(day)
+                    self._send_data(data, 'text/plain; charset=utf-8', send_body, filename)
                     if send_body:
-                        self._export_note(filename.name)
+                        self._export_note(filename)
                     return
                 if parts != [day]:
                     raise FileNotFoundError
-                report = html.escape(filename.read_text(encoding='utf-8'))
+                report = html.escape(repository.read_bytes(day).decode('utf-8'))
                 content = (
                     f'<a class="back-link" href="/{journal}/">← Todas las jornadas</a>'
                     f'<h1>{title} · {day}</h1><div class="journal-actions">'
@@ -398,16 +426,10 @@ class Handler(SimpleHTTPRequestHandler):
     def _export_note(self, name):
         if not self.server.journal_settings:
             return
-        try:
-            config = json.loads(Path(self.server.journal_settings).read_text(encoding='utf-8'))
-            if isinstance(config, dict) and config.get('technicalJournal') is True:
-                now = datetime.now().astimezone()
-                entry = technical_line(now, journal_text('journalWebExport', config.get('language', 'es'), name=name))
-                append_entry(Path(self.server.captures) / 'bitacora', now, '.txt', entry)
-        except FileNotFoundError:
-            return
-        except (OSError, ValueError) as error:
-            self.log_message('Bitácora: %s', error)
+        service = TechnicalJournalService(
+            StoredSettingsReader(Path(self.server.journal_settings)), render_event,
+            FileJournalRepository(Path(self.server.captures) / 'bitacora', '.txt').append)
+        service.record(OperationEvent('web_export', 'completed', {}, name))
 
     def do_POST(self) -> None:
         parts = urlsplit(self.path).path.split('/')
@@ -426,7 +448,8 @@ class Handler(SimpleHTTPRequestHandler):
             if form.get('token') != [self.server.activity_token]:
                 self.send_error(403)
                 return
-            day_path(Path(self.server.captures) / parts[1], parts[2], JOURNALS[parts[1]][1]).unlink()
+            FileJournalRepository(Path(self.server.captures) / parts[1], JOURNALS[parts[1]][1]).delete(
+                parts[2], missing_ok=False)
         except (ValueError, FileNotFoundError):
             self.send_error(404)
             return

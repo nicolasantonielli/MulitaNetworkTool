@@ -54,3 +54,13 @@ class MemorySettingsStore(SettingsStore):
 
     def save(self, settings: Settings) -> None:
         self.settings = settings
+
+
+class StoredSettingsReader:
+    """Read the same persisted settings on each operation in a separate process."""
+    def __init__(self, path: Path):
+        self._store = JsonSettingsStore(path)
+
+    @property
+    def current(self):
+        return self._store.load()

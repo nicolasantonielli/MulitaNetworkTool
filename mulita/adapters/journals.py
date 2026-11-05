@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 from mulita.core.journals import JournalSnapshot
+from mulita.adapters.journal_lock import journal_lock
 from mulita.servers.activity_days import append_entry, day_path, list_days
 
 
@@ -12,6 +13,22 @@ class FileJournalRepository:
         self._suffix = suffix
 
     def snapshot(self, day, known_day='', known_revision=''):
+        with self.transaction():
+            return self._snapshot(day, known_day, known_revision)
+
+    def transaction(self):
+        return journal_lock(self._folder)
+
+    def days(self):
+        with self.transaction():
+            return list_days(self._folder, self._suffix)
+
+    def read_bytes(self, day):
+        """A complete snapshot. Do not hold the lock while sending it to a client."""
+        with self.transaction():
+            return day_path(self._folder, day, self._suffix).read_bytes()
+
+    def _snapshot(self, day, known_day='', known_revision=''):
         days = list_days(self._folder, self._suffix)
         # Another process may delete a day between listing and opening it.
         while days:
@@ -27,7 +44,9 @@ class FileJournalRepository:
         return JournalSnapshot((), '', '', '')
 
     def append(self, now, line):
-        append_entry(self._folder, now, self._suffix, line)
+        with self.transaction():
+            append_entry(self._folder, now, self._suffix, line)
 
-    def delete(self, day):
-        day_path(self._folder, day, self._suffix).unlink(missing_ok=True)
+    def delete(self, day, *, missing_ok=True):
+        with self.transaction():
+            day_path(self._folder, day, self._suffix).unlink(missing_ok=missing_ok)

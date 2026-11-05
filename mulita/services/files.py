@@ -1,4 +1,5 @@
 from __future__ import annotations
+from contextlib import nullcontext
 
 from mulita.core.events import EventSource
 from mulita.services.operation_events import operation
@@ -34,13 +35,14 @@ class CaptureFilesService(EventSource):
 
     def __init__(self, directory: PurePosixPath | Path,
                  capture_active=None, tap_active=None,
-                 storage: RemovableStorage | None = None, journal_flush=None):
+                 storage: RemovableStorage | None = None, journal_flush=None, journal_access=None):
         self._root = Path(directory)
         self._paths = StoragePaths(self._root)
         self._capture_active = capture_active or (lambda: False)
         self._tap_active = tap_active or (lambda: False)
         self._storage = storage
         self._journal_flush = journal_flush or (lambda _place: None)
+        self._journal_access = journal_access or (lambda _place: nullcontext())
 
     def list_files(self) -> tuple[StoredCapture, ...]:
         found: list[tuple[float, StoredCapture]] = []
@@ -66,29 +68,32 @@ class CaptureFilesService(EventSource):
     @operation('rename', 'name', 'new_name')
     def rename(self, place: str, name: str, new_name: str) -> str:
         self._guard(place)
-        source = self._existing(place, name)
-        target = self._destination(place, new_name, self._kept_suffix(place, source))
-        if source == target:
-            return source.name
-        if target.exists():
-            raise ValidationError(message('nameExists'))
-        source.rename(target)
-        return target.name
+        with self._journal_access(place):
+            source = self._existing(place, name)
+            target = self._destination(place, new_name, self._kept_suffix(place, source))
+            if source == target:
+                return source.name
+            if target.exists():
+                raise ValidationError(message('nameExists'))
+            source.rename(target)
+            return target.name
 
     @operation('copy', 'name', 'new_name')
     def copy(self, place: str, name: str, new_name: str) -> str:
         self._guard(place)
-        source = self._existing(place, name)
-        target = self._destination(place, new_name, self._kept_suffix(place, source))
-        if target.exists():
-            raise ValidationError(message('nameExists'))
-        shutil.copyfile(source, target)
-        return target.name
+        with self._journal_access(place):
+            source = self._existing(place, name)
+            target = self._destination(place, new_name, self._kept_suffix(place, source))
+            if target.exists():
+                raise ValidationError(message('nameExists'))
+            shutil.copyfile(source, target)
+            return target.name
 
     @operation('delete', 'name')
     def delete(self, place: str, name: str) -> None:
         self._guard(place)
-        self._existing(place, name).unlink()
+        with self._journal_access(place):
+            self._existing(place, name).unlink()
 
     @operation('delete', 'items')
     def delete_many(self, items: list[tuple[str, str]]) -> None:
@@ -97,9 +102,10 @@ class CaptureFilesService(EventSource):
         paths = []
         for place, name in items:
             self._guard(place)
-            paths.append(self._existing(place, name))
-        for path in paths:
-            path.unlink()
+            paths.append((place, self._existing(place, name)))
+        for place, path in paths:
+            with self._journal_access(place):
+                path.unlink()
 
     def list_drives(self) -> tuple[UsbDrive, ...]:
         found = self._storage.list_drives() if self._storage is not None else ()
@@ -122,7 +128,7 @@ class CaptureFilesService(EventSource):
         target = folder / source.name
         if target.exists():
             raise ValidationError(message('usbExists'))
-        shutil.copyfile(source, target)
+        self._export_copy(place, source, target)
         self._storage.sync()
         return source.name
 
@@ -133,7 +139,7 @@ class CaptureFilesService(EventSource):
         if not _DEVICE.fullmatch(drive_id or ''):
             raise ValidationError(message('badDrive'))
         folder = self._drive_folder(drive_id)
-        planned: list[tuple[Path, Path]] = []
+        planned: list[tuple[str, Path, Path]] = []
         names: set[str] = set()
         for place, name in items:
             self._guard(place)
@@ -144,11 +150,20 @@ class CaptureFilesService(EventSource):
             target = folder / source.name
             if target.exists():
                 raise ValidationError(message('usbExists'))
-            planned.append((source, target))
-        for source, target in planned:
-            shutil.copyfile(source, target)
+            planned.append((place, source, target))
+        for place, source, target in planned:
+            self._export_copy(place, source, target)
         self._storage.sync()
         return len(planned)
+
+    def _export_copy(self, place, source, target):
+        if place in ('actividad', 'bitacora'):
+            with self._journal_access(place):
+                snapshot = source.read_bytes()
+            # A slow USB drive must not keep the shared source locked.
+            target.write_bytes(snapshot)
+        else:
+            shutil.copyfile(source, target)
 
     def _guard(self, place: str) -> None:
         self._journal_flush(place)

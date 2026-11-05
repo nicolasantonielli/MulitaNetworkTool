@@ -7,6 +7,7 @@ import socket
 import ssl
 import struct
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -255,6 +256,37 @@ class WebTest(unittest.TestCase):
 
     def test_technical_journal_view_download_and_confirmed_deletion(self):
         self.check_daily_management('bitacora', '.txt')
+
+    def test_web_script_loads_shared_services_from_an_unrelated_working_directory(self):
+        result = subprocess.run([sys.executable, '-I', str(Path(web.__file__).resolve()), '--help'],
+                                cwd=self.tmp.name, capture_output=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        self.assertIn(b'--journal-settings', result.stdout)
+
+    def test_daily_and_raw_downloads_send_snapshots_and_release_lock_before_network(self):
+        from datetime import datetime
+        from mulita.adapters.journals import FileJournalRepository
+        folder = Path(self.captures) / 'bitacora'
+        folder.mkdir()
+        path = folder / '2026-11-05.txt'
+        repository = FileJournalRepository(folder, '.txt')
+        now = datetime(2026, 11, 5)
+        class ChangingHandler(web.Handler):
+            def _send_data(self, page, content_type, send_body, filename=None, status=200):
+                if filename:
+                    repository.append(now, 'Appended during HTTP send')
+                return super()._send_data(page, content_type, send_body, filename, status)
+
+            def copyfile(self, source, outputfile):
+                repository.append(now, 'Appended during raw file send')
+                return super().copyfile(source, outputfile)
+        port = self.serve(handler=ChangingHandler)
+        for route in ('/bitacora/2026-11-05/exportar', '/capturas/bitacora/2026-11-05.txt'):
+            path.write_bytes(b'Original\n')
+            self.assertEqual(self.get(port, route), (200, b'Original\n'))
+            self.assertIn('Appended during', path.read_text(encoding='utf-8'))
+        self.assertNotIn(b'.mulita-bitacora.lock', self.get(port, '/capturas/')[1])
+        self.assertEqual(self.get(port, '/capturas/.mulita-bitacora.lock')[0], 404)
 
     def test_web_export_records_the_actual_filename_only_when_enabled(self):
         settings = Path(self.tmp.name) / 'settings.json'
