@@ -91,9 +91,7 @@ class QtApplication:
         activity = ActivityController(ctx)
         self._remote = RemoteControl(lambda: self.root)
         notifier.activityRecorded.connect(activity.record)
-        journal = TechnicalJournal(ctx)
-        notifier.activityRecorded.connect(journal.action)
-        notifier.technicalNote.connect(journal.note)
+        journal = TechnicalJournal(ctx, services.journal)
         self._controllers = {
             'remoteControl': self._remote,
             'activity': activity,
@@ -184,6 +182,7 @@ class QtApplication:
             self._services.shutdown()
         finally:
             self._dispatcher.shutdown()
+            self._controllers['technicalJournal'].close()
 
     def dispose(self) -> None:
         """El motor QML se destruye antes que los controladores que sus vinculaciones leen."""

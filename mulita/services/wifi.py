@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from mulita.core.events import EventSource
+from mulita.services.operation_events import operation
+
 import csv
 import os
 from datetime import datetime
@@ -16,7 +19,7 @@ from mulita.core.ports import CommandRunner
 from mulita.core.messages import message
 
 
-class WifiService:
+class WifiService(EventSource):
     """Busca redes y se conecta con NetworkManager."""
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
@@ -37,6 +40,7 @@ class WifiService:
         listed = self._checked(self._commands.wifi_list(device), 'No se pudieron buscar redes')
         return device, tuple(parse_wifi_list(listed.stdout))
 
+    @operation('export')
     def save(self, link: WifiLink, moment: datetime | None = None) -> str:
         facts = link.facts()
         if not facts:
@@ -93,6 +97,7 @@ class WifiService:
         result = self._runner.run(argv)
         return result.stdout if result.ok else ''
 
+    @operation('wifi_connect', 'ssid')
     def connect(self, ssid: str, password: str, secure: bool) -> str:
         name = validation.wifi_ssid(ssid)
         secret = validation.wifi_password(password, required=secure)
@@ -111,6 +116,7 @@ class WifiService:
         self._checked(self._commands.wifi_up(name, device), f'No se pudo conectar a {name}')
         return name
 
+    @operation('wifi_reconnect', 'ssid')
     def reconnect_saved(self, ssid: str) -> bool:
         name = validation.wifi_ssid(ssid)
         device = self.interface()
@@ -126,6 +132,7 @@ class WifiService:
                 return True
         return False
 
+    @operation('wifi_forget')
     def forget(self) -> None:
         device = self.interface()
         if not device:
@@ -140,11 +147,13 @@ class WifiService:
         result = self._checked(self._commands.wifi_saved(), message('wifiSavedFailed'))
         return parse_saved_wifi(result.stdout)
 
+    @operation('wifi_forget', 'uuid')
     def forget_saved(self, uuid: str) -> None:
         if not any(profile['uuid'] == uuid for profile in self.saved()):
             raise ValidationError(message('wifiSavedMissing'))
         self._checked(self._commands.wifi_delete_uuid(uuid), message('wifiForgetFailed'))
 
+    @operation('wifi_disconnect')
     def disconnect(self) -> None:
         device = self.interface()
         if not device:
@@ -172,6 +181,7 @@ class WifiService:
         config = parse_nmcli_ipv4(self._checked(self._commands.wifi_ipv4(uuid), message('wifiIpFailed')).stdout)
         return self._lease(device) if config.mode is AddressMode.DHCP else config
 
+    @operation('ipv4_wifi')
     def apply_static(self, address: str, netmask: str, gateway: str = '', dns: str = '') -> EthernetConfig:
         config = validation.static_ethernet(address, netmask, gateway, dns)
         device, uuid = self._ip_profile()
@@ -179,6 +189,7 @@ class WifiService:
         self._checked(self._commands.wifi_up_uuid(uuid, device), message('wifiIpFailed'))
         return config
 
+    @operation('ipv4_wifi')
     def apply_dhcp(self) -> EthernetConfig:
         device, uuid = self._ip_profile()
         self._checked(self._commands.wifi_set_ipv4(uuid), message('wifiIpFailed'))

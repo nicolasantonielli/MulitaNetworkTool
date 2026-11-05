@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from mulita.core.events import EventSource
+from mulita.services.operation_events import operation
+
 import csv
 import ipaddress
 import os
@@ -29,12 +32,13 @@ class MagicPacket:
     port: str
 
 
-class WakeOnLanService:
+class WakeOnLanService(EventSource):
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory):
         self._runner = runner
         self._commands = commands
 
+    @operation('wol', 'mac')
     def wake(self, mac: str) -> MagicPacket:
         normalized = validation.mac_address(mac)
         result = self._runner.run(self._commands.wake_on_lan(normalized))
@@ -46,12 +50,13 @@ class WakeOnLanService:
         return MagicPacket(normalized.upper(), target, port)
 
 
-class ClimateService:
+class ClimateService(EventSource):
 
     def __init__(self, sensor: ClimateSensor, calibration: Calibration):
         self._sensor = sensor
         self._calibration = calibration
 
+    @operation('climate')
     def read(self) -> ClimateReading | None:
         reading = self._sensor.read()
         return self._calibration.apply(reading) if reading else None
@@ -60,12 +65,13 @@ class ClimateService:
 _SPEED_TABLE = '185'
 
 
-class SpeedTestService:
+class SpeedTestService(EventSource):
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory):
         self._runner = runner
         self._commands = commands
 
+    @operation('speed', 'interface')
     def measure(self, interface: str = '') -> SpeedTestResult:
         name = (interface or '').strip()
         source = ''
@@ -127,7 +133,7 @@ class SpeedTestService:
         raise ValidationError(message('speedNoAddress', interface=name))
 
 
-class PublicIpService:
+class PublicIpService(EventSource):
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory, url: str, timeout: int,
                  directory: PurePosixPath | Path = Path.home() / 'capturas' / 'internet'):
@@ -137,12 +143,14 @@ class PublicIpService:
         self._timeout = timeout
         self._directory = Path(directory)
 
+    @operation('public_ip')
     def lookup(self) -> PublicAddress:
         result = self._runner.run(self._commands.public_ip(self._url, self._timeout))
         if not result.ok or not (result.stdout or '').strip():
             raise CommandFailedError(message('pubFail'), result)
         return parse_public_address(result.stdout)
 
+    @operation('export')
     def save(self, info: PublicAddress, moment: datetime | None = None) -> str:
         if not info.ip:
             raise ValidationError(message('noPublic'))
@@ -175,7 +183,7 @@ class PublicIpService:
             raise CommandFailedError(message('publicFolder')) from exc
 
 
-class MacVendorService:
+class MacVendorService(EventSource):
     """Fabricante de una MAC via api.macvendors.com. Una consulta por segundo."""
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory, url: str, timeout: int):
@@ -185,6 +193,7 @@ class MacVendorService:
         self._timeout = timeout
         self._next_at = 0.0
 
+    @operation('vendor', 'mac')
     def lookup(self, mac: str) -> str:
         text = validation.mac_address(mac).replace('-', ':').upper()
         self._pace()

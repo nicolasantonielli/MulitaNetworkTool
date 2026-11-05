@@ -4,7 +4,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, TYPE_CHECKING
 import json
-from pathlib import PurePath
 
 from PyQt5.QtCore import QObject, pyqtProperty, pyqtSignal, pyqtSlot
 
@@ -17,7 +16,6 @@ if TYPE_CHECKING:
 
 
 class Notifier(QObject):
-    technicalNote = pyqtSignal(str)
     activityRecorded = pyqtSignal(str, str, str)
     notified = pyqtSignal(str, str, str, arguments=['kind', 'title', 'message'])
 
@@ -72,12 +70,6 @@ class Controller(QObject):
         if action:
             self._ctx.notifier.activityRecorded.emit(action, detail, phase)
 
-    def _note(self, sentence):
-        self._ctx.notifier.technicalNote.emit(sentence)
-
-    def _saved_file(self, name):
-        self._note(self._tr('journalExport', name=name))
-
     def _export(self, task, on_success) -> None:
         """Una exportación por controlador, con respuestas en el hilo gráfico."""
         if self._saving:
@@ -89,8 +81,6 @@ class Controller(QObject):
             self._saving = False
             self.savingChanged.emit()
             self._record('export', '', phase)
-            if phase == 'activityCompleted' and isinstance(value, (str, PurePath)):
-                self._saved_file(PurePath(value).name)
             callback(value)
 
         try:
@@ -152,8 +142,6 @@ class TaskController(Controller):
         def succeeded(value: Any) -> None:
             self._set_busy(False)
             self._record(action, detail, 'activityCompleted')
-            if action in ('save', 'export') and isinstance(value, str):
-                self._saved_file(value)
             if on_success:
                 on_success(value)
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from mulita.services.operation_events import operation, session
+
 import csv
 import os
 import shutil
@@ -33,6 +35,7 @@ class TlsService(ProcessSession):
         """Hallazgos del ultimo analisis. Quedan disponibles cuando el proceso termina."""
         return self._findings
 
+    @session('tls', 'target')
     def start(self, target: str, mode: str, on_output: Optional[OutputListener] = None,
               on_exit: Optional[ExitListener] = None) -> TlsTarget:
         parsed = parse_target(target)
@@ -64,6 +67,7 @@ class TlsService(ProcessSession):
         self._findings = parse_report(raw)
         shutil.rmtree(workdir, ignore_errors=True)
 
+    @operation('export')
     def save(self, findings: tuple[TlsFinding, ...], filename: str) -> str:
         if not findings:
             raise ValidationError(message('noTlsRows'))

@@ -66,7 +66,6 @@ class WakeOnLanController(TaskController):
 
     def _sent(self, packet) -> None:
         self._phase = 'sent'
-        self._note(self._tr('journalWol', mac=packet.mac, target=packet.target, port=packet.port))
         self._mac = packet.mac
         self._target = packet.target
         self._port = packet.port
@@ -108,10 +107,6 @@ class ClimateController(TaskController):
 
     def _show(self, reading: ClimateReading | None) -> None:
         self._reading = reading
-        if reading:
-            self._note(self._tr('journalClimate', temperature=self.temperature, humidity=self.humidity))
-        else:
-            self._note(self._tr('journalNoClimate'))
         self._read = True
         self.readingChanged.emit()
 
@@ -145,7 +140,6 @@ class SpeedTestController(TaskController):
 
     def _show(self, result: SpeedTestResult) -> None:
         self._result = result
-        self._note(self._tr('journalSpeed', download=self.download, upload=self.upload))
         self._set_status('')
 
     def _set_status(self, status: str) -> None:
@@ -193,7 +187,6 @@ class PublicIpController(TaskController):
 
     def _show(self, info) -> None:
         self._info, self._status = info, ''
-        self._note(self._tr('journalPublicIp', ip=info.ip))
         self.addressChanged.emit()
 
     def _failed(self, error: Exception) -> None:
@@ -223,7 +216,6 @@ class MacVendorController(TaskController):
         self._task(lambda: self._mac_vendor.lookup(mac), lambda name: self._show(name, mac), self._failed, action='vendor', detail=mac)
 
     def _show(self, name: str, mac: str) -> None:
-        self._note(self._tr('journalVendor', mac=mac, name=name or self._tr('journalNoMatch')))
         self._vendor, self._status = name, ''
         self.vendorChanged.emit()
 
@@ -314,8 +306,6 @@ class FilesController(TaskController):
     @pyqtSlot(str, str)
     def exportMany(self, payload: str, drive: str) -> None:
         def exported(count):
-            for _, name in _picked(payload):
-                self._saved_file(name)
             self._done(count)
         self._task(lambda: self._files_service.export_many(_picked(payload), drive), exported,
                    action='export')

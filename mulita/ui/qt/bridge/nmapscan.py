@@ -351,12 +351,6 @@ class NmapController(SessionController):
             self._partial = outcome.partial
             self._phase = outcome.status
             self._last_ports = outcome.open_ports
-            hosts = ', '.join(h['ip'] for h in outcome.hosts if h.get('ip'))
-            self._note(self._tr(
-                'journalNmap', target=self._targets,
-                status=self._tr('nmapStatus' + outcome.status.capitalize()),
-                hosts=hosts or self._tr('journalNone'),
-                ports=outcome.open_ports or self._tr('journalNoneReported')))
             if outcome.privilege and outcome.profile_id == 'syn':
                 self._fallback = 'tcp-standard'
             if outcome.status == 'error':

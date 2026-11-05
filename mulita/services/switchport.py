@@ -1,6 +1,9 @@
 """Identificación de la boca conectada, sin modificar IP ni configuración del switch."""
 from __future__ import annotations
 
+from mulita.core.events import EventSource
+from mulita.services.operation_events import operation
+
 import json
 import threading
 import time
@@ -13,7 +16,7 @@ from mulita.core.switchport import parse_frame
 from mulita.core.messages import message
 
 
-class SwitchPortService:
+class SwitchPortService(EventSource):
     def __init__(self, packets: PacketSource, link: LinkReader, reports: SwitchReportStore):
         self._packets = packets
         self._link = link
@@ -23,6 +26,7 @@ class SwitchPortService:
     def stop(self) -> None:
         self.cancelled.set()
 
+    @operation('switch', 'interface')
     def scan(self, interface: str, seconds: int, cancelled: threading.Event,
              update, simulated: bool = False) -> dict:
         interface = validation.interface_name(interface)
@@ -72,5 +76,6 @@ class SwitchPortService:
                       neighbors=[value[1] for value in neighbors.values() if value[0] > now], vlans=sorted(observed))
         return report
 
+    @operation('export')
     def save(self, report: dict) -> Path:
         return self._reports.save(report)

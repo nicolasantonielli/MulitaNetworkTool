@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from mulita.core.events import EventSource
+from mulita.services.operation_events import operation
+
 import re
 import shutil
 from dataclasses import dataclass
@@ -26,7 +29,7 @@ class StoredCapture:
     modified: str
 
 
-class CaptureFilesService:
+class CaptureFilesService(EventSource):
     """Capturas .pcap y trazas .csv. No sale de esas carpetas."""
 
     def __init__(self, directory: PurePosixPath | Path,
@@ -59,6 +62,7 @@ class CaptureFilesService:
         found.sort(key=lambda item: item[0], reverse=True)
         return tuple(item for _when, item in found)
 
+    @operation('rename', 'name', 'new_name')
     def rename(self, place: str, name: str, new_name: str) -> str:
         self._guard(place)
         source = self._existing(place, name)
@@ -70,6 +74,7 @@ class CaptureFilesService:
         source.rename(target)
         return target.name
 
+    @operation('copy', 'name', 'new_name')
     def copy(self, place: str, name: str, new_name: str) -> str:
         self._guard(place)
         source = self._existing(place, name)
@@ -79,10 +84,12 @@ class CaptureFilesService:
         shutil.copyfile(source, target)
         return target.name
 
+    @operation('delete', 'name')
     def delete(self, place: str, name: str) -> None:
         self._guard(place)
         self._existing(place, name).unlink()
 
+    @operation('delete', 'items')
     def delete_many(self, items: list[tuple[str, str]]) -> None:
         if not items:
             raise ValidationError(message('noFilesSelected'))
@@ -104,6 +111,7 @@ class CaptureFilesService:
             named.append(UsbDrive(drive.device, label, drive.mountpoint))
         return tuple(named)
 
+    @operation('export')
     def export(self, place: str, name: str, drive_id: str) -> str:
         self._guard(place)
         if not _DEVICE.fullmatch(drive_id or ''):
@@ -117,6 +125,7 @@ class CaptureFilesService:
         self._storage.sync()
         return source.name
 
+    @operation('export_many', 'items')
     def export_many(self, items: list[tuple[str, str]], drive_id: str) -> int:
         if not items:
             raise ValidationError(message('noFilesSelected'))

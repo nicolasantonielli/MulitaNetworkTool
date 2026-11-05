@@ -262,6 +262,8 @@ Enable **Record technical journal** in **Settings → General**. Its switch is i
 
 New entries use the language selected in Settings (Spanish or English), including exports from the web, without restarting the application or server. Existing entries keep their original text. Entries use local time in `YYYY-DD-MM HH:MM` format. Ping entries include the target, packet loss and mean round-trip time when available. Other diagnostics record their findings, and successful exports record the filenames. Daily filenames use `YYYY-MM-DD.txt` so they sort chronologically.
 
+Device operations emit structured events from the services, including when called without Qt. `TechnicalJournalService` observes these events; a separate formatter produces the localized sentences. Qt controllers only display and manage the journal. The composition root connects the observer, formatter and file writer. Event parameters are explicitly selected so credentials and raw error output are not copied to the journal. A journal write failure is logged and does not change the result of the operation being recorded.
+
 ### Remote control
 
 Start the Mulita web server, preferably with HTTPS. On the device, open **Settings → General → Remote control**, turn it on, then enter the displayed code at `/control` in the browser. The six-digit code is valid for two minutes and pairs one browser. The browser shows the live device screen and accepts taps, drags, and long presses. Use the on-screen keyboard for text. Screen capture runs only for a paired viewer and is limited to four captures per second.

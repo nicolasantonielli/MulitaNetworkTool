@@ -1,6 +1,8 @@
 """Escaneo Nmap: un proceso por vez, informe en su propia carpeta y perfiles propios."""
 from __future__ import annotations
 
+from mulita.services.operation_events import session
+
 from mulita.core.storage import PLACES, StoragePaths
 
 import csv
@@ -121,6 +123,7 @@ class NmapScanService(ProcessSession):
         self._write_meta(prepared, 'running', None, False)
         return prepared
 
+    @session('nmap')
     def launch(self, prepared: Prepared, on_output: OutputListener | None = None,
                on_exit: ExitListener | None = None) -> None:
         xml = prepared.folder / 'informe.xml'

@@ -174,8 +174,6 @@ class CaptureController(SessionController):
         self._fail(error)
 
     def _finished(self, code: int) -> None:
-        if self._active_file and (code == 0 or self._stopping):
-            self._note(self._tr('journalCaptureSaved', interface=self._activity_detail, name=self._active_file))
         if code != 0 and not self._stopping:
             detail = ''.join(self._last_output).strip() or self._tr('captureEnded', code=code)
             folder = str(self._ctx.config.capture_dir)
@@ -229,8 +227,6 @@ class TapController(Controller):
         self._pending = ''
         self.linesChanged.emit()
         self._active_file = name
-        if name:
-            self._note(self._tr('journalTap', name=name))
         self._record('homeTap', interfaces, 'activityStarted')
         self.activeFileChanged.emit()
         self.runningChanged.emit()

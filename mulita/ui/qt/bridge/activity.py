@@ -4,7 +4,7 @@ from pathlib import Path
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
-from mulita.servers.activity_days import append_entry, day_path, list_days, technical_line
+from mulita.servers.activity_days import append_entry, day_path, list_days
 from mulita.ui.qt.bridge.base import Controller
 
 
@@ -101,37 +101,14 @@ class ActivityController(DailyJournal):
 
 
 class TechnicalJournal(DailyJournal):
-    def __init__(self, ctx):
+    """Read/manage journal files; recording is owned by the application service."""
+    def __init__(self, ctx, journal):
         super().__init__(ctx, 'bitacora', '.txt')
+        self._journal = journal
+        self._listener = self.changed.emit
+        journal.subscribe(self._listener)
 
-    def note(self, sentence):
-        if self._ctx.settings.current.technical_journal:
-            now = datetime.now().astimezone()
-            self._append(now, technical_line(now, sentence))
-
-    def action(self, key, detail, phase):
-        if not self._ctx.settings.current.technical_journal:
-            return
-        label = self._tr(key)
-        subject = f'{label} ({detail})' if detail else label
-        if phase == 'activityFailed':
-            self.note(self._tr('journalFailed', subject=subject))
-        elif phase == 'activityStop':
-            self.note(self._tr('journalStop', subject=subject))
-        elif phase == 'activityStarted':
-            if key == 'pingTitle':
-                self.note(self._tr('journalPing', detail=detail))
-            elif key == 'tracesTitle':
-                self.note(self._tr('journalTrace', detail=detail))
-            elif key == 'captureTitle':
-                self.note(self._tr('journalCapture', detail=detail))
-            elif key not in ('export', 'save'):
-                self.note(self._tr('journalStarted', subject=subject))
-        elif phase == 'activityCompleted' and key == 'connect':
-            self.note(self._tr('journalConnected', detail=detail))
-        elif phase == 'activityCompleted' and key == 'wifiDisconnect':
-            self.note(self._tr('journalDisconnected'))
-        elif phase in ('activityCompleted', 'activityEnded') and key not in (
-                'pingTitle', 'tracesTitle', 'discoverTitle', 'scanPorts', 'toolSpeed',
-                'publicIp', 'vendor', 'cyberTls', 'cyberNmap', 'export', 'save'):
-            self.note(self._tr('journalEnded', subject=subject))
+    def close(self):
+        if self._listener is not None:
+            self._journal.unsubscribe(self._listener)
+            self._listener = None

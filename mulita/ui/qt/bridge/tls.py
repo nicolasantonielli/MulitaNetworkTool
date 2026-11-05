@@ -16,7 +16,7 @@ from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 from mulita.core.errors import MulitaError
 from mulita.core.models import MISSING_COMMAND_CODE
 from mulita.core.tls import DEFAULT_MODE, MODES, parse_target
-from mulita.presentation.tls import grouped, summarize, severity_label
+from mulita.presentation.tls import grouped, summarize
 from mulita.ui.qt.bridge.base import BridgeContext, SessionController
 
 
@@ -109,12 +109,6 @@ class TlsController(SessionController):
     def _finished(self, code: int) -> None:
         self._findings = self._session.findings
         self.resultChanged.emit()
-        counts = {}
-        for finding in self._findings:
-            counts[finding.severity] = counts.get(finding.severity, 0) + 1
-        result = ', '.join(f'{severity_label(level, self.translator)}: {count}'
-                           for level, count in counts.items()) or self._tr('journalNoFindings')
-        self._note(self._tr('journalTls', target=self._target, result=result))
         if self._stopping:
             return
         title = self._tr('cyberTls')

@@ -1,0 +1,36 @@
+"""Independent observer that renders and stores technical operation events."""
+import logging
+from threading import RLock
+
+from mulita.core.events import OperationEvent
+
+
+class TechnicalJournalService:
+    def __init__(self, settings, render, append):
+        self._settings = settings
+        self._render = render
+        self._append = append
+        self._lock = RLock()
+        self._listeners = []
+
+    def subscribe(self, listener):
+        self._listeners.append(listener)
+
+    def unsubscribe(self, listener):
+        self._listeners.remove(listener)
+
+    def record(self, event: OperationEvent):
+        with self._lock:
+            current = self._settings.current
+            if not current.technical_journal:
+                return
+            try:
+                lines = self._render(event, current.language.value)
+                for line in lines:
+                    self._append(event.occurred_at, line)
+            except Exception:
+                logging.getLogger(__name__).exception('Could not write technical journal')
+                return
+            if lines:
+                for listener in tuple(self._listeners):
+                    listener()

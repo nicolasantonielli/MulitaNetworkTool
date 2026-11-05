@@ -18,6 +18,7 @@ from mulita.services.switchport import SwitchPortService
 from mulita.services.tools import (ClimateService, MacVendorService, PublicIpService,
                                    SpeedTestService, WakeOnLanService)
 from mulita.services.wifi import WifiService
+from mulita.services.journal import TechnicalJournalService
 
 
 @dataclass
@@ -45,6 +46,7 @@ class Services:
     tls: TlsService
     nmap: NmapScanService
     switchport: SwitchPortService
+    journal: TechnicalJournalService
 
     def shutdown(self) -> None:
         """Al cerrar la aplicacion no quedan capturas ni pings huerfanos."""

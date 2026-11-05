@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from mulita.core.events import EventSource
+from mulita.services.operation_events import operation, session, stop_events
+
 import csv
 import ipaddress
 import os
@@ -32,7 +35,7 @@ class _Session(ProcessSession):
         self._launch(argv, on_output, on_exit)
 
 
-class ServerService:
+class ServerService(EventSource):
     """Arma y lanza cada servidor. Puede haber varios activos a la vez, uno por tipo."""
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
@@ -60,6 +63,7 @@ class ServerService:
     def is_running(self, kind: str) -> bool:
         return self._sessions[kind_by_id(kind).id].is_running
 
+    @session('server', 'kind')
     def start(self, kind: str, values: Mapping[str, str],
               on_output: Optional[OutputListener] = None,
               on_exit: Optional[ExitListener] = None) -> None:
@@ -85,6 +89,7 @@ class ServerService:
 
     def stop(self, kind: str) -> None:
         identifier = kind_by_id(kind).id
+        stop_events(self, identifier)
         self._sessions[identifier].stop()
         self._cleanup(identifier)
 
@@ -99,6 +104,7 @@ class ServerService:
 
     # --- Registro guardado --------------------------------------------------------------
 
+    @operation('export')
     def save(self, kind: str, rows: list[dict], filename: str) -> str:
         definition = kind_by_id(kind)
         if not rows:

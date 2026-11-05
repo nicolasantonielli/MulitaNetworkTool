@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from mulita.core.events import EventSource
+from mulita.services.operation_events import operation, session
+
 import logging
 import os
 from dataclasses import dataclass
@@ -52,6 +55,7 @@ class CaptureService(ProcessSession):
         self._commands = commands
         self._directory = directory
 
+    @session('capture', 'interface')
     def start(self, interface: str, direction: str, filename: str,
               on_output: Optional[OutputListener] = None,
               on_exit: Optional[ExitListener] = None) -> CaptureRequest:
@@ -78,7 +82,7 @@ class _TapLinks:
     bridge: str = 'br-mulita'
 
 
-class TapService:
+class TapService(EventSource):
     """Pone el equipo entre la boca del switch y otro dispositivo.
 
     El trafico pasa de la interfaz entrante a la saliente y se graba.
@@ -103,6 +107,7 @@ class TapService:
     def config(self) -> TapConfig | None:
         return self._config
 
+    @operation('tap', 'config')
     def start(self, config: TapConfig, filename: str = '',
               on_output: Optional[OutputListener] = None,
               on_exit: Optional[ExitListener] = None) -> str:
@@ -133,6 +138,7 @@ class TapService:
         self._config = TapConfig(links.entrante, links.saliente, links.mirror)
         return recorded
 
+    @operation('tap_stop', when=lambda self: self.is_running)
     def stop(self) -> None:
         if self._recording and self._capture is not None:
             self._capture.stop()

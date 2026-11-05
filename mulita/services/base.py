@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from typing import Optional, Sequence
 
+from mulita.core.events import EventSource
+from mulita.services.operation_events import stop_events
+
 from mulita.core.errors import AlreadyRunningError
 from mulita.core.ports import (CommandRunner, ExitListener, OutputListener,
                                RunningCommand)
 
 
-class ProcessSession:
+class ProcessSession(EventSource):
     """Un proceso largo a la vez, con arranque y parada."""
 
     def __init__(self, runner: CommandRunner, name: str):
@@ -31,8 +34,10 @@ class ProcessSession:
 
     def stop(self) -> None:
         if self.is_running:
+            stop_events(self)
             self._handle.terminate()
 
     def _interrupt(self) -> None:
         if self.is_running:
+            stop_events(self)
             self._handle.interrupt()

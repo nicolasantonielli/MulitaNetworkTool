@@ -13,6 +13,7 @@ from mulita.adapters.settings_store import JsonSettingsStore
 from mulita.bootstrap import build_services
 from mulita.config import AppConfig
 from mulita.core.models import CommandResult
+from mulita.core.events import OperationEvent
 from mulita.core.platform import UsbDrive
 from mulita.services.files import CaptureFilesService
 from mulita.ui.qt.app import QtApplication
@@ -135,6 +136,8 @@ class ActivityLogTest(unittest.TestCase):
                 self.assertIn('Tiempo medio de respuesta: 10.0 ms.', text)
                 self.assertIn('Se exportó el archivo ping.csv.', text)
                 self.assertIn('Se exportó el archivo ping.statics.csv.', text)
+                self.assertEqual(text.count('Se hizo ping a 8.8.8.8.'), 1)
+                self.assertEqual(text.count('Se exportó el archivo ping.csv.'), 1)
                 self.assertEqual(activity.read(day), report)
 
                 settings.setLanguage('en')
@@ -156,7 +159,7 @@ class ActivityLogTest(unittest.TestCase):
                 self.assertIn('The file english.csv was exported.', updated)
                 self.assertIn('The file english.statics.csv was exported.', updated)
                 settings.setLanguage('es')
-                journal.action('wifiDisconnect', '', 'activityCompleted')
+                services.journal.record(OperationEvent('wifi_disconnect', 'completed', {}))
                 text = journal.read(day)
                 self.assertTrue(text.endswith('Se desconectó la interfaz Wi-Fi.\n'))
 

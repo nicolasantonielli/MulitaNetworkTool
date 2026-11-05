@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from mulita.core.events import EventSource
+from mulita.services.operation_events import operation, session
+
 import csv
 import os
 from pathlib import Path, PurePosixPath
@@ -19,7 +22,7 @@ from mulita.services.base import ProcessSession
 _CSV_HEADER = ('hop', 'address', 'loss', 'sent', 'last', 'average', 'best', 'worst', 'deviation')
 
 
-class TraceService:
+class TraceService(EventSource):
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory, cycles: int,
                  directory: PurePosixPath | Path = Path.home() / 'capturas' / 'trazas'):
@@ -28,6 +31,7 @@ class TraceService:
         self._cycles = cycles
         self._directory = Path(directory)
 
+    @operation('trace', 'target')
     def trace(self, target: str) -> tuple[TraceHop, ...]:
         result = self._runner.run(self._commands.trace(validation.host(target), self._cycles))
         hops = parse_trace(result.stdout)
@@ -38,6 +42,7 @@ class TraceService:
             raise CommandFailedError(detail or message('traceFailed'), result)
         return ()
 
+    @operation('export')
     def save(self, hops: tuple[TraceHop, ...], filename: str) -> str:
         if not hops:
             raise ValidationError(message('noTrace'))
@@ -103,6 +108,7 @@ class PingService(ProcessSession):
         self._commands = commands
         self._directory = Path(directory)
 
+    @operation('ping_export')
     def save(self, replies: tuple[PingReply, ...], summary: PingSummary | None, filename: str) -> str:
         if not replies and not (summary and summary.ready):
             raise ValidationError(message('noPing'))
@@ -145,6 +151,7 @@ class PingService(ProcessSession):
         except OSError as exc:
             raise CommandFailedError(message('pingFolder')) from exc
 
+    @session('ping', 'target')
     def start(self, target: str, count: float, interval: float, size: float,
               on_output: Optional[OutputListener] = None,
               on_exit: Optional[ExitListener] = None) -> PingRequest:
@@ -157,7 +164,7 @@ class PingService(ProcessSession):
         self._interrupt()
 
 
-class PortScanService:
+class PortScanService(EventSource):
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
                  directory: PurePosixPath | Path = Path.home() / 'capturas' / 'escaneo'):
@@ -165,6 +172,7 @@ class PortScanService:
         self._commands = commands
         self._directory = Path(directory)
 
+    @operation('ports', 'arguments')
     def scan(self, arguments: str) -> tuple[PortFinding, ...]:
         result = self._runner.run(self._commands.port_scan(validation.scan_arguments(arguments)))
         found = parse_port_scan(result.stdout)
@@ -175,6 +183,7 @@ class PortScanService:
             raise CommandFailedError(detail or message('scanFailed'), result)
         return ()
 
+    @operation('export')
     def save(self, findings: tuple[PortFinding, ...], filename: str) -> str:
         if not findings:
             raise ValidationError(message('noPorts'))
@@ -216,6 +225,7 @@ class DiscoveryService(ProcessSession):
         self._commands = commands
         self._directory = Path(directory)
 
+    @session('discovery', 'interface')
     def start(self, interface: str = '', on_output: Optional[OutputListener] = None,
               on_exit: Optional[ExitListener] = None) -> None:
         name = validation.interface_name(interface) if (interface or '').strip() else ''
@@ -231,6 +241,7 @@ class DiscoveryService(ProcessSession):
             raise ValidationError(message('discoverNoAddress', interface=interface))
         return network
 
+    @operation('export')
     def save(self, hosts: tuple[HostSighting, ...], filename: str) -> str:
         if not hosts:
             raise ValidationError(message('noHosts'))

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from mulita.core.events import EventSource
+from mulita.services.operation_events import operation
+
 import logging
 import os
 from typing import Callable
@@ -15,7 +18,7 @@ log = logging.getLogger(__name__)
 KeyboardListener = Callable[[bool], None]
 
 
-class MaintenanceService:
+class MaintenanceService(EventSource):
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
                  repository_dir: str, service_name: str,
@@ -28,17 +31,20 @@ class MaintenanceService:
         self._update_branch = update_branch
         self._installation_user = installation_user
 
+    @operation('update')
     def update(self) -> CommandResult:
         user = (self._installation_user if hasattr(os, 'geteuid') and os.geteuid() == 0 else '')
         argv = self._commands.update(self._repository_dir, self._update_remote, self._update_branch, user)
         return self._checked(argv, 'No se pudo actualizar')
 
+    @operation('restart')
     def reset(self) -> CommandResult | None:
         """Con systemd, pide el reinicio del servicio. Sin systemd, None: el proceso se reemplaza."""
         if not os.environ.get('INVOCATION_ID'):
             return None
         return self._checked(self._commands.restart_service(self._service_name), 'No se pudo reiniciar')
 
+    @operation('poweroff')
     def poweroff(self) -> CommandResult:
         return self._checked(self._commands.poweroff(), 'No se pudo apagar')
 

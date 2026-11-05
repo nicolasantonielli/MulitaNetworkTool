@@ -63,8 +63,6 @@ class TraceController(TaskController):
         self._task(lambda: self._trace.save(hops, filename), self._saved, action='save', detail=filename)
 
     def _show(self, hops: tuple, target: str) -> None:
-        route = '; '.join(self._tr('journalHop', hop=h.hop, address=h.address, loss=h.loss, average=h.average) for h in hops)
-        self._note(self._tr('journalTraceResult', target=target) + (route or self._tr('journalNoHops')))
         self._hops = tuple(hops)
         self.hopsChanged.emit()
         if not self._hops:
@@ -184,7 +182,6 @@ class PingController(SessionController):
         replies, summary = tuple(self._replies), self._summary
         def saved(name):
             statics = name[:-4] + '.statics.csv' if name.endswith('.csv') else name
-            self._saved_file(statics)
             self._ctx.notifier.success(self._tr('pingTitle'), self._tr('pingSaved', table=name, statics=statics))
         self._export(lambda: self._ping.save(replies, summary, filename), saved)
 
@@ -202,19 +199,6 @@ class PingController(SessionController):
             self._pending = ''
             self.repliesChanged.emit()
             self.summaryChanged.emit()
-
-        summary = self._summary
-        target = summary.target or self._activity_detail
-        if summary.ready:
-            sent = self._tr('journalSentOne') if summary.transmitted == '1' else self._tr('journalSent', count=summary.transmitted)
-            received = self._tr('journalReceivedOne') if summary.received == '1' else self._tr('journalReceived', count=summary.received)
-            result = self._tr('journalPingStats', sent=sent, received=received, loss=summary.loss)
-            if summary.average:
-                result += self._tr('journalPingAverage', average=summary.average)
-        else:
-            ok = sum(reply.status == 'ok' for reply in self._replies)
-            result = self._tr('journalPingIncomplete', count=ok)
-        self._note(self._tr('journalPingResult', target=target, result=result))
 
     def _take(self, line: str) -> None:
         reply, summary = read_ping_line(line, self._summary)
@@ -262,9 +246,6 @@ class PortScanController(TaskController):
 
     def _show(self, found: tuple) -> None:
         self._ports = tuple(found)
-        rows = '; '.join(f'{item.host} {item.port}/{item.protocol} {item.state} {item.service}'.strip()
-                         for item in self._ports)
-        self._note(self._tr('journalPorts') + (rows or self._tr('journalNoPorts')))
         self.portsChanged.emit()
         if not self._ports:
             self._ctx.notifier.info(self._tr('scanTitle'), self._tr('noPorts'))
@@ -337,9 +318,6 @@ class DiscoveryController(SessionController):
             self._take(self._pending)
             self._pending = ''
             self.hostsChanged.emit()
-        hosts = '; '.join(f'{item.ip} ({item.mac})' for item in self._hosts)
-        self._note(self._tr('journalDiscovery', interface=self._activity_detail)
-                   + (hosts or self._tr('journalNoHosts')))
         if code != 0 and not self._stopping:
             detail = '\n'.join(self._diagnostics) or self._tr('discoverFailed', code=code)
             self._ctx.notifier.error(detail, title=self._tr('discoverTitle'))

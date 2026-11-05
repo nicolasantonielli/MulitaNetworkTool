@@ -17,6 +17,10 @@ from mulita.adapters.subprocess_runner import SubprocessCommandRunner
 from mulita.config import AppConfig, load_config
 from mulita.core.commands import CommandFactory
 from mulita.core.models import Calibration
+from mulita.core.events import EventSource
+from mulita.presentation.journal import render_event
+from mulita.servers.activity_days import append_entry, technical_line
+from mulita.services.journal import TechnicalJournalService
 from mulita.core.ports import ClimateSensor, CommandRunner, SettingsStore
 from mulita.services import Services
 from mulita.services.settings import SettingsService
@@ -54,7 +58,11 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
     commands = CommandFactory(config.binaries, server_programs())
     capture = CaptureService(runner, commands, config.capture_dir)
     tap = TapService(runner, commands, CaptureService(runner, commands, config.storage.folder('tap')))
-    return Services(
+    settings = SettingsService(settings_store or JsonSettingsStore(config.settings_path), PanelBacklight())
+    journal = TechnicalJournalService(
+        settings, render_event,
+        lambda now, text: append_entry(Path(config.storage.folder('bitacora')), now, '.txt', technical_line(now, text)))
+    services = Services(
         interfaces=InterfaceService(runner, commands),
         ethernet=EthernetService(runner, commands, config.internal_interface, config.internal_connection),
         wifi=WifiService(runner, commands, config.wifi_dir),
@@ -77,7 +85,8 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
                                    config.update_remote, config.update_branch, config.installation_user),
         keyboard=KeyboardService(runner, commands),
         share=ShareService(),
-        settings=SettingsService(settings_store or JsonSettingsStore(config.settings_path), PanelBacklight()),
+        settings=settings,
+        journal=journal,
         servers=ServerService(runner, commands, config.servers_dir, config.servers_state_dir,
                               config.capture_dir, settings_path=config.settings_path),
         tls=TlsService(runner, commands, config.tls_dir),
@@ -86,6 +95,10 @@ def build_services(config: AppConfig, runner: CommandRunner | None = None,
         switchport=SwitchPortService(LinuxPacketSource(), SysfsLinkReader(),
                                     JsonSwitchReportStore(config.storage.folder('puerto-switch'))),
     )
+    for service in vars(services).values():
+        if isinstance(service, EventSource):
+            service.set_event_sink(journal.record)
+    return services
 
 
 def _ensure_home() -> None:

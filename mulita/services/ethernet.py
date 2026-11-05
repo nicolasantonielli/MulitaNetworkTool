@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from mulita.core.events import EventSource
+from mulita.services.operation_events import operation
+
 import json
 
 from mulita.core import validation
@@ -13,7 +16,7 @@ from mulita.core.parsers import (parse_connection_name, parse_default_gateway,
 from mulita.core.ports import CommandRunner
 
 
-class EthernetService:
+class EthernetService(EventSource):
     """Dirección de la ethernet interna, por DHCP o fija, vía NetworkManager."""
 
     def __init__(self, runner: CommandRunner, commands: CommandFactory,
@@ -71,6 +74,7 @@ class EthernetService:
                 raise CommandFailedError(message('vlanFailed'))
             self._checked(self._commands.delete_link(name), message('vlanFailed'))
 
+    @operation('vlan', 'enabled', 'vlan', context=lambda self: {'interface': self.interface})
     def apply_with_vlan(self, mode: str, address: str, netmask: str, gateway: str,
                         dns: str, enabled: bool, vlan: str) -> EthernetConfig:
         if mode not in ('dhcp', 'static'):
@@ -124,12 +128,14 @@ class EthernetService:
             gateway = reported.gateway
         return EthernetConfig(AddressMode.DHCP, address, prefix, gateway, reported.dns)
 
+    @operation('ipv4_ethernet', context=lambda self: {'interface': self.interface})
     def apply_dhcp(self) -> EthernetConfig:
         name = self._ensure()
         self._checked(self._commands.set_dhcp(name), 'No se pudo activar DHCP')
         self._checked(self._commands.activate_connection(name), 'No se pudo aplicar DHCP')
         return self.lease()
 
+    @operation('ipv4_ethernet', context=lambda self: {'interface': self.interface})
     def apply_static(self, address: str, netmask: str, gateway: str = '', dns: str = '') -> EthernetConfig:
         config = validation.static_ethernet(address, netmask, gateway, dns)
         name = self._ensure()
