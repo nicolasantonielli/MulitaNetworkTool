@@ -14,25 +14,68 @@ log = logging.getLogger(__name__)
 QML_DIR = Path(__file__).resolve().parent / 'qml'
 
 
+def _configure_environment() -> None:
+    """Variables que Qt lee al arrancar. Van antes de crear la aplicacion."""
+    # El plugin qtvirtualkeyboard abre una ventana propia. En EGLFS Qt
+    # aborta: "OpenGL windows cannot be mixed with others".
+    os.environ.pop('QT_IM_MODULE', None)
+    os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Material'
+    # Se decide en caliente: oculto con el dedo, visible si hay un mouse.
+    os.environ.pop('QT_QPA_EGLFS_HIDECURSOR', None)
+    runtime = os.environ.get('XDG_RUNTIME_DIR')
+    if not runtime and hasattr(os, 'getuid'):
+        runtime = f'/tmp/runtime-{os.getuid()}'
+        os.makedirs(runtime, mode=0o700, exist_ok=True)
+        os.environ['XDG_RUNTIME_DIR'] = runtime
+
+
 class QtApplication:
 
     def __init__(self, config: AppConfig, services: Services):
-        # El plugin qtvirtualkeyboard abre una ventana propia. En EGLFS Qt
-        # aborta: "OpenGL windows cannot be mixed with others".
-        os.environ.pop('QT_IM_MODULE', None)
-        os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Material'
-        # Se decide en caliente: oculto con el dedo, visible si hay un mouse.
-        os.environ.pop('QT_QPA_EGLFS_HIDECURSOR', None)
-        runtime = os.environ.get('XDG_RUNTIME_DIR')
-        if not runtime and hasattr(os, 'getuid'):
-            runtime = f'/tmp/runtime-{os.getuid()}'
-            os.makedirs(runtime, mode=0o700, exist_ok=True)
-            os.environ['XDG_RUNTIME_DIR'] = runtime
+        _configure_environment()
+        from PyQt5.QtGui import QGuiApplication
+        from mulita.ui.qt.touch_debug import log_input_devices
 
-        from PyQt5.QtCore import Qt, QTimer, QUrl
-        from PyQt5.QtGui import QCursor, QGuiApplication
-        from PyQt5.QtQml import QQmlApplicationEngine
+        self._services = services
+        self.app = QGuiApplication(sys.argv)
+        self.app.setApplicationName('Mulita')
+        log_input_devices()
+        self._setup_cursor(config)
+        self._install_input_filters()
+        context = self._build_controllers(config, services)
+        self._start_engine(context.dispatcher)
+        self._install_signal_pump()
 
+    def _setup_cursor(self, config: AppConfig) -> None:
+        from PyQt5.QtCore import Qt, QTimer
+        from PyQt5.QtGui import QCursor
+
+        self._pointer_cursor = False
+        # Linux tambien puede correr con escritorio: DISPLAY no indica que haya mouse.
+        self._cursor_follows_mouse = (
+            Path('/proc/bus/input/devices').exists()
+            and not config.test_mode)
+        if self._cursor_follows_mouse:
+            self.app.setOverrideCursor(QCursor(Qt.BlankCursor))
+            self._cursor_timer = QTimer(self.app)
+            self._cursor_timer.setInterval(1000)
+            self._cursor_timer.timeout.connect(self._sync_cursor)
+            self._sync_cursor()
+            self._cursor_timer.start()
+
+    def _install_input_filters(self) -> None:
+        from mulita.ui.qt.text_copy import TextCopyController
+        from mulita.ui.qt.touch_debug import TouchDebug
+        from mulita.ui.qt.touch_test import TouchTest
+
+        self._touch_test = TouchTest()
+        self._touch_debug = TouchDebug(self._touch_test)
+        self.app.installEventFilter(self._touch_debug)
+        self._text_copy = TextCopyController()
+        self.app.installEventFilter(self._text_copy)
+
+    def _build_controllers(self, config: AppConfig, services: Services):
+        """Crea los controladores que QML ve como objetos de contexto. Devuelve el contexto comun."""
         from mulita.ui.qt.bridge.activity import ActivityController, TechnicalJournal
         from mulita.ui.qt.bridge.remote import RemoteControl
         from mulita.ui.qt.bridge.base import BridgeContext, Notifier
@@ -59,32 +102,6 @@ class QtApplication:
                                                SpeedTestController,
                                                WakeOnLanController)
         from mulita.ui.qt.dispatcher import QtDispatcher
-        from mulita.ui.qt.icons import IconProvider
-        from mulita.ui.qt.touch_debug import TouchDebug, log_input_devices
-        from mulita.ui.qt.touch_test import TouchTest
-        from mulita.ui.qt.text_copy import TextCopyController
-
-        self._services = services
-        self.app = QGuiApplication(sys.argv)
-        self.app.setApplicationName('Mulita')
-        log_input_devices()
-        self._pointer_cursor = False
-        # Linux tambien puede correr con escritorio: DISPLAY no indica que haya mouse.
-        self._cursor_follows_mouse = (
-            Path('/proc/bus/input/devices').exists()
-            and not config.test_mode)
-        if self._cursor_follows_mouse:
-            self.app.setOverrideCursor(QCursor(Qt.BlankCursor))
-            self._cursor_timer = QTimer(self.app)
-            self._cursor_timer.setInterval(1000)
-            self._cursor_timer.timeout.connect(self._sync_cursor)
-            self._sync_cursor()
-            self._cursor_timer.start()
-        self._touch_test = TouchTest()
-        self._touch_debug = TouchDebug(self._touch_test)
-        self.app.installEventFilter(self._touch_debug)
-        self._text_copy = TextCopyController()
-        self.app.installEventFilter(self._text_copy)
 
         notifier = Notifier()
         ctx = BridgeContext(config=config, settings=services.settings, dispatcher=QtDispatcher(), notifier=notifier)
@@ -124,6 +141,12 @@ class QtApplication:
             'nmapScan': NmapController(ctx, services.nmap),
             'switchPort': SwitchPortController(ctx, services.switchport),
         }
+        return ctx
+
+    def _start_engine(self, dispatcher) -> None:
+        from PyQt5.QtCore import QUrl
+        from PyQt5.QtQml import QQmlApplicationEngine
+        from mulita.ui.qt.icons import IconProvider
 
         self.engine = QQmlApplicationEngine()
         self.engine.warnings.connect(lambda warnings: [log.warning(w.toString()) for w in warnings])
@@ -132,11 +155,14 @@ class QtApplication:
         for name, controller in self._controllers.items():
             context.setContextProperty(name, controller)
 
-        self._dispatcher = ctx.dispatcher
+        self._dispatcher = dispatcher
         self.app.aboutToQuit.connect(self._shutdown)
         self.engine.load(QUrl.fromLocalFile(str(QML_DIR / 'Main.qml')))
         if not self.engine.rootObjects():
             raise RuntimeError('No se pudo cargar la interfaz QML')
+
+    def _install_signal_pump(self) -> None:
+        from PyQt5.QtCore import QTimer
 
         # Python solo atiende Ctrl+C cuando recupera el control del bucle de Qt
         signal.signal(signal.SIGINT, lambda *_: self.app.quit())
