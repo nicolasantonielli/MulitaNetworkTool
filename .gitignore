@@ -1,4 +1,9 @@
 .venv/
 .venv-win/
+.venv-ci/
 __pycache__/
 *.pyc
+reports/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/

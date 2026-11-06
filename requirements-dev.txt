@@ -1,0 +1,5 @@
+# Herramientas de calidad y pruebas. No se instalan en la Raspberry Pi de produccion.
+ruff
+mypy
+import-linter
+pytest

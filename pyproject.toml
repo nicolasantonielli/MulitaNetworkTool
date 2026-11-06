@@ -1,0 +1,64 @@
+# Herramientas de calidad. No define un paquete instalable: Mulita se despliega con install-lite.sh.
+
+[tool.ruff]
+line-length = 140
+target-version = "py310"
+extend-exclude = [".venv", ".venv-win", "img"]
+
+[tool.ruff.lint]
+# F: errores reales (nombres sin definir, imports sin uso). E9: errores de sintaxis.
+# B: trampas comunes. C90: complejidad ciclomatica.
+select = ["F", "E9", "B", "C90"]
+ignore = [
+    "B008",  # Path.home() como valor por defecto y QModelIndex() en firmas de Qt son intencionales
+    "B905",  # zip sin strict: cambiaria el comportamiento actual
+]
+
+[tool.ruff.lint.mccabe]
+# Hoy ninguna funcion pasa de 20. Bajar el numero de a poco.
+max-complexity = 20
+
+[tool.ruff.lint.per-file-ignores]
+"mulita/core/parsers.py" = ["F401"]  # fachada: reexporta los parsers por dominio
+"tests/*" = ["F401", "B"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["mulita"]
+ignore_missing_imports = true
+explicit_package_bases = true  # la raiz del repositorio tiene un __init__.py
+
+[tool.importlinter]
+root_package = "mulita"
+
+[[tool.importlinter.contracts]]
+name = "core no depende de ninguna otra capa"
+type = "forbidden"
+source_modules = ["mulita.core"]
+forbidden_modules = [
+    "mulita.config", "mulita.services", "mulita.adapters", "mulita.presentation",
+    "mulita.ui", "mulita.servers", "mulita.bootstrap",
+]
+
+[[tool.importlinter.contracts]]
+name = "adapters y presentation solo conocen core"
+type = "forbidden"
+source_modules = ["mulita.adapters", "mulita.presentation"]
+forbidden_modules = [
+    "mulita.config", "mulita.services", "mulita.ui", "mulita.servers", "mulita.bootstrap",
+]
+
+[[tool.importlinter.contracts]]
+name = "services no conoce adaptadores, interfaz ni presentacion"
+type = "forbidden"
+source_modules = ["mulita.services"]
+forbidden_modules = [
+    "mulita.config", "mulita.adapters", "mulita.presentation", "mulita.ui",
+    "mulita.servers", "mulita.bootstrap",
+]
+
+[[tool.importlinter.contracts]]
+name = "la interfaz no conoce adaptadores ni servidores"
+type = "forbidden"
+source_modules = ["mulita.ui"]
+forbidden_modules = ["mulita.adapters", "mulita.servers", "mulita.bootstrap"]
