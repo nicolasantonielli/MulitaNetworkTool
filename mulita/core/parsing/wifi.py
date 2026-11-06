@@ -4,6 +4,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import re
+from typing import NamedTuple
 from mulita.core.errors import CommandFailedError
 from mulita.core.models import EthernetConfig, WifiLink, WifiNetwork
 from .network import parse_default_gateway, parse_nmcli_device_ipv4
@@ -239,10 +240,44 @@ def _survey_noise(text: str, freq: int | None) -> str:
     return noise
 
 
-def build_wifi_link(interface: str, addr: str, route: str, lease: str, details: str,
-                    iw_link: str, iw_info: str, station: str, survey: str,
-                    networks: tuple[WifiNetwork, ...] = ()) -> WifiLink:
-    """Junta IP, nmcli e iw. Lo que falta queda vacío y no se muestra."""
+_UNSIGNED = re.compile(r'(\d+)')
+_SIGNED = re.compile(r'(-?\d+)')
+_IW_CHANNEL = re.compile(
+    r'channel\s+(\d+)\s+\((\d+)\s*MHz\)(?:,\s*width:\s*([^,]+))?(?:,\s*center1:\s*(\d+)\s*MHz)?',
+    re.IGNORECASE)
+_IW_ADDR = re.compile(r'^\s*addr\s+([0-9a-f:]{17})', re.IGNORECASE | re.MULTILINE)
+_IW_TYPE = re.compile(r'^\s*type\s+(.+)$', re.IGNORECASE | re.MULTILINE)
+_IW_SSID = re.compile(r'^\s*ssid\s+(.+)$', re.IGNORECASE | re.MULTILINE)
+_IW_POWER = re.compile(r'^\s*txpower\s+(-?\d+(?:\.\d+)?)\s*dBm', re.IGNORECASE | re.MULTILINE)
+
+
+class _IpSettings(NamedTuple):
+    address: str
+    netmask: str
+    gateway: str
+    dns: str
+    ipv6: str
+    mac: str
+
+
+class _IwInfo(NamedTuple):
+    mac: str
+    mode: str
+    ssid: str
+    power: str
+    channel: str
+    frequency: int | None
+    width: str
+    center: str
+
+
+def _number(pattern: re.Pattern, text: str) -> int | None:
+    match = pattern.search(text)
+    return int(match.group(1)) if match else None
+
+
+def _ip_settings(addr: str, route: str, lease: str) -> _IpSettings:
+    """IPv4, mascara, puerta de enlace, DNS e IPv6. Si `ip` o `nmcli` fallan, lo que falte queda vacio."""
     try:
         address, prefix, mac, ipv6 = parse_interface_details(addr)
     except CommandFailedError:
@@ -257,101 +292,113 @@ def build_wifi_link(interface: str, addr: str, route: str, lease: str, details: 
         reported = EthernetConfig()
     if not address:
         address, prefix = reported.address, reported.prefix
-    if not gateway:
-        gateway = reported.gateway
-    netmask = ''
-    if address:
-        netmask = f'{ipaddress.IPv4Network(f"0.0.0.0/{prefix}").netmask} (/{prefix})'
+    netmask = f'{ipaddress.IPv4Network(f"0.0.0.0/{prefix}").netmask} (/{prefix})' if address else ''
+    return _IpSettings(address, netmask, gateway or reported.gateway, reported.dns, ipv6, mac)
 
-    active = next((item for item in networks if item.active), None)
-    radio = parse_wifi_active(details)
-    link = _lines(iw_link)
-    sta = _lines(station)
-    connected = _CONNECTED.search(iw_link or '')
-    bssid = (connected.group(1) if connected else radio.get('bssid', '')).lower()
-    channel_line = re.search(
-        r'channel\s+(\d+)\s+\((\d+)\s*MHz\)(?:,\s*width:\s*([^,]+))?(?:,\s*center1:\s*(\d+)\s*MHz)?',
-        iw_info or '', re.IGNORECASE)
-    addr = re.search(r'^\s*addr\s+([0-9a-f:]{17})', iw_info or '', re.IGNORECASE | re.MULTILINE)
-    kind = re.search(r'^\s*type\s+(.+)$', iw_info or '', re.IGNORECASE | re.MULTILINE)
-    info_ssid = re.search(r'^\s*ssid\s+(.+)$', iw_info or '', re.IGNORECASE | re.MULTILINE)
-    power_match = re.search(r'^\s*txpower\s+(-?\d+(?:\.\d+)?)\s*dBm', iw_info or '', re.IGNORECASE | re.MULTILINE)
-    freq = (_mhz(link.get('freq', ''))
-             or (int(channel_line.group(2)) if channel_line else None)
-             or _mhz(radio.get('frequency', '')))
-    if channel_line:
-        channel = channel_line.group(1)
-    elif radio.get('channel', '').isdigit():
-        channel = radio['channel']
-    elif freq:
-        channel = _channel(freq)
-    else:
-        channel = ''
+
+def _iw_info(text: str) -> _IwInfo:
+    """Lo que informa `iw dev <interfaz> info`."""
+    text = text or ''
+    channel = _IW_CHANNEL.search(text)
+    addr, kind, ssid, power = (pattern.search(text) for pattern in (_IW_ADDR, _IW_TYPE, _IW_SSID, _IW_POWER))
+    return _IwInfo(
+        mac=addr.group(1) if addr else '',
+        mode=kind.group(1).strip() if kind else '',
+        ssid=ssid.group(1).strip() if ssid else '',
+        power=f'{float(power.group(1)):g} dBm' if power else '',
+        channel=channel.group(1) if channel else '',
+        frequency=int(channel.group(2)) if channel else None,
+        width=channel.group(3).strip() if channel and channel.group(3) else '',
+        center=f'{channel.group(4)} MHz' if channel and channel.group(4) else '')
+
+
+def _frequency_and_channel(link: dict, radio: dict, info: _IwInfo) -> tuple[int | None, str]:
+    freq = _mhz(link.get('freq', '')) or info.frequency or _mhz(radio.get('frequency', ''))
+    if info.channel:
+        return freq, info.channel
+    if radio.get('channel', '').isdigit():
+        return freq, radio['channel']
+    return freq, _channel(freq) if freq else ''
+
+
+def _rates(link: dict, sta: dict, radio: dict) -> tuple[str, str, str, str]:
+    """Velocidad y MCS de recepcion y de transmision."""
     rate_rx, mcs_rx = _bitrate(link.get('rx bitrate', '') or sta.get('rx bitrate', ''))
     rate_tx, mcs_tx = _bitrate(link.get('tx bitrate', '') or sta.get('tx bitrate', ''))
     if not rate_rx and not rate_tx and radio.get('rate'):
         rate_rx = radio['rate']
-    uptime_match = re.search(r'(\d+)', sta.get('connected time', ''))
-    signal_match = re.search(r'(-?\d+)', sta.get('signal', '') or link.get('signal', ''))
-    avg_match = re.search(r'(-?\d+)', sta.get('signal avg', ''))
-    percent = ''
+    return rate_rx, mcs_rx, rate_tx, mcs_tx
+
+
+def _signal(link: dict, sta: dict, radio: dict, active: WifiNetwork | None) -> tuple[str, int | None]:
+    """Texto de la senal (dBm, promedio y porcentaje) y los dBm medidos."""
     if active and active.signal:
         percent = f'{active.signal} %'
     elif radio.get('signal', '').isdigit():
         percent = f'{radio["signal"]} %'
-    signal = ''
-    dbm = int(signal_match.group(1)) if signal_match else None
-    if dbm is not None:
-        signal = f'{dbm} dBm'
-        if avg_match and int(avg_match.group(1)) != dbm:
-            signal += f' · avg {avg_match.group(1)} dBm'
-        if percent:
-            signal += f' · {percent}'
-    elif percent:
-        signal = percent
+    else:
+        percent = ''
+    dbm = _number(_SIGNED, sta.get('signal', '') or link.get('signal', ''))
+    if dbm is None:
+        return percent, None
+    signal = f'{dbm} dBm'
+    average = _number(_SIGNED, sta.get('signal avg', ''))
+    if average is not None and average != dbm:
+        signal += f' · avg {average} dBm'
+    if percent:
+        signal += f' · {percent}'
+    return signal, dbm
+
+
+def build_wifi_link(interface: str, addr: str, route: str, lease: str, details: str,
+                    iw_link: str, iw_info: str, station: str, survey: str,
+                    networks: tuple[WifiNetwork, ...] = ()) -> WifiLink:
+    """Junta IP, nmcli e iw. Lo que falta queda vacío y no se muestra."""
+    ip = _ip_settings(addr, route, lease)
+    active = next((item for item in networks if item.active), None)
+    radio = parse_wifi_active(details)
+    link, sta = _lines(iw_link), _lines(station)
+    info = _iw_info(iw_info)
+    connected = _CONNECTED.search(iw_link or '')
+    freq, channel = _frequency_and_channel(link, radio, info)
+    rate_rx, mcs_rx, rate_tx, mcs_tx = _rates(link, sta, radio)
+    signal, dbm = _signal(link, sta, radio, active)
     noise = _survey_noise(survey, freq)
-    snr = ''
-    noise_match = re.search(r'(-?\d+)', noise)
-    if dbm is not None and noise_match:
-        snr = f'{dbm - int(noise_match.group(1))} dB'
-    uptime = _duration(int(uptime_match.group(1))) if uptime_match else ''
-    power = f'{float(power_match.group(1)):g} dBm' if power_match else ''
-    rx = re.search(r'(\d+)', link.get('rx', ''))
-    tx = re.search(r'(\d+)', link.get('tx', ''))
-    kind_name = kind.group(1).strip() if kind else ''
-    mode = kind_name
-    info_name = info_ssid.group(1).strip() if info_ssid else ''
+    noise_dbm = _number(_SIGNED, noise)
+    uptime = _number(_UNSIGNED, sta.get('connected time', ''))
+    received = _number(_UNSIGNED, link.get('rx', ''))
+    sent = _number(_UNSIGNED, link.get('tx', ''))
     return WifiLink(
         interface=interface,
-        ssid=link.get('ssid') or (active.ssid if active else '') or info_name,
-        bssid=bssid,
+        ssid=link.get('ssid') or (active.ssid if active else '') or info.ssid,
+        bssid=(connected.group(1) if connected else radio.get('bssid', '')).lower(),
         security=(active.security if active and active.security else '') or radio.get('security', ''),
-        mode=mode,
-        mac=((addr.group(1) if addr else '') or mac).lower(),
-        address=address,
-        netmask=netmask,
-        gateway=gateway,
-        dns=reported.dns,
-        ipv6=ipv6,
+        mode=info.mode,
+        mac=(info.mac or ip.mac).lower(),
+        address=ip.address,
+        netmask=ip.netmask,
+        gateway=ip.gateway,
+        dns=ip.dns,
+        ipv6=ip.ipv6,
         band=_band(freq) if freq else '',
         channel=channel,
         frequency=f'{freq} MHz' if freq else '',
-        width=channel_line.group(3).strip() if channel_line and channel_line.group(3) else '',
-        center=f'{channel_line.group(4)} MHz' if channel_line and channel_line.group(4) else '',
+        width=info.width,
+        center=info.center,
         signal=signal,
         noise=noise,
-        snr=snr,
+        snr=f'{dbm - noise_dbm} dB' if dbm is not None and noise_dbm is not None else '',
         mcs_rx=mcs_rx,
         mcs_tx=mcs_tx,
         rate_rx=rate_rx,
         rate_tx=rate_tx,
-        tx_power=power,
-        uptime=uptime,
+        tx_power=info.power,
+        uptime=_duration(uptime) if uptime is not None else '',
         beacon=f'{link["beacon int"]} TU' if link.get('beacon int', '').isdigit() else '',
         dtim=link.get('dtim period', ''),
         retries=sta.get('tx retries', ''),
         failed=sta.get('tx failed', ''),
         beacon_loss=sta.get('beacon loss', ''),
-        rx=_size(int(rx.group(1))) if rx else '',
-        tx=_size(int(tx.group(1))) if tx else '',
+        rx=_size(received) if received is not None else '',
+        tx=_size(sent) if sent is not None else '',
     )

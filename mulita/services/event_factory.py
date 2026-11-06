@@ -43,41 +43,55 @@ def publish_event(source: EventSource, action: str, phase: EventPhase, parameter
         logging.getLogger(__name__).exception('Invalid diagnostic event contract: %s/%s', action, phase)
 
 
+_EXPORT_ACTIONS = ('export', 'web_export', 'ping_export', 'export_many')
+
+
+def _export(action: str, value: Any, items: tuple[ExportItem, ...]) -> ExportReport:
+    names = tuple(item.name for item in items) if action == 'export_many' else (PurePath(value).name,)
+    if action == 'ping_export':
+        names += (names[0][:-4] + '.statics.csv',)
+    return ExportReport(names)
+
+
+def _tls(value: Any) -> TlsReport:
+    counts = Counter(finding.severity for finding in value)
+    return TlsReport(tuple(SeverityCount(severity, count) for severity, count in counts.items()))
+
+
+def _nmap(value: Any) -> NmapReport:
+    if not value:
+        return NmapReport('', (), '')
+    return NmapReport(value.status, tuple(h['ip'] for h in value.hosts if h.get('ip')), value.open_ports)
+
+
+def _switch(value: Any) -> SwitchReport:
+    neighbors = tuple(NeighborReport(row.get('name') or row.get('chassis') or '', row.get('port') or '')
+                      for row in value.get('neighbors', ()))
+    return SwitchReport(value.get('interface', ''), value['cancelled'], value.get('frames', 0), neighbors)
+
+
+# Accion -> como se convierte lo que devolvio el servicio en un resultado tipado.
+_RESULTS = {
+    'ping': lambda value: PingReport(value['summary'], value['replies']),
+    'trace': lambda value: TraceReport(tuple(value)),
+    'ports': lambda value: PortsReport(tuple(value)),
+    'discovery': lambda value: DiscoveryReport(tuple(HostReport(host.ip, host.mac) for host in value)),
+    'wol': lambda value: WakeReport(value.mac, value.target, value.port),
+    'climate': ClimateReport,
+    'speed': lambda value: value,
+    'wifi_info': lambda value: value,
+    'public_ip': lambda value: PublicIpReport(value.ip),
+    'vendor': lambda value: VendorReport(value or ''),
+    'tap': lambda value: TapReport(value or ''),
+    'tls': _tls,
+    'nmap': _nmap,
+    'switch': _switch,
+}
+
+
 def _result(action: str, value: Any, items: tuple[ExportItem, ...]) -> OperationResult | None:
-    if action in ('export', 'web_export', 'ping_export', 'export_many'):
-        names = tuple(item.name for item in items) if action == 'export_many' else (PurePath(value).name,)
-        if action == 'ping_export':
-            names += (names[0][:-4] + '.statics.csv',)
-        return ExportReport(names)
-    if action == 'ping':
-        return PingReport(value['summary'], value['replies'])
-    if action == 'trace':
-        return TraceReport(tuple(value))
-    if action == 'ports':
-        return PortsReport(tuple(value))
-    if action == 'discovery':
-        return DiscoveryReport(tuple(HostReport(host.ip, host.mac) for host in value))
-    if action == 'wol':
-        return WakeReport(value.mac, value.target, value.port)
-    if action == 'climate':
-        return ClimateReport(value)
-    if action in ('speed', 'wifi_info'):
-        return value
-    if action == 'public_ip':
-        return PublicIpReport(value.ip)
-    if action == 'vendor':
-        return VendorReport(value or '')
-    if action == 'tap':
-        return TapReport(value or '')
-    if action == 'tls':
-        counts = Counter(finding.severity for finding in value)
-        return TlsReport(tuple(SeverityCount(severity, count) for severity, count in counts.items()))
-    if action == 'nmap':
-        return NmapReport(value.status, tuple(h['ip'] for h in value.hosts if h.get('ip')),
-                          value.open_ports) if value else NmapReport('', (), '')
-    if action == 'switch':
-        neighbors = tuple(NeighborReport(row.get('name') or row.get('chassis') or '', row.get('port') or '')
-                          for row in value.get('neighbors', ()))
-        return SwitchReport(value.get('interface', ''), value['cancelled'], value.get('frames', 0), neighbors)
+    if action in _EXPORT_ACTIONS:
+        return _export(action, value, items)
     # System operations and capture completion need no diagnostic payload.
-    return None
+    build = _RESULTS.get(action)
+    return build(value) if build else None

@@ -40,6 +40,84 @@ def _vlan(value: int) -> bool:
     return 1 <= value <= 4094
 
 
+_LLDP_CAPABILITIES = {0: 'other', 1: 'repeater', 2: 'bridge', 3: 'wlan', 4: 'router',
+                      5: 'telephone', 6: 'docsis', 7: 'station'}
+_DOT1 = b'\x00\x80\xc2'
+_MED = b'\x00\x12\xbb'
+
+
+def _lldp_chassis(row: dict, value: bytes) -> None:
+    row['chassis'] = _identifier(value, True)
+
+
+def _lldp_port(row: dict, value: bytes) -> None:
+    row['port'] = _identifier(value, False)
+
+
+def _lldp_ttl(row: dict, value: bytes) -> None:
+    if len(value) == 2:
+        row['ttl'] = int.from_bytes(value, 'big')
+
+
+def _lldp_text(key: str):
+    def handler(row: dict, value: bytes) -> None:
+        row[key] = _text(value)
+    return handler
+
+
+def _lldp_capabilities(row: dict, value: bytes) -> None:
+    if len(value) == 4:
+        enabled = int.from_bytes(value[2:4], 'big')
+        row['capabilities'] = [name for bit, name in _LLDP_CAPABILITIES.items() if enabled & (1 << bit)]
+
+
+def _lldp_management(row: dict, value: bytes) -> None:
+    if len(value) < 2:
+        return
+    count, family = value[:2]
+    if count >= 2 and count + 1 <= len(value) and family in (1, 2):
+        address = _address(value[2:1 + count])
+        if address and address not in row['addresses']:
+            row['addresses'].append(address)
+
+
+def _lldp_dot1(row: dict, subtype: int, data: bytes) -> None:
+    if subtype == 1 and len(data) == 2:
+        vid = int.from_bytes(data, 'big')
+        if _vlan(vid):
+            row['pvid'] = vid
+    elif subtype == 3 and len(data) >= 3:
+        vid, length = int.from_bytes(data[:2], 'big'), data[2]
+        if _vlan(vid) and length <= len(data) - 3:
+            row['vlans'].append({'id': vid, 'name': _text(data[3:3 + length])})
+
+
+def _lldp_med(row: dict, subtype: int, data: bytes) -> None:
+    if subtype == 2 and len(data) == 4:
+        # LLDP-MED: aplicación, unknown/tagged, VID, prioridad y DSCP.
+        policy = int.from_bytes(data[1:], 'big')
+        vid = (policy >> 9) & 4095
+        if data[0] in (1, 2) and not policy & 0x800000 and _vlan(vid):
+            row['voice'].append({'id': vid, 'tagged': bool(policy & 0x400000)})
+
+
+def _lldp_organization(row: dict, value: bytes) -> None:
+    if len(value) < 4:
+        return
+    oui, subtype, data = value[:3], value[3], value[4:]
+    if oui == _DOT1:
+        _lldp_dot1(row, subtype, data)
+    elif oui == _MED:
+        _lldp_med(row, subtype, data)
+
+
+_LLDP_HANDLERS = {
+    1: _lldp_chassis, 2: _lldp_port, 3: _lldp_ttl,
+    4: _lldp_text('description'), 5: _lldp_text('name'), 6: _lldp_text('system'),
+    7: _lldp_capabilities, 8: _lldp_management, 127: _lldp_organization,
+}
+
+
 def _lldp(payload: bytes, source: str) -> dict | None:
     row = _neighbor('LLDP', source)
     seen = []
@@ -57,42 +135,9 @@ def _lldp(payload: bytes, source: str) -> dict | None:
             ended = size == 0
             break
         seen.append(kind)
-        if kind == 1:
-            row['chassis'] = _identifier(value, True)
-        elif kind == 2:
-            row['port'] = _identifier(value, False)
-        elif kind == 3 and size == 2:
-            row['ttl'] = int.from_bytes(value, 'big')
-        elif kind in (4, 5, 6):
-            row[{4: 'description', 5: 'name', 6: 'system'}[kind]] = _text(value)
-        elif kind == 7 and size == 4:
-            enabled = int.from_bytes(value[2:4], 'big')
-            names = {0: 'other', 1: 'repeater', 2: 'bridge', 3: 'wlan', 4: 'router',
-                     5: 'telephone', 6: 'docsis', 7: 'station'}
-            row['capabilities'] = [name for bit, name in names.items() if enabled & (1 << bit)]
-        elif kind == 8 and size >= 2:
-            count, family = value[:2]
-            if count >= 2 and count + 1 <= size and family in (1, 2):
-                address = _address(value[2:1 + count])
-                if address and address not in row['addresses']:
-                    row['addresses'].append(address)
-        elif kind == 127 and size >= 4:
-            oui, subtype, data = value[:3], value[3], value[4:]
-            if oui == b'\x00\x80\xc2':
-                if subtype == 1 and len(data) == 2:
-                    vid = int.from_bytes(data, 'big')
-                    if _vlan(vid):
-                        row['pvid'] = vid
-                elif subtype == 3 and len(data) >= 3:
-                    vid, length = int.from_bytes(data[:2], 'big'), data[2]
-                    if _vlan(vid) and length <= len(data) - 3:
-                        row['vlans'].append({'id': vid, 'name': _text(data[3:3 + length])})
-            elif oui == b'\x00\x12\xbb' and subtype == 2 and len(data) == 4:
-                # LLDP-MED: aplicación, unknown/tagged, VID, prioridad y DSCP.
-                policy = int.from_bytes(data[1:], 'big')
-                vid = (policy >> 9) & 4095
-                if data[0] in (1, 2) and not policy & 0x800000 and _vlan(vid):
-                    row['voice'].append({'id': vid, 'tagged': bool(policy & 0x400000)})
+        handler = _LLDP_HANDLERS.get(kind)
+        if handler:
+            handler(row, value)
     if not ended or seen[:3] != [1, 2, 3] or not row['chassis'] or not row['port']:
         return None
     return row
@@ -125,6 +170,43 @@ def _cdp_addresses(value: bytes) -> list[str]:
     return found
 
 
+def _cdp_text(key: str):
+    def handler(row: dict, value: bytes) -> None:
+        row[key] = _text(value)
+    return handler
+
+
+def _cdp_addresses_into(row: dict, value: bytes) -> None:
+    row['addresses'] = list(dict.fromkeys(row['addresses'] + _cdp_addresses(value)))
+
+
+def _cdp_native_vlan(row: dict, value: bytes) -> None:
+    if len(value) == 2:
+        vid = int.from_bytes(value, 'big')
+        if _vlan(vid):
+            row['pvid'] = vid
+
+
+def _cdp_duplex(row: dict, value: bytes) -> None:
+    if len(value) == 1:
+        row['duplex'] = 'full' if value[0] else 'half'
+
+
+def _cdp_voice_vlan(row: dict, value: bytes) -> None:
+    if len(value) == 3:
+        vid = int.from_bytes(value[1:], 'big')
+        if _vlan(vid):
+            row['voice'].append({'id': vid, 'tagged': True})
+
+
+_CDP_HANDLERS = {
+    1: _cdp_text('chassis'), 3: _cdp_text('port'), 5: _cdp_text('description'),
+    6: _cdp_text('system'), 20: _cdp_text('name'),
+    2: _cdp_addresses_into, 22: _cdp_addresses_into,
+    10: _cdp_native_vlan, 11: _cdp_duplex, 14: _cdp_voice_vlan,
+}
+
+
 def _cdp(payload: bytes, source: str) -> dict | None:
     if len(payload) < 4 or payload[0] not in (1, 2):
         return None
@@ -137,21 +219,9 @@ def _cdp(payload: bytes, source: str) -> dict | None:
             return None
         value = payload[offset + 4:offset + size]
         offset += size
-        if kind in (1, 3, 5, 6, 20):
-            key = {1: 'chassis', 3: 'port', 5: 'description', 6: 'system', 20: 'name'}[kind]
-            row[key] = _text(value)
-        elif kind in (2, 22):
-            row['addresses'] = list(dict.fromkeys(row['addresses'] + _cdp_addresses(value)))
-        elif kind == 10 and len(value) == 2:
-            vid = int.from_bytes(value, 'big')
-            if _vlan(vid):
-                row['pvid'] = vid
-        elif kind == 11 and len(value) == 1:
-            row['duplex'] = 'full' if value[0] else 'half'
-        elif kind == 14 and len(value) == 3:
-            vid = int.from_bytes(value[1:], 'big')
-            if _vlan(vid):
-                row['voice'].append({'id': vid, 'tagged': True})
+        handler = _CDP_HANDLERS.get(kind)
+        if handler:
+            handler(row, value)
     if not row['chassis'] or not row['port']:
         return None
     row['name'] = row['name'] or row['chassis']
