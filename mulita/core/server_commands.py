@@ -1,16 +1,10 @@
 """Comandos de servidores y de las cuentas que necesitan."""
 from __future__ import annotations
 
-from pathlib import PurePosixPath
-from mulita.core.binaries import Binaries
-
-Argv = list[str]
+from mulita.core.command_base import Argv, CommandBase
 
 
-class ServerCommands:
-    def __init__(self, binaries: Binaries, server_programs: PurePosixPath | None = None):
-        self._bin = binaries
-        self._server_programs = server_programs
+class ServerCommands(CommandBase):
 
     def _script(self, name: str) -> Argv:
         """Servidores propios (TFTP, web, NTP): scripts de la biblioteca estandar, sin salida diferida."""
