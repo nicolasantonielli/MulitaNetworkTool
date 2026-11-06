@@ -48,7 +48,7 @@ def serve(host: str, port: int, stratum: int, ready: threading.Event | None = No
     except OSError as exc:
         server.close()
         say('', f'No se pudo abrir el puerto {port}: {exc.strerror or exc}')
-        raise SystemExit(1)
+        raise SystemExit(1) from exc
     server.settimeout(0.5)
     say('', f'NTP escuchando en el puerto {server.getsockname()[1]} (estrato {stratum})')
     if ready:

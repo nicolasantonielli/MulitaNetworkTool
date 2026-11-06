@@ -6,7 +6,6 @@ from mulita.services.operation_events import operation, session, stop_events
 import csv
 import ipaddress
 import os
-import secrets
 from pathlib import Path, PurePosixPath
 from typing import Callable, Mapping, Optional
 
@@ -20,15 +19,7 @@ from mulita.core.messages import message
 from mulita.services.base import ProcessSession
 
 from mulita.services.server_plan import ServerPlan as _Plan
-from mulita.services.sftp_provisioning import SftpProvisioner, USER_MARK
-PASSWORD_ALPHABET = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-PASSWORD_LENGTH = 8
-
-
-def suggest_password() -> str:
-    return ''.join(secrets.choice(PASSWORD_ALPHABET) for _ in range(PASSWORD_LENGTH))
-
-
+from mulita.services.sftp_provisioning import SftpProvisioner, USER_MARK  # noqa: F401  (los tests lo importan desde aqui)
 class _Session(ProcessSession):
 
     def launch(self, argv, on_output, on_exit) -> None:

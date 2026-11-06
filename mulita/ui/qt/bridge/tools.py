@@ -16,7 +16,7 @@ from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.models import ClimateReading, SpeedTestResult
 from mulita.core.messages import message
-from mulita.core.errors import MulitaError, ValidationError
+from mulita.core.errors import ValidationError
 from mulita.presentation import texts
 from mulita.presentation.facts import public_facts
 from mulita.ui.qt.bridge.base import BridgeContext, TaskController

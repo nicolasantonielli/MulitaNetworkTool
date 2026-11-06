@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import ipaddress
 import json
-import re
 from mulita.core.errors import CommandFailedError
 from mulita.core.messages import message
 from mulita.core.models import PublicAddress

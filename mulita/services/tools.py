@@ -16,7 +16,7 @@ from mulita.core import validation
 from mulita.core.commands import CommandFactory
 from mulita.core.errors import CommandFailedError, ValidationError
 from mulita.core.messages import message
-from mulita.core.models import Calibration, ClimateReading, SpeedTestResult
+from mulita.core.models import Calibration, ClimateReading, PublicAddress, SpeedTestResult
 from mulita.core.parsers import (parse_default_gateway, parse_interfaces,
                                 parse_mac_vendor, parse_public_address, parse_speed_test)
 from mulita.core.ports import ClimateSensor, CommandRunner

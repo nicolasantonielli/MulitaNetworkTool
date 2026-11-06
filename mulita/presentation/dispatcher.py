@@ -4,7 +4,7 @@ import functools
 import logging
 import threading
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 log = logging.getLogger(__name__)
 

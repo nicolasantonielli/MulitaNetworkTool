@@ -8,7 +8,6 @@ if TYPE_CHECKING:
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
-from mulita.core.errors import MulitaError
 from mulita.core.models import WifiLink, WifiNetwork
 from mulita.presentation.facts import wifi_facts
 from mulita.ui.qt.bridge.base import TaskController

@@ -409,7 +409,7 @@ def serve(host: str, http_port: int, https_port: int, root: str, captures: str, 
         for opened in servers:
             opened.server_close()
         say('', f'No se pudo iniciar el servidor web: {getattr(exc, "strerror", None) or exc}')
-        raise SystemExit(1)
+        raise SystemExit(1) from exc
     for server in servers:
         server.journal_settings = journal_settings
     for extra in servers[1:]:

@@ -172,7 +172,7 @@ def serve(host: str, port: int, root: str, writable: bool, ready: threading.Even
     except OSError as exc:
         server.close()
         say('', f'No se pudo abrir el puerto {port}: {exc.strerror or exc}')
-        raise SystemExit(1)
+        raise SystemExit(1) from exc
     server.settimeout(0.5)
     say('', f'TFTP escuchando en el puerto {server.getsockname()[1]}')
     if ready:

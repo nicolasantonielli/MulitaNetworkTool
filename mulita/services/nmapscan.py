@@ -165,7 +165,7 @@ class NmapScanService(ProcessSession):
         found = []
         if not self._captures.is_dir():
             return found
-        for place, folder in _PLACES.items():
+        for place in _PLACES:
             base = self._paths.folder(place)
             if not base.is_dir():
                 continue
@@ -182,7 +182,6 @@ class NmapScanService(ProcessSession):
             place, _sep, name = value[1:].partition('/')
             if place not in _PLACES or not name or '/' in name or '\\' in name or name in ('.', '..'):
                 return None
-            folder = _PLACES[place]
             base = self._paths.folder(place)
             path = base / name
             try:

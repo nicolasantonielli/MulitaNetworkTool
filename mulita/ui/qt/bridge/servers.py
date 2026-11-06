@@ -11,9 +11,8 @@ from typing import Callable
 
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
-from mulita.core.errors import MulitaError
+from mulita.core.credentials import suggest_password
 from mulita.core.servers import KINDS, RANDOM, ServerLog, kind_by_id
-from mulita.services.servers import suggest_password
 from mulita.ui.qt.bridge.base import BridgeContext, Controller
 
 IDLE = 'idle'

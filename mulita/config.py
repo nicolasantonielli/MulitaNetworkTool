@@ -108,7 +108,7 @@ def _installation_paths() -> dict:
             data = json.loads(path.read_text(encoding='utf-8'))
         except FileNotFoundError:
             if configured:
-                raise ValueError(f'No existe la configuración de Mulita: {path}')
+                raise ValueError(f'No existe la configuración de Mulita: {path}') from None
         except (OSError, ValueError) as exc:
             raise ValueError(f'No se pudo leer la configuración de Mulita: {path}') from exc
     if not isinstance(data, dict):

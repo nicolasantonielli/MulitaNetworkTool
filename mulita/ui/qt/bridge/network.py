@@ -11,11 +11,11 @@ import ipaddress
 import time
 from collections import deque
 
-from PyQt5.QtCore import QObject, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QTimer, pyqtProperty, pyqtSignal, pyqtSlot
 
 from mulita.core.models import CaptureDirection, NetworkInterface, TapConfig
 from mulita.core.parsing.network import is_wifi_interface
-from mulita.ui.qt.bridge.base import (BridgeContext, Console, Controller,
+from mulita.ui.qt.bridge.base import (BridgeContext, Controller,
                                       SessionController)
 
 
