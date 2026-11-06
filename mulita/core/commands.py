@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import PurePosixPath
 from mulita.core.server_commands import ServerCommands
 
-from mulita.config import Binaries
+from mulita.core.binaries import Binaries
 from mulita.core.models import CaptureRequest, PingRequest
 
 Argv = list[str]

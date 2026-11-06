@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import PurePosixPath
-from mulita.config import Binaries
+from mulita.core.binaries import Binaries
 
 Argv = list[str]
 
